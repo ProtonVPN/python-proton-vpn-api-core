@@ -1,19 +1,10 @@
-from protonvpn_connection.vpnconfig import AbstractVPNConfiguration, AbstractVPNCredentials
+import os
+from abc import abstractmethod
+from protonvpn_connection.vpnconfig import (AbstractVPNConfiguration,
+                                            AbstractVPNCredentials)
+
 PROTON_XDG_CACHE_HOME = os.path.join("~/.home", "protonvpn")
-
-
-class VPNConnectionCredentials(AbstractVPNCredentials):
-
-    def __init__(self, credentials_component):
-        self.credentials_component = credentials_component
-
-    def get_certificate(self) -> str:
-        """Get certificate for certificate based authentication"""
-        self.credentials_component.get_certificate()
-
-    def get_user_pass(self) -> tuple(str):
-        """Get OpenVPN username and password for authentication"""
-        self.credentials_component.get_user_pass()
+from typing import List
 
 
 class VPNConfiguration(AbstractVPNConfiguration):
@@ -29,20 +20,30 @@ class VPNConfiguration(AbstractVPNConfiguration):
     """
 
     def __init__(
-        self, server_entry_ip, ports,
-        virtual_device_type, custom_dns_list, domain, servername, vpnconnection_credentials):
+        self, server_entry_ip, ports, vpnconnection_credentials,
+        servername=None, domain=None, virtual_device_type=None, custom_dns_list=None, split_tunneling=None
+    ):
         self._configfile = None
         self._server_entry_ip = server_entry_ip
         self._ports = ports
+        self._vpnconnection_credentials = vpnconnection_credentials
+        self._servername = servername
+        self._domain = domain
         self._virtual_device_type = virtual_device_type
         self._custom_dns_list = custom_dns_list
-        self._domain = domain
-        self._servername = servername
-        self._vpnconnection_credentials = vpnconnection_credentials
+        self._split_tunneling = split_tunneling
+
+    @property
+    def device_name(self) -> str:
+        return self.default_device_name if self._virtual_device_type is None else self._virtual_device_type
 
     @property
     def servername(self) -> str:
         return self._servername
+
+    @property
+    def split_tunneling(self) -> List:
+        return self._split_tunneling
 
     @property
     def vpn_credentials(self) -> AbstractVPNCredentials:
@@ -54,7 +55,7 @@ class VPNConfiguration(AbstractVPNConfiguration):
 
     @property
     @abstractmethod
-    def config_extn(self):
+    def config_extn(self) -> str:
         """Config file extension"""
         pass
 
@@ -62,7 +63,7 @@ class VPNConfiguration(AbstractVPNConfiguration):
     def generate(self):
         pass
 
-    def __enter__(self):
+    def __enter__(self) -> str:
         # We create the configuration file when we enter,
         # and delete it when we exit.
         # This is a race free way of having temporary files.

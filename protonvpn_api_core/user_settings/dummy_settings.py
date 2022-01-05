@@ -1,71 +1,20 @@
-from abc import abstractmethod, ABC
-from enum import Enum
+from .abstract_user_settings import (AbstractUserSettings,
+                                     AlternativeRoutingEnum, ClientSuffixEnum,
+                                     DNSEnum, KillswitchEnum, NetshieldEnum,
+                                     ProtocolEnum, SecureCoreEnum,
+                                     VPNAcceleratorEnum, NotificationEnum)
+
 from typing import List
 
 
-class ClientSuffixEnum(Enum):
-    PLATFORM = "pl"
-    NETSHIELD = "f1"
-    NETSHIELD_ADS_TRACKING = "f2"
-    NETSHIELD_NA = "f3"
-    RANDOMAZIED_NAT = "nr"
-
-
-class NetshieldEnum(Enum):
-    DISABLE = "f0"
-    MALWARE = ClientSuffixEnum.NETSHIELD.value
-    ADS_MALWARE = ClientSuffixEnum.NETSHIELD_ADS_TRACKING.value
-
-
-class KillswitchEnum(Enum):
-    DISABLE = 0
-    PERMANENT = 1
-    ENABLE = 2
-
-
-class SecureCoreEnum(Enum):
-    DISABLE = 0
-    ENABLE = 1
-
-
-class ProtocolEnum(Enum):
-    OPENVPN_TCP = "tcp"
-    OPENVPN_UDP = "udp"
-    IKEV2 = "ikev2"
-    WIREGUARD = "wireguard"
-
-
-class AlternativeRoutingEnum(Enum):
-    DISABLE = 0
-    ENABLE = 1
-
-
-class DNSEnum(Enum):
-    CUSTOM = 0
-    AUTOMATIC = 1
-
-
-class VPNAcceleratorEnum(Enum):
-    DISABLE = 0
-    ENABLE = 1
-
-
-class NotificationEnum(Enum):
-    OPENED = 0
-    NOT_OPENED = 1
-    UNKNOWN = 2
-
-
-class AbstractUserSettings(ABC):
+class DummySettings(AbstractUserSettings):
 
     @property
-    @abstractmethod
     def netshield(self) -> NetshieldEnum:
         """Get netshield to specified option."""
         pass
 
     @netshield.setter
-    @abstractmethod
     def netshield(self, enum_value: NetshieldEnum):
         """Set user netshield setting.
         
@@ -75,13 +24,11 @@ class AbstractUserSettings(ABC):
         pass
 
     @property
-    @abstractmethod
     def killswitch(self) -> KillswitchEnum:
         """Get user Kill Switch setting."""
         pass
 
     @killswitch.setter
-    @abstractmethod
     def killswitch(self, enum_value: KillswitchEnum):
         """Set Kill Switch to specified option.
         
@@ -91,7 +38,6 @@ class AbstractUserSettings(ABC):
         pass
 
     @property
-    @abstractmethod
     def secure_core(self) -> SecureCoreEnum:
         """Get Secure Core setting.
 
@@ -101,7 +47,6 @@ class AbstractUserSettings(ABC):
         pass
 
     @secure_core.setter
-    @abstractmethod
     def secure_core(self, enum_value: SecureCoreEnum):
         """set Secure Core setting.
         
@@ -111,13 +56,11 @@ class AbstractUserSettings(ABC):
         pass
 
     @property
-    @abstractmethod
     def alternative_routing(self) -> AlternativeRoutingEnum:
         """Get alternative routing setting."""
         pass
 
     @alternative_routing.setter
-    @abstractmethod
     def alternative_routing(self, enum_value: AlternativeRoutingEnum):
         """Set alternative routing setting.
 
@@ -127,13 +70,11 @@ class AbstractUserSettings(ABC):
         pass
 
     @property
-    @abstractmethod
     def protocol(self) -> ProtocolEnum:
         """Get default protocol."""
         pass
 
     @protocol.setter
-    @abstractmethod
     def protocol(self, enum_value: ProtocolEnum):
         """Set default protocol setting.
         
@@ -145,7 +86,7 @@ class AbstractUserSettings(ABC):
     @property
     def split_tunneling(self) -> List[str]:
         """Get default protocol."""
-        pass
+        return []
 
     @split_tunneling.setter
     def split_tunneling(self, ips_to_split_from_vpn: List[str]):
@@ -157,13 +98,11 @@ class AbstractUserSettings(ABC):
         pass
 
     @property
-    @abstractmethod
     def dns(self) -> DNSEnum:
         """Get user DNS setting."""
         pass
 
     @dns.setter
-    @abstractmethod
     def dns(self, enum_value: DNSEnum):
         """Set DNS setting.
         
@@ -173,13 +112,11 @@ class AbstractUserSettings(ABC):
         pass
 
     @property
-    @abstractmethod
     def dns_custom_ips(self) -> List[str]:
         """Get user DNS setting."""
-        pass
+        return []
 
     @dns_custom_ips.setter
-    @abstractmethod
     def dns_custom_ips(self, custom_ips: List[str]):
         """Set and replace (if exists) custom DNS lis.
         
@@ -189,13 +126,11 @@ class AbstractUserSettings(ABC):
         pass
 
     @property
-    @abstractmethod
     def vpn_accelerator(self) -> VPNAcceleratorEnum:
         """Get user VPN Accelerator setting."""
         pass
 
     @vpn_accelerator.setter
-    @abstractmethod
     def vpn_accelerator(self, enum_value: VPNAcceleratorEnum):
         """Set VPN Accelerator lis.
         
@@ -205,13 +140,11 @@ class AbstractUserSettings(ABC):
         pass
 
     @property
-    @abstractmethod
     def event_notification(self) -> NotificationEnum:
         """Get event notification setting."""
         pass
 
     @event_notification.setter
-    @abstractmethod
     def event_notification(self, enum_value: NotificationEnum):
         """Set event notification.
         
@@ -220,8 +153,6 @@ class AbstractUserSettings(ABC):
         """
         pass
 
-    @abstractmethod
     def reset_to_default_configs(self) -> bool:
         """Reset user configuration to default values."""
         pass
-

@@ -1,5 +1,8 @@
-from .vpnconfig import VPNConfiguration
+from abc import abstractmethod
 from enum import Enum
+
+from .vpnconfig import VPNConfiguration
+
 
 class OpenVPNProtocolEnum(Enum):
     TCP = "tcp"
@@ -12,6 +15,9 @@ class VPNConfigurationOpenVPN(VPNConfiguration):
     Generates VPN configuration that can be used to
     import via NM tool.
     """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     @property
     def config_extn(self):
@@ -34,6 +40,9 @@ class VPNConfigurationOpenVPN(VPNConfiguration):
 
 class VPNConfigurationOpenVPNTCP(VPNConfigurationOpenVPN):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     @property
     def ports(self):
         """Return a list of ports"""
@@ -41,10 +50,14 @@ class VPNConfigurationOpenVPNTCP(VPNConfigurationOpenVPN):
 
     @property
     def protocol(self) -> str:
-        return OpenVPNProtocolEnum.TCP
+        return OpenVPNProtocolEnum.TCP.value
 
 
 class VPNConfigurationOpenVPNUDP(VPNConfigurationOpenVPN):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     @property
     def ports(self):
         """Return a list of ports"""
@@ -52,4 +65,4 @@ class VPNConfigurationOpenVPNUDP(VPNConfigurationOpenVPN):
 
     @property
     def protocol(self) -> str:
-        return OpenVPNProtocolEnum.UDP
+        return OpenVPNProtocolEnum.UDP.value
