@@ -45,7 +45,7 @@ class VPNConfiguration(AbstractVPNConfiguration):
         return self._servername
 
     @property
-    def credentials(self) -> str:
+    def vpn_credentials(self) -> AbstractVPNCredentials:
         return self._credentials
 
     @property
