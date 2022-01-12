@@ -1,0 +1,243 @@
+from typing import List
+
+from .abstract_user_settings import (AbstractUserSettings,
+                                     AlternativeRoutingEnum,
+                                     DNSEnum, KillswitchEnum, NetshieldEnum,
+                                     NotificationEnum, ProtocolEnum,
+                                     SecureCoreEnum, SplitTunnelingEnum,
+                                     UserConfigTemplateEnum,
+                                     VPNAcceleratorEnum)
+from .persistence_handler import SettingsPersistenceHandler
+
+
+class BasicSettings(SettingsPersistenceHandler, AbstractUserSettings):
+    """Simple and basic user settings implementation.
+
+    Most of its properties either accept Enum objects or any expected value type for the enum.
+    By not enforcing the enum and allowing some breathing room this could be easily scripted as long
+    as correct types are passed to each property.
+    Usage:
+    ::
+        from protonvpn_api_core.user_settings import BasicSettings
+
+        s = BasicSettings()
+
+        s.protocol = "udp"
+        s.killswitch = 1
+        s.dns = 0
+        s.dns_custom_ips = ["192.12.1.9"]
+        s.split_tunneling = 1
+        s.split_tunneling_ips = ["192.12.66.9"]
+        s.netshield = "f2"
+        s.vpn_accelerator = 0
+        s.alternative_routing = 1
+        s.secure_core = 1
+        s.event_notification = 0
+        s.ui_display_language = "pt"
+    """
+
+    _template = {
+        UserConfigTemplateEnum.PROTOCOL: ProtocolEnum.OPENVPN_UDP,
+        UserConfigTemplateEnum.KILLSWITCH: KillswitchEnum.DISABLE,
+        UserConfigTemplateEnum.DNS: {
+            UserConfigTemplateEnum.DNS_STATUS: DNSEnum.AUTOMATIC,
+            UserConfigTemplateEnum.DNS_IP_LIST: [],
+        },
+        UserConfigTemplateEnum.SPLIT_TUNNELING: {
+            UserConfigTemplateEnum.SPLIT_TUNNELING_STATUS: SplitTunnelingEnum.DISABLE,
+            UserConfigTemplateEnum.SPLIT_TUNNELING_IP_LIST: [],
+        },
+        UserConfigTemplateEnum.NETSHIELD: NetshieldEnum.DISABLE,
+        UserConfigTemplateEnum.VPN_ACCELERATOR: VPNAcceleratorEnum.ENABLE,
+        UserConfigTemplateEnum.ALTERNATIVE_ROUTING: AlternativeRoutingEnum.DISABLE,
+        UserConfigTemplateEnum.SECURE_CORE: SecureCoreEnum.DISABLE,
+        UserConfigTemplateEnum.EVENT_NOTIFICATION: NotificationEnum.UNKNOWN,
+        UserConfigTemplateEnum.UI_LANGUAGE: "en"
+    }
+
+    def __init__(self, fp="settings.json", template=None):
+        _template = self._template
+        if template:
+            _template = template
+
+        super().__init__(_template, fp, UserConfigTemplateEnum)
+
+    @property
+    def netshield(self) -> NetshieldEnum:
+        """Get netshield to specified option."""
+        return NetshieldEnum(self._get(UserConfigTemplateEnum.NETSHIELD))
+
+    @netshield.setter
+    def netshield(self, enum_value: NetshieldEnum):
+        """Set user netshield setting.
+
+        :param enum_value: enum constant, ie: NetshieldEnum.DISABLED
+        :type enum_value: NetshieldEnum
+        """
+        self._set(UserConfigTemplateEnum.NETSHIELD, NetshieldEnum(enum_value))
+
+    @property
+    def killswitch(self) -> KillswitchEnum:
+        """Get user Kill Switch setting."""
+        return KillswitchEnum(self._get(UserConfigTemplateEnum.KILLSWITCH))
+
+    @killswitch.setter
+    def killswitch(self, enum_value: KillswitchEnum):
+        """Set Kill Switch to specified option.
+
+        :param enum_value: enum constant, ie: KillswitchEnum.PERMANENT
+        :type enum_value: KillswitchEnum
+        """
+        self._set(UserConfigTemplateEnum.KILLSWITCH, KillswitchEnum(enum_value))
+
+    @property
+    def secure_core(self) -> SecureCoreEnum:
+        """Get Secure Core setting.
+
+        This is mostly for GUI as it might not be very
+        relevant for CLIs.
+        """
+        return SecureCoreEnum(self._get(UserConfigTemplateEnum.SECURE_CORE))
+
+    @secure_core.setter
+    def secure_core(self, enum_value: SecureCoreEnum):
+        """set Secure Core setting.
+
+        :param enum_value: enum constant, ie: SecureCoreEnum.ENABLE
+        :type enum_value: SecureCoreEnum
+        """
+        self._set(UserConfigTemplateEnum.SECURE_CORE, SecureCoreEnum(enum_value))
+
+    @property
+    def alternative_routing(self) -> AlternativeRoutingEnum:
+        """Get alternative routing setting."""
+        return AlternativeRoutingEnum(self._get(UserConfigTemplateEnum.ALTERNATIVE_ROUTING))
+
+    @alternative_routing.setter
+    def alternative_routing(self, enum_value: AlternativeRoutingEnum):
+        """Set alternative routing setting.
+
+        :param enum_value: enum constant, ie: AlternativeRoutingEnum.ENABLE
+        :type enum_value: AlternativeRoutingEnum
+        """
+        self._set(UserConfigTemplateEnum.ALTERNATIVE_ROUTING, AlternativeRoutingEnum(enum_value))
+
+    @property
+    def protocol(self) -> ProtocolEnum:
+        """Get default protocol."""
+        return ProtocolEnum(self._get(UserConfigTemplateEnum.PROTOCOL))
+
+    @protocol.setter
+    def protocol(self, enum_value: ProtocolEnum):
+        """Set default protocol setting.
+
+        :param enum_value: enum constant, ie: ProtocolEnum.OPENVPN_TCP
+        :type enum_value: ProtocolEnum
+        """
+        self._set(UserConfigTemplateEnum.PROTOCOL, ProtocolEnum(enum_value))
+
+    @property
+    def split_tunneling(self) -> SplitTunnelingEnum:
+        """Get split tunneling status."""
+        return SplitTunnelingEnum(self._get(UserConfigTemplateEnum.SPLIT_TUNNELING_STATUS, 0))
+
+    @split_tunneling.setter
+    def split_tunneling(self, enum_value: SplitTunnelingEnum):
+        """Set split tunneling status.
+
+        :param enum_value: enum constant, ie: SplitTunnelingEnum.ENABLE
+        :type enum_value: SplitTunnelingEnum
+        """
+        self._set(UserConfigTemplateEnum.SPLIT_TUNNELING_STATUS, enum_value)
+
+    @property
+    def split_tunneling_ips(self) -> List[str]:
+        """Get split tunneling IPs."""
+        return self._get(UserConfigTemplateEnum.SPLIT_TUNNELING_IP_LIST)
+
+    @split_tunneling_ips.setter
+    def split_tunneling_ips(self, ips_to_split_from_vpn: List[str]):
+        """Set split tunneling IPs.
+
+        :param ips_to_split_from_vpn: List of IPs to split from VPN
+        :type ips_to_split_from_vpn: List
+        """
+        self._set(UserConfigTemplateEnum.SPLIT_TUNNELING_IP_LIST, ips_to_split_from_vpn)
+
+    @property
+    def dns(self) -> DNSEnum:
+        """Get user DNS setting."""
+        return self._get(UserConfigTemplateEnum.DNS_STATUS)
+
+    @dns.setter
+    def dns(self, enum_value: DNSEnum):
+        """Set DNS setting.
+
+        :param enum_value: enum constant, ie: DNSEnum.AUTOMATIC
+        :type enum_value: DNSEnum
+        """
+        self._set(UserConfigTemplateEnum.DNS_STATUS, DNSEnum(enum_value))
+
+    @property
+    def dns_custom_ips(self) -> List[str]:
+        """Get user DNS setting."""
+        return self._get(UserConfigTemplateEnum.DNS_IP_LIST)
+
+    @dns_custom_ips.setter
+    def dns_custom_ips(self, custom_ips: List[str]):
+        """Set and replace (if exists) custom DNS lis.
+
+        :param custom_ips: a collection of IPs in str format
+        :type enum_value: List[str]
+        """
+        self._set(UserConfigTemplateEnum.DNS_IP_LIST, custom_ips)
+
+    @property
+    def vpn_accelerator(self) -> VPNAcceleratorEnum:
+        """Get user VPN Accelerator setting."""
+        return VPNAcceleratorEnum(self._get(UserConfigTemplateEnum.VPN_ACCELERATOR))
+
+    @vpn_accelerator.setter
+    def vpn_accelerator(self, enum_value: VPNAcceleratorEnum):
+        """Set VPN Accelerator lis.
+
+        :param enum_value: enum constant, ie: VPNAcceleratorEnum.ENABLE
+        :type enum_value: VPNAcceleratorEnum
+        """
+        self._set(UserConfigTemplateEnum.VPN_ACCELERATOR, enum_value)
+
+    @property
+    def event_notification(self) -> NotificationEnum:
+        """Get event notification setting."""
+        return NotificationEnum(self._get(UserConfigTemplateEnum.EVENT_NOTIFICATION))
+
+    @event_notification.setter
+    def event_notification(self, enum_value: NotificationEnum):
+        """Set event notification.
+
+        :param enum_value: enum constant, ie: NotificationEnum.OPENED
+        :type enum_value: NotificationEnum
+        """
+        self._set(UserConfigTemplateEnum.EVENT_NOTIFICATION, enum_value)
+
+    @property
+    def ui_display_language(self) -> str:
+        """Get current UI language.
+
+        :return: country ISO code
+        :rtype: str
+        """
+        return self._get(UserConfigTemplateEnum.UI_LANGUAGE)
+
+    @ui_display_language.setter
+    def ui_display_language(self, value: str):
+        """Set current UI language.
+
+        :param value: country ISO code
+        :type value: str
+        """
+        self._set(UserConfigTemplateEnum.UI_LANGUAGE, value)
+
+    def reset_to_default_configs(self) -> bool:
+        """Reset user configuration to default values."""
+        pass

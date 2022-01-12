@@ -1,3 +1,3 @@
-from .dummy_settings import DummySettings
+from .basic import BasicSettings
 
-__all__ = ["DummySettings"]
+__all__ = ["BasicSettings"]
