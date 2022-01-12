@@ -4,7 +4,7 @@ from typing import List
 
 
 class ClientSuffixEnum(Enum):
-    PLATFORM = "pl"
+    PLATFORM_LINUX = "pl"
     NETSHIELD = "f1"
     NETSHIELD_ADS_TRACKING = "f2"
     NETSHIELD_NA = "f3"
@@ -40,6 +40,11 @@ class AlternativeRoutingEnum(Enum):
     ENABLE = 1
 
 
+class SplitTunnelingEnum(Enum):
+    DISABLE = 0
+    ENABLE = 1
+
+
 class DNSEnum(Enum):
     CUSTOM = 0
     AUTOMATIC = 1
@@ -56,6 +61,23 @@ class NotificationEnum(Enum):
     UNKNOWN = 2
 
 
+class UserConfigTemplateEnum(Enum):
+    PROTOCOL = "protocol"
+    KILLSWITCH = "killswitch"
+    DNS = "dns"
+    DNS_STATUS = "d-status"
+    DNS_IP_LIST = "d-ip-list"
+    SPLIT_TUNNELING = "split-tunneling"
+    SPLIT_TUNNELING_STATUS = "sp-status"
+    SPLIT_TUNNELING_IP_LIST = "sp-ip-list"
+    NETSHIELD = "netshield"
+    VPN_ACCELERATOR = "vpn-accelerator"
+    ALTERNATIVE_ROUTING = "alternative_routing"
+    SECURE_CORE = "secure-core"
+    EVENT_NOTIFICATION = "event-notification"
+    UI_LANGUAGE = "ui-language"
+
+
 class AbstractUserSettings(ABC):
 
     @property
@@ -68,7 +90,7 @@ class AbstractUserSettings(ABC):
     @abstractmethod
     def netshield(self, enum_value: NetshieldEnum):
         """Set user netshield setting.
-        
+
         :param enum_value: enum constant, ie: NetshieldEnum.DISABLED
         :type enum_value: NetshieldEnum
         """
@@ -84,7 +106,7 @@ class AbstractUserSettings(ABC):
     @abstractmethod
     def killswitch(self, enum_value: KillswitchEnum):
         """Set Kill Switch to specified option.
-        
+
         :param enum_value: enum constant, ie: KillswitchEnum.PERMANENT
         :type enum_value: KillswitchEnum
         """
@@ -104,7 +126,7 @@ class AbstractUserSettings(ABC):
     @abstractmethod
     def secure_core(self, enum_value: SecureCoreEnum):
         """set Secure Core setting.
-        
+
         :param enum_value: enum constant, ie: SecureCoreEnum.ENABLE
         :type enum_value: SecureCoreEnum
         """
@@ -136,21 +158,39 @@ class AbstractUserSettings(ABC):
     @abstractmethod
     def protocol(self, enum_value: ProtocolEnum):
         """Set default protocol setting.
-        
+
         :param enum_value: enum constant, ie: ProtocolEnum.OPENVPN_TCP
         :type enum_value: ProtocolEnum
         """
         pass
 
     @property
-    def split_tunneling(self) -> List[str]:
-        """Get default protocol."""
+    @abstractmethod
+    def split_tunneling(self) -> SplitTunnelingEnum:
+        """Get split tunneling status."""
         pass
 
     @split_tunneling.setter
-    def split_tunneling(self, ips_to_split_from_vpn: List[str]):
-        """Set default protocol setting.
-        
+    @abstractmethod
+    def split_tunneling(self, enum_value: SplitTunnelingEnum):
+        """Set split tunneling status.
+
+        :param enum_value: enum constant, ie: SplitTunnelingEnum.ENABLE
+        :type enum_value: SplitTunnelingEnum
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def split_tunneling_ips(self) -> List[str]:
+        """Get split tunneling IPs."""
+        pass
+
+    @split_tunneling_ips.setter
+    @abstractmethod
+    def split_tunneling_ips(self, ips_to_split_from_vpn: List[str]):
+        """Set split tunneling IPs.
+
         :param ips_to_split_from_vpn: List of IPs to split from VPN
         :type ips_to_split_from_vpn: List
         """
@@ -166,7 +206,7 @@ class AbstractUserSettings(ABC):
     @abstractmethod
     def dns(self, enum_value: DNSEnum):
         """Set DNS setting.
-        
+
         :param enum_value: enum constant, ie: DNSEnum.AUTOMATIC
         :type enum_value: DNSEnum
         """
@@ -182,7 +222,7 @@ class AbstractUserSettings(ABC):
     @abstractmethod
     def dns_custom_ips(self, custom_ips: List[str]):
         """Set and replace (if exists) custom DNS lis.
-        
+
         :param custom_ips: a collection of IPs in str format
         :type enum_value: List[str]
         """
@@ -198,7 +238,7 @@ class AbstractUserSettings(ABC):
     @abstractmethod
     def vpn_accelerator(self, enum_value: VPNAcceleratorEnum):
         """Set VPN Accelerator lis.
-        
+
         :param enum_value: enum constant, ie: VPNAcceleratorEnum.ENABLE
         :type enum_value: VPNAcceleratorEnum
         """
@@ -214,9 +254,29 @@ class AbstractUserSettings(ABC):
     @abstractmethod
     def event_notification(self, enum_value: NotificationEnum):
         """Set event notification.
-        
+
         :param enum_value: enum constant, ie: NotificationEnum.OPENED
         :type enum_value: NotificationEnum
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def ui_display_language(self) -> str:
+        """Get current UI language.
+
+        :return: country ISO code
+        :rtype: str
+        """
+        pass
+
+    @ui_display_language.setter
+    @abstractmethod
+    def ui_display_language(self, value: str):
+        """Set current UI language.
+
+        :param value: country ISO code
+        :type value: str
         """
         pass
 
@@ -225,3 +285,10 @@ class AbstractUserSettings(ABC):
         """Reset user configuration to default values."""
         pass
 
+    @abstractmethod
+    def _get(self):
+        pass
+
+    @abstractmethod
+    def _set(self):
+        pass
