@@ -7,10 +7,10 @@ from .abstract_user_settings import (AbstractUserSettings,
                                      SecureCoreEnum, SplitTunnelingEnum,
                                      UserConfigTemplateEnum,
                                      VPNAcceleratorEnum)
-from .persistence_handler import SettingsPersistenceHandler
+from .persistence import FilePersistence
 
 
-class BasicSettings(SettingsPersistenceHandler, AbstractUserSettings):
+class BasicSettings(AbstractUserSettings):
     """Simple and basic user settings implementation.
 
     Most of its properties either accept Enum objects or any expected value type for the enum.
@@ -55,17 +55,20 @@ class BasicSettings(SettingsPersistenceHandler, AbstractUserSettings):
         UserConfigTemplateEnum.UI_LANGUAGE: "en"
     }
 
-    def __init__(self, fp="settings.json", template=None):
+    def __init__(self, fp="settings.json", template=None, persistence=None):
+        self._persistence = persistence
         _template = self._template
+
         if template:
             _template = template
 
-        super().__init__(_template, fp, UserConfigTemplateEnum)
+        if not self._persistence:
+            self._persistence = FilePersistence(_template, UserConfigTemplateEnum, fp)
 
     @property
     def netshield(self) -> NetshieldEnum:
         """Get netshield to specified option."""
-        return NetshieldEnum(self._get(UserConfigTemplateEnum.NETSHIELD))
+        return self._get(UserConfigTemplateEnum.NETSHIELD, NetshieldEnum.DISABLE, NetshieldEnum)
 
     @netshield.setter
     def netshield(self, enum_value: NetshieldEnum):
@@ -79,7 +82,7 @@ class BasicSettings(SettingsPersistenceHandler, AbstractUserSettings):
     @property
     def killswitch(self) -> KillswitchEnum:
         """Get user Kill Switch setting."""
-        return KillswitchEnum(self._get(UserConfigTemplateEnum.KILLSWITCH))
+        return self._get(UserConfigTemplateEnum.KILLSWITCH, KillswitchEnum.DISABLE, KillswitchEnum)
 
     @killswitch.setter
     def killswitch(self, enum_value: KillswitchEnum):
@@ -97,7 +100,7 @@ class BasicSettings(SettingsPersistenceHandler, AbstractUserSettings):
         This is mostly for GUI as it might not be very
         relevant for CLIs.
         """
-        return SecureCoreEnum(self._get(UserConfigTemplateEnum.SECURE_CORE))
+        return self._get(UserConfigTemplateEnum.SECURE_CORE, SecureCoreEnum.DISABLE, SecureCoreEnum)
 
     @secure_core.setter
     def secure_core(self, enum_value: SecureCoreEnum):
@@ -111,7 +114,10 @@ class BasicSettings(SettingsPersistenceHandler, AbstractUserSettings):
     @property
     def alternative_routing(self) -> AlternativeRoutingEnum:
         """Get alternative routing setting."""
-        return AlternativeRoutingEnum(self._get(UserConfigTemplateEnum.ALTERNATIVE_ROUTING))
+        return self._get(
+            UserConfigTemplateEnum.ALTERNATIVE_ROUTING, AlternativeRoutingEnum.DISABLE,
+            AlternativeRoutingEnum
+        )
 
     @alternative_routing.setter
     def alternative_routing(self, enum_value: AlternativeRoutingEnum):
@@ -125,7 +131,7 @@ class BasicSettings(SettingsPersistenceHandler, AbstractUserSettings):
     @property
     def protocol(self) -> ProtocolEnum:
         """Get default protocol."""
-        return ProtocolEnum(self._get(UserConfigTemplateEnum.PROTOCOL))
+        return self._get(UserConfigTemplateEnum.PROTOCOL, ProtocolEnum.OPENVPN_UDP, ProtocolEnum)
 
     @protocol.setter
     def protocol(self, enum_value: ProtocolEnum):
@@ -139,7 +145,10 @@ class BasicSettings(SettingsPersistenceHandler, AbstractUserSettings):
     @property
     def split_tunneling(self) -> SplitTunnelingEnum:
         """Get split tunneling status."""
-        return SplitTunnelingEnum(self._get(UserConfigTemplateEnum.SPLIT_TUNNELING_STATUS, 0))
+        return self._get(
+            UserConfigTemplateEnum.SPLIT_TUNNELING_STATUS, SplitTunnelingEnum.DISABLE,
+            SplitTunnelingEnum
+        )
 
     @split_tunneling.setter
     def split_tunneling(self, enum_value: SplitTunnelingEnum):
@@ -167,7 +176,7 @@ class BasicSettings(SettingsPersistenceHandler, AbstractUserSettings):
     @property
     def dns(self) -> DNSEnum:
         """Get user DNS setting."""
-        return self._get(UserConfigTemplateEnum.DNS_STATUS)
+        return self._get(UserConfigTemplateEnum.DNS_STATUS, DNSEnum.AUTOMATIC, DNSEnum)
 
     @dns.setter
     def dns(self, enum_value: DNSEnum):
@@ -195,7 +204,10 @@ class BasicSettings(SettingsPersistenceHandler, AbstractUserSettings):
     @property
     def vpn_accelerator(self) -> VPNAcceleratorEnum:
         """Get user VPN Accelerator setting."""
-        return VPNAcceleratorEnum(self._get(UserConfigTemplateEnum.VPN_ACCELERATOR))
+        return self._get(
+            UserConfigTemplateEnum.VPN_ACCELERATOR, VPNAcceleratorEnum.ENABLE,
+            VPNAcceleratorEnum
+        )
 
     @vpn_accelerator.setter
     def vpn_accelerator(self, enum_value: VPNAcceleratorEnum):
@@ -209,7 +221,10 @@ class BasicSettings(SettingsPersistenceHandler, AbstractUserSettings):
     @property
     def event_notification(self) -> NotificationEnum:
         """Get event notification setting."""
-        return NotificationEnum(self._get(UserConfigTemplateEnum.EVENT_NOTIFICATION))
+        return self._get(
+            UserConfigTemplateEnum.EVENT_NOTIFICATION, NotificationEnum.UNKNOWN,
+            NotificationEnum
+        )
 
     @event_notification.setter
     def event_notification(self, enum_value: NotificationEnum):
@@ -236,8 +251,20 @@ class BasicSettings(SettingsPersistenceHandler, AbstractUserSettings):
         :param value: country ISO code
         :type value: str
         """
-        self._set(UserConfigTemplateEnum.UI_LANGUAGE, value)
+        self._set(UserConfigTemplateEnum.UI_LANGUAGE)
 
     def reset_to_default_configs(self) -> bool:
         """Reset user configuration to default values."""
         pass
+
+    def _get(self, enum, default_value=None, to_enum=None):
+        if default_value and to_enum:
+            try:
+                return to_enum(self._persistence._get(enum, default_value))
+            except ValueError:
+                return default_value
+
+        return self._persistence._get(enum, default_value)
+
+    def _set(self, enum, new_value):
+        self._persistence._set(enum, new_value)
