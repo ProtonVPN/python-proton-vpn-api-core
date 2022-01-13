@@ -284,11 +284,3 @@ class AbstractUserSettings(ABC):
     def reset_to_default_configs(self) -> bool:
         """Reset user configuration to default values."""
         pass
-
-    @abstractmethod
-    def _get(self):
-        pass
-
-    @abstractmethod
-    def _set(self):
-        pass
