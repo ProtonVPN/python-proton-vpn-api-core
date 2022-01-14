@@ -29,8 +29,8 @@ class SecureCoreEnum(Enum):
 
 
 class ProtocolEnum(Enum):
-    OPENVPN_TCP = "tcp"
-    OPENVPN_UDP = "udp"
+    OPENVPN_TCP = "openvpn-tcp"
+    OPENVPN_UDP = "openvpn-udp"
     IKEV2 = "ikev2"
     WIREGUARD = "wireguard"
 

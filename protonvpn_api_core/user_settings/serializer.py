@@ -92,11 +92,13 @@ class JSONEnumSerializer:
         Regardless of how deep this enum can be within the tree, as long as key defined in _enum_json_keys
         is found in the file, the value will be found and returned.
         """
+
+        if enum in data: return data[enum]
         for k, v in data.items():
-            if k.value == enum.value:
-                return v
-            elif isinstance(v, dict):
-                return self.recursive_get(v, enum)
+            if isinstance(v, dict):
+                item=self.recursive_get(v, enum)
+                if item is not None:
+                    return item
 
     def recursive_set(self, enum, updated_value, local_data=None):
         """Recurisvely set the desired value to selected enum in memory.
@@ -116,6 +118,7 @@ class JSONEnumSerializer:
         else:
             _internal = self.data
 
+        if enum in _internal:_internal[enum] = updated_value
         for k, v in _internal.items():
             val = None
             if k == enum:

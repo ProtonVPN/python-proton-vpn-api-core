@@ -251,7 +251,7 @@ class BasicSettings(AbstractUserSettings):
         :param value: country ISO code
         :type value: str
         """
-        self._set(UserConfigTemplateEnum.UI_LANGUAGE)
+        self._set(UserConfigTemplateEnum.UI_LANGUAGE, value)
 
     def reset_to_default_configs(self) -> bool:
         """Reset user configuration to default values."""

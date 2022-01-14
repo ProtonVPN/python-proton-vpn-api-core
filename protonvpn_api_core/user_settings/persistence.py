@@ -121,10 +121,6 @@ class FilePersistence(JSONEnumSerializer):
         This method will return anything that settings hold. It could return a list,
         it could return a string or some other complex object.
         """
-        try:
-            return self.data[enum]
-        except KeyError:
-            pass
 
         try:
             return self.recursive_get(self.data, enum)
@@ -142,11 +138,8 @@ class FilePersistence(JSONEnumSerializer):
         It sets the value for the desired enum, which are then stored to file
         for persistence.
         """
-        if enum in self.data:
-            self.data[enum] = updated_value
-        else:
-            self.recursive_set(enum, updated_value)
 
+        self.recursive_set(enum, updated_value)
         self._save_to_file()
 
     def _save_to_file(self):
