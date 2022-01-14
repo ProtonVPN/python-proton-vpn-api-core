@@ -6,7 +6,7 @@ from .serializer import JSONEnumSerializer
 class FilePersistence(JSONEnumSerializer):
     """Persists settings to file.
 
-    This class will use a serializer to conver objects to friendly json format
+    This class will use a serializer to convert objects to friendly json format
     for easy storage and vice-versa, when reading from a json
     file it will converty json to known python objects based on json keys which should match
     with the keys provided in enum.
