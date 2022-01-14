@@ -9,3 +9,4 @@ __SOURCE_APP
 .env
 cov.xml
 html
+.coverage
