@@ -15,7 +15,9 @@ class BasicSettings(AbstractUserSettings):
 
     Most of its properties either accept Enum objects or any expected value type for the enum.
     By not enforcing the enum and allowing some breathing room this could be easily scripted as long
-    as correct types are passed to each property.
+    as correct types are passed to each property. Settings are persistent ( see :meth:`__init__` method)
+    by default.
+
     Usage:
     ::
         from protonvpn_api_core.user_settings import BasicSettings
