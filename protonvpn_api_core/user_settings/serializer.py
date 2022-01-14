@@ -93,10 +93,12 @@ class JSONEnumSerializer:
         is found in the file, the value will be found and returned.
         """
 
-        if enum in data: return data[enum]
+        if enum in data:
+            return data[enum]
+
         for k, v in data.items():
             if isinstance(v, dict):
-                item=self.recursive_get(v, enum)
+                item = self.recursive_get(v, enum)
                 if item is not None:
                     return item
 
@@ -118,7 +120,10 @@ class JSONEnumSerializer:
         else:
             _internal = self.data
 
-        if enum in _internal:_internal[enum] = updated_value
+        if enum in _internal:
+            _internal[enum] = updated_value
+            return
+
         for k, v in _internal.items():
             val = None
             if k == enum:
