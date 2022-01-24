@@ -20,7 +20,7 @@ class TestBasicSettings:
         s = BasicSettings(fp=TestBasicSettings.SETTING_PATH)
         settings = [
             {
-                BasicSettings.netshield: ('f0', NetshieldEnum.DISABLE),
+                BasicSettings.netshield: (0, NetshieldEnum.DISABLE),
                 BasicSettings.killswitch: (0, KillswitchEnum.DISABLE),
                 BasicSettings.secure_core: (0, SecureCoreEnum.DISABLE),
                 BasicSettings.split_tunneling: (1, SplitTunnelingEnum.ENABLE),
@@ -32,7 +32,7 @@ class TestBasicSettings:
                 BasicSettings.event_notification: (0, NotificationEnum.OPENED)
             },
             {
-                BasicSettings.netshield: ('f1', NetshieldEnum.MALWARE),
+                BasicSettings.netshield: (1, NetshieldEnum.MALWARE),
                 BasicSettings.killswitch: (1, KillswitchEnum.PERMANENT),
                 BasicSettings.secure_core: (1, SecureCoreEnum.ENABLE),
                 BasicSettings.split_tunneling: (0, SplitTunnelingEnum.DISABLE),
@@ -44,7 +44,7 @@ class TestBasicSettings:
                 BasicSettings.event_notification: (1, NotificationEnum.NOT_OPENED)
             },
             {
-                BasicSettings.netshield: ('f2', NetshieldEnum.ADS_MALWARE),
+                BasicSettings.netshield: (2, NetshieldEnum.ADS_MALWARE),
                 BasicSettings.killswitch: (2, KillswitchEnum.ENABLE),
                 BasicSettings.secure_core: (0, SecureCoreEnum.DISABLE),
                 BasicSettings.split_tunneling: (1, SplitTunnelingEnum.ENABLE),
