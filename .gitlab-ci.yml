@@ -67,6 +67,7 @@ bandit-sast:
 
 pages:
   image: python:3.10.0-slim-bullseye
+  when: manual
   script:
   - pip install -r requirements.txt
   - pip install sphinx sphinx-rtd-theme
