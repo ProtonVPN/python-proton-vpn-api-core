@@ -270,6 +270,39 @@ class AbstractUserSettings(ABC):
         """
         pass
 
+
+    @property
+    @abstractmethod
+    def random_nat(self) -> RandomNatEnum:
+        """Get user VPN random nat settings."""
+        pass
+
+    @random_nat.setter
+    @abstractmethod
+    def random_nat(self, enum_value: RandomNatEnum):
+        """Set VPN random nat value
+
+        :param enum_value: enum constant, ie: RandomNatEnum.ENABLE
+        :type enum_value: PortForwardingEnum
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def safe_mode(self) -> SafeModeEnum:
+        """Get user VPN safe mode settings."""
+        pass
+
+    @safe_mode.setter
+    @abstractmethod
+    def safe_mode(self, enum_value: SafeModeEnum):
+        """Set VPN safe mode value
+
+        :param enum_value: enum constant, ie: SafeMode.ENABLE
+        :type enum_value: PortForwardingEnum
+        """
+        pass
+
     @property
     @abstractmethod
     def event_notification(self) -> NotificationEnum:
