@@ -6,7 +6,10 @@ from .abstract_user_settings import (AbstractUserSettings,
                                      NotificationEnum, ProtocolEnum,
                                      SecureCoreEnum, SplitTunnelingEnum,
                                      UserConfigTemplateEnum,
-                                     VPNAcceleratorEnum)
+                                     VPNAcceleratorEnum,
+                                     PortForwardingEnum,
+                                     RandomNatEnum,
+                                     SafeModeEnum)
 from .persistence import FilePersistence
 
 
@@ -51,6 +54,9 @@ class BasicSettings(AbstractUserSettings):
         },
         UserConfigTemplateEnum.NETSHIELD: NetshieldEnum.DISABLE,
         UserConfigTemplateEnum.VPN_ACCELERATOR: VPNAcceleratorEnum.ENABLE,
+        UserConfigTemplateEnum.PORT_FORWARDING: PortForwardingEnum.DISABLE,
+        UserConfigTemplateEnum.RANDOM_NAT: RandomNatEnum.ENABLE,
+        UserConfigTemplateEnum.SAFE_MODE : SafeModeEnum.DISABLE,
         UserConfigTemplateEnum.ALTERNATIVE_ROUTING: AlternativeRoutingEnum.DISABLE,
         UserConfigTemplateEnum.SECURE_CORE: SecureCoreEnum.DISABLE,
         UserConfigTemplateEnum.EVENT_NOTIFICATION: NotificationEnum.UNKNOWN,
@@ -219,6 +225,57 @@ class BasicSettings(AbstractUserSettings):
         :type enum_value: VPNAcceleratorEnum
         """
         self._set(UserConfigTemplateEnum.VPN_ACCELERATOR, enum_value)
+
+    @property
+    def port_forwarding(self) -> PortForwardingEnum:
+        """Get user VPN Port forwarding setting."""
+        return self._get(
+            UserConfigTemplateEnum.PORT_FORWARDING, PortForwardingEnum.DISABLE,
+            PortForwardingEnum
+        )
+
+    @port_forwarding.setter
+    def port_forwarding(self, enum_value: PortForwardingEnum):
+        """Set VPN Port forwarding value
+
+        :param enum_value: enum constant, ie: PortForwardingEnum.ENABLE
+        :type enum_value: PortForwardingEnum
+        """
+        self._set(UserConfigTemplateEnum.PORT_FORWARDING, enum_value)
+
+    @property
+    def random_nat(self) -> RandomNatEnum:
+        """Get user VPN random nat settings."""
+        return self._get(
+            UserConfigTemplateEnum.RANDOM_NAT, RandomNatEnum.ENABLE,
+            RandomNatEnum
+        )
+
+    @random_nat.setter
+    def random_nat(self, enum_value: RandomNatEnum):
+        """Set VPN random nat value
+
+        :param enum_value: enum constant, ie: RandomNatEnum.ENABLE
+        :type enum_value: PortForwardingEnum
+        """
+        self._set(UserConfigTemplateEnum.RANDOM_NAT, enum_value)
+
+    @property
+    def safe_mode(self) -> SafeModeEnum:
+        """Get user VPN safe mode settings."""
+        return self._get(
+            UserConfigTemplateEnum.SAFE_MODE, SafeModeEnum.DISABLE,
+            SafeModeEnum
+        )
+
+    @safe_mode.setter
+    def safe_mode(self, enum_value: SafeModeEnum):
+        """Set VPN safe mode value
+
+        :param enum_value: enum constant, ie: SafeMode.ENABLE
+        :type enum_value: PortForwardingEnum
+        """
+        self._set(UserConfigTemplateEnum.SAFE_MODE, enum_value)
 
     @property
     def event_notification(self) -> NotificationEnum:

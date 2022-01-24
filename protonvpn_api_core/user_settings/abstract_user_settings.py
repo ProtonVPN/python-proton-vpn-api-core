@@ -5,16 +5,11 @@ from typing import List
 
 class ClientSuffixEnum(Enum):
     PLATFORM_LINUX = "pl"
-    NETSHIELD = "f1"
-    NETSHIELD_ADS_TRACKING = "f2"
-    NETSHIELD_NA = "f3"
-    RANDOMAZIED_NAT = "nr"
-
 
 class NetshieldEnum(Enum):
-    DISABLE = "f0"
-    MALWARE = ClientSuffixEnum.NETSHIELD.value
-    ADS_MALWARE = ClientSuffixEnum.NETSHIELD_ADS_TRACKING.value
+    DISABLE = 0
+    MALWARE = 1
+    ADS_MALWARE = 2
 
 
 class KillswitchEnum(Enum):
@@ -54,6 +49,18 @@ class VPNAcceleratorEnum(Enum):
     DISABLE = 0
     ENABLE = 1
 
+class PortForwardingEnum(Enum):
+    DISABLE = 0
+    ENABLE = 1
+
+class RandomNatEnum(Enum):
+    DISABLE = 0
+    ENABLE = 1
+
+class SafeModeEnum(Enum):
+    DISABLE = 0
+    ENABLE = 1
+
 
 class NotificationEnum(Enum):
     OPENED = 0
@@ -70,12 +77,15 @@ class UserConfigTemplateEnum(Enum):
     SPLIT_TUNNELING = "split-tunneling"
     SPLIT_TUNNELING_STATUS = "sp-status"
     SPLIT_TUNNELING_IP_LIST = "sp-ip-list"
-    NETSHIELD = "netshield"
+    NETSHIELD = "netshield-level"
     VPN_ACCELERATOR = "vpn-accelerator"
     ALTERNATIVE_ROUTING = "alternative_routing"
     SECURE_CORE = "secure-core"
     EVENT_NOTIFICATION = "event-notification"
     UI_LANGUAGE = "ui-language"
+    PORT_FORWARDING = "port-forwarding"
+    RANDOM_NAT = "random-nat"
+    SAFE_MODE = "safe-mode"
 
 
 class AbstractUserSettings(ABC):
@@ -241,6 +251,22 @@ class AbstractUserSettings(ABC):
 
         :param enum_value: enum constant, ie: VPNAcceleratorEnum.ENABLE
         :type enum_value: VPNAcceleratorEnum
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def port_forwarding(self) -> PortForwardingEnum:
+        """Get user VPN Port forwarding setting."""
+        pass
+
+    @port_forwarding.setter
+    @abstractmethod
+    def port_forwarding(self, enum_value: PortForwardingEnum):
+        """Set VPN Port forwarding
+
+        :param enum_value: enum constant, ie: PortforwardingEnum.ENABLE
+        :type enum_value:  PortForwardingEnum
         """
         pass
 
