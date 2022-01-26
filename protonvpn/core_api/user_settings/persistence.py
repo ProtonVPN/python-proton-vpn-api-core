@@ -50,7 +50,7 @@ class FilePersistence(JSONEnumSerializer):
         }
 
         import os
-        from protonvpn_api_core.user_settings import FilePersistence
+        from protonvpn.core_api.user_settings import FilePersistence
 
         fp = FilePersistence(
             settings_template,

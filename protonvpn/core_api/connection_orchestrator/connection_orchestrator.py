@@ -1,5 +1,5 @@
-from protonvpn_api_core.user_settings import DummySettings
-from protonvpn_api_core.vpn_configuration_component import VPNConfigurationOpenVPNTCP, VPNConfigurationOpenVPNUDP, VPNConfigurationWireguard
+from protonvpn.core_api.user_settings import DummySettings
+from protonvpn.core_api.vpn_configuration_component import VPNConfigurationOpenVPNTCP, VPNConfigurationOpenVPNUDP, VPNConfigurationWireguard
 from protonvpn_connection.vpnconnection import VPNConnection
 from protonvpn_connection.vpnconfig import AbstractVPNCredentials
 
