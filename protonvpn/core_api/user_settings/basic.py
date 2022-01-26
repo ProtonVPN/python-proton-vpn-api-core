@@ -23,7 +23,7 @@ class BasicSettings(AbstractUserSettings):
 
     Usage:
     ::
-        from protonvpn_api_core.user_settings import BasicSettings
+        from protonvpn.core_api.user_settings import BasicSettings
 
         s = BasicSettings()
 
