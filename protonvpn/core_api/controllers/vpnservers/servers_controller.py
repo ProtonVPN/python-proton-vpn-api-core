@@ -9,14 +9,17 @@ from typing import Optional
 import copy
 from enum import Enum
 
+
 class ServernameServerNotFound(Exception):
     pass
+
 
 class ProtocolEnum(Enum):
     TCP = "OpenVPN tcp"
     UDP = "OpenVPN udp"
     WIREGUARD = "Wireguard"
     IKEV2 = "ikev2"
+
 
 class VPNServerConfigChoices(Enum):
     ovpnuserpass = 'ovpnpass'
@@ -28,15 +31,18 @@ class VPNServerConfigChoices(Enum):
     def __str__(self):
         return self.value
 
+
 class VPNServer:
-    """ Implement :class:`protonvpn_connection.abstract_interfaces.AbstractVPNServer` to
-        provide an interface readily usable to instanciate a :class:`protonvpn_connection.vpnconnection.VPNConnection`
+    """ Implement :class:`protonvpn_connection.interfaces.VPNServer` to
+        provide an interface readily usable to instanciate a :class:`protonvpn.vpnconnection.VPNConnection`
     """
-    def __init__(self, entry_ip, ports=None, domain=None, x25519pk=None):
+    def __init__(self, entry_ip, udp_ports=None, tcp_ports=None, domain=None, x25519pk=None, servername=None):
         self._entry_ip = entry_ip
-        self._ports=ports
-        self._x25519pk=x25519pk
-        self._domain=domain
+        self._udp_ports = udp_ports
+        self._tcp_ports = tcp_ports
+        self._x25519pk = x25519pk
+        self._domain = domain
+        self._servername = servername
 
     @property
     def server_ip(self):
@@ -44,11 +50,19 @@ class VPNServer:
 
     @property
     def udp_ports(self):
-        return self._ports
+        return self._udp_ports
 
     @udp_ports.setter
     def udp_ports(self, ports):
-        self._ports = ports
+        self._udp_ports = ports
+
+    @property
+    def tcp_ports(self):
+        return self._tcp_ports
+
+    @tcp_ports.setter
+    def tcp_ports(self, ports):
+        self._tcp_ports = ports
 
     @property
     def x25519pk(self):
@@ -58,18 +72,22 @@ class VPNServer:
     def domain(self):
         return self._domain
 
+    @property
+    def servername(self):
+        return self._servername
+
 
 class VPNServersController:
-    LOGICALS_ROUTE='/vpn/logicals'
+    LOGICALS_ROUTE = '/vpn/logicals'
 
     """ This implements all the business logic related to ProtonVPN server list.
     """
 
-    def __init__(self, session:Optional[Session], vpn_tier):
-        self._session=session
+    def __init__(self, session: Optional[Session], vpn_tier):
+        self._session = session
         self._sl = self._get_cached_server_list()
         self._countries = Country()
-        self._vpn_tier=vpn_tier
+        self._vpn_tier = vpn_tier
         self.SUPPORTED_FEATURES = {
             ServerFeatureEnum.NORMAL: "",
             ServerFeatureEnum.SECURE_CORE: "Secure-Core",
@@ -90,9 +108,9 @@ class VPNServersController:
 
     def _get_cached_server_list(self) -> CachedServerList:
         try:
-            sl=CachedServerList()
+            sl = CachedServerList()
         except ServerFileCacheNotFound:
-            sl=CachedServerList(self.get_logicals())
+            sl = CachedServerList(self.get_logicals())
         return sl
 
     @property
@@ -110,19 +128,23 @@ class VPNServersController:
                 ]
 
     def get_countries_name_choices(self, countries):
-        choices=[]
+        choices = []
         for country in sorted(countries.keys()):
             try:
-                country_code=[ cc for cc,name in self._countries.country_codes.items() if name==country ].pop()
+                country_code = [
+                    cc for
+                    cc, name in self._countries.country_codes.items()
+                    if name == country
+                ].pop()
             except IndexError:
-                country_code='XX'
+                country_code = 'XX'
             choices.append((country_code, f"{country}"))
         return choices
 
     def get_securecore_countries_name_choices(self):
-        choices=[]
-        country_codes=set()
-        s=self._sl.get_secure_core_servers()
+        choices = []
+        country_codes = set()
+        s = self._sl.get_secure_core_servers()
         for server in s:
             country_codes.add(server.exit_country)
 
@@ -130,12 +152,12 @@ class VPNServersController:
             country_name = self._countries.extract_country_name(country_code)
             choices.append((country_code, f"{country_name}"))
 
-        choices.sort(key=lambda x:x[1])
+        choices.sort(key=lambda x: x[1])
         return choices
 
     def get_securecore_countries_per_entry_country_choices(self, servers):
-        choices=[]
-        country_codes=set()
+        choices = []
+        country_codes = set()
         for server in servers:
             country_codes.add(server.entry_country)
 
@@ -143,16 +165,23 @@ class VPNServersController:
             country_name = self._countries.extract_country_name(country_code)
             choices.append((country_code, f"{country_name}"))
 
-        choices.sort(key=lambda x:x[1])
+        choices.sort(key=lambda x: x[1])
         return choices
 
     def get_securecore_server_choices(self, exit_country, entry_country=None):
-        choices=[]
-        s=self._sl.get_secure_core_servers()
+        s = self._sl.get_secure_core_servers()
         if entry_country is None:
-            s_country=list(filter(lambda server: server.exit_country == exit_country, s))
+            s_country = list(filter(lambda server: server.exit_country == exit_country, s))
         else:
-            s_country=list(filter(lambda server: server.exit_country == exit_country and server.entry_country==entry_country, s))
+            s_country = list(
+                filter(
+                    lambda server: (
+                        server.exit_country == exit_country
+                        and server.entry_country == entry_country
+                        ),
+                    s
+                )
+            )
         return s_country
 
     def get_servers_choices(self, country, countries):
@@ -252,7 +281,7 @@ class VPNServersController:
             in match_tier_servers.items()
         ]
 
-    def get_vpn_server(self, logical : str) -> VPNServer:
+    def get_vpn_server(self, logical: str) -> VPNServer:
         """
             return an :class:`protonvpn_connection.interfaces.VPNServer` interface from the logical name (DE#13) as a entry. Logical
             name can be secure core logical name also (like CH-FR#1 for ex). It can be directly used
@@ -262,17 +291,17 @@ class VPNServersController:
             :rtype: VPNServer
         """
         try:
-            server=list(filter(lambda server: server.name == logical, self._sl))[0]
+            server = list(filter(lambda server: server.name == logical, self._sl))[0]
             physical = server.get_random_physical_server()
             self._sl.match_server_domain(physical)
-            ip=physical.entry_ip
-            domain=physical.domain
+            ip = physical.entry_ip
+            domain = physical.domain
             # FIXME : This is required for wireguard
-            wg_server_pk=server.physical_servers[0].x25519_pk
+            wg_server_pk = server.physical_servers[0].x25519_pk
         except (ProtonVPNServerListError, IndexError):
             raise
 
-        return VPNServer(ip, domain=domain, x25519pk=wg_server_pk)
+        return VPNServer(ip, domain=domain, x25519pk=wg_server_pk, servername=logical)
 
     @staticmethod
     def get_protocol_choices():
@@ -282,4 +311,4 @@ class VPNServersController:
             (VPNServerConfigChoices.ikev2cert.value, "IKEv2 Cert auth"),
             (VPNServerConfigChoices.ikev2userpass.value, "IKEv2 user pass auth"),
             (VPNServerConfigChoices.wireguard.value, "Wireguard")
-            ]
+        ]

@@ -86,3 +86,11 @@ class VPNSessionOrchestrator:
     @property
     def username(self):
         return self._vpnsession_ctrl.username
+
+    @property
+    def tier(self):
+        return self._vpncred_ctrl.vpnaccount.max_tier
+
+    @property
+    def _account(self):
+        return self._vpncred_ctrl.vpnaccount
