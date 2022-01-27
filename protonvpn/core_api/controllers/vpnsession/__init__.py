@@ -1,4 +1,3 @@
-from .session_controller import VPNSessionController, VPNSessionControllerState
+from .vpnsession_controller import VPNSessionController
 
-__all__ = ['VPNSessionController', 'VPNSessionControllerState']
-
+__all__ = ["VPNSessionController"]
