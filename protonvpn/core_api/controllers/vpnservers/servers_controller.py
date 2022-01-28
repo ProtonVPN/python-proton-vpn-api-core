@@ -32,62 +32,32 @@ class VPNServerConfigChoices(Enum):
         return self.value
 
 
-class VPNServer:
-    """ Implement :class:`protonvpn_connection.interfaces.VPNServer` to
-        provide an interface readily usable to instanciate a :class:`protonvpn.vpnconnection.VPNConnection`
-    """
-    def __init__(self, entry_ip, udp_ports=None, tcp_ports=None, domain=None, x25519pk=None, servername=None):
-        self._entry_ip = entry_ip
-        self._udp_ports = udp_ports
-        self._tcp_ports = tcp_ports
-        self._x25519pk = x25519pk
-        self._domain = domain
-        self._servername = servername
-
-    @property
-    def server_ip(self):
-        return self._entry_ip
-
-    @property
-    def udp_ports(self):
-        return self._udp_ports
-
-    @udp_ports.setter
-    def udp_ports(self, ports):
-        self._udp_ports = ports
-
-    @property
-    def tcp_ports(self):
-        return self._tcp_ports
-
-    @tcp_ports.setter
-    def tcp_ports(self, ports):
-        self._tcp_ports = ports
-
-    @property
-    def x25519pk(self):
-        return self._x25519pk
-
-    @property
-    def domain(self):
-        return self._domain
-
-    @property
-    def servername(self):
-        return self._servername
-
-
 class VPNServersController:
     LOGICALS_ROUTE = '/vpn/logicals'
 
     """ This implements all the business logic related to ProtonVPN server list.
     """
 
-    def __init__(self, session: Optional[Session], vpn_tier):
+    def __init__(self, session: Optional["Session"], vpn_tier, cached_serverlist=None, country=None):
         self._session = session
-        self._sl = self._get_cached_server_list()
-        self._countries = Country()
         self._vpn_tier = vpn_tier
+
+        if not cached_serverlist:
+            self._sl = self._get_cached_server_list()
+        else:
+            self._sl = cached_serverlist
+
+        if not country:
+            from .country import Country
+            self._countries = Country()
+        else:
+            self._countries = country
+
+
+        self._set_dict_with_tier_and_featue_enum()
+
+    def _set_dict_with_tier_and_featue_enum(self):
+        from protonvpn.servers.list import ServerFeatureEnum, ServerTierEnum
         self.SUPPORTED_FEATURES = {
             ServerFeatureEnum.NORMAL: "",
             ServerFeatureEnum.SECURE_CORE: "Secure-Core",
@@ -106,16 +76,15 @@ class VPNServersController:
     def get_logicals(self) -> dict:
         return self._session.api_request(VPNServersController.LOGICALS_ROUTE)
 
-    def _get_cached_server_list(self) -> CachedServerList:
+    def _get_cached_server_list(self) -> "CachedServerList":
+        from protonvpn.servers import CachedServerList
+        from protonvpn.servers.exceptions import ServerFileCacheNotFound
+
         try:
             sl = CachedServerList()
         except ServerFileCacheNotFound:
             sl = CachedServerList(self.get_logicals())
         return sl
-
-    @property
-    def vpn_tier(self):
-        return self._vpn_tier
 
     def get_servers_per_country(self):
         return self._countries.get_dict_with_country_servername(self._sl, self.vpn_tier)
@@ -231,6 +200,8 @@ class VPNServersController:
         Returns:
             LogicalServer
         """
+        from protonvpn.servers.exceptions import EmptyServerListError
+
         try:
             return self._sl.filter(
                 lambda server:
@@ -281,7 +252,7 @@ class VPNServersController:
             in match_tier_servers.items()
         ]
 
-    def get_vpn_server(self, logical: str) -> VPNServer:
+    def get_vpn_server(self, logical: str) -> "VPNServer":
         """
             return an :class:`protonvpn_connection.interfaces.VPNServer` interface from the logical name (DE#13) as a entry. Logical
             name can be secure core logical name also (like CH-FR#1 for ex). It can be directly used
@@ -290,18 +261,7 @@ class VPNServersController:
             :return: an instance of the default VPNServer
             :rtype: VPNServer
         """
-        try:
-            server = list(filter(lambda server: server.name == logical, self._sl))[0]
-            physical = server.get_random_physical_server()
-            self._sl.match_server_domain(physical)
-            ip = physical.entry_ip
-            domain = physical.domain
-            # FIXME : This is required for wireguard
-            wg_server_pk = server.physical_servers[0].x25519_pk
-        except (ProtonVPNServerListError, IndexError):
-            raise
-
-        return VPNServer(ip, domain=domain, x25519pk=wg_server_pk, servername=logical)
+        return self._sl.get_vpn_server(logical)
 
     @staticmethod
     def get_protocol_choices():
