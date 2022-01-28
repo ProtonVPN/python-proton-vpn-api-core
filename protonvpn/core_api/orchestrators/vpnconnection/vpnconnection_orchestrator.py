@@ -5,7 +5,8 @@ class VPNConnectionOrchestrator:
         view,
         session_orchestrator,
         vpnconnection_ctrl=None,
-        vpnservers_controller=None
+        vpnservers_orchestrator=None,
+        user_settings=None
     ):
         self._view = view
         self._session_orchestrator = session_orchestrator
@@ -16,30 +17,33 @@ class VPNConnectionOrchestrator:
         else:
             self._vpnconnection_ctrl = vpnconnection_ctrl
 
-        if not vpnservers_controller:
-            from protonvpn.core_api.controllers import VPNServersController
-            self._vpnserver_ctlr = VPNServersController(
-                self._session_orchestrator.session,
-                self._session_orchestrator.tier,
+        if not vpnservers_orchestrator:
+            from ..vpnserver import VPNServerOrchestrator
+            self._vpnservers_orchestrator = VPNServerOrchestrator(
+                self._session_orchestrator
             )
         else:
-            self._vpnserver_ctlr = vpnservers_controller
+            self._vpnservers_orchestrator = vpnservers_orchestrator
 
     def setup(self, protocol, backend=None):
         self._vpnconnection_ctrl.setup(protocol, backend)
 
-    def connect(self, servername: str, settings=None):
-        vpnserver = self._get_server_by_name(servername)
+    def connect(self, **kwargs):
+        vpnserver = self._vpnservers_orchestrator.get_server(**kwargs)
         if not vpnserver:
+            self._view.display_error("Could not find server with provided arguments")
             return
 
         vpnserver.tcp_ports = [443, 5995, 8443, 5060]
         vpnserver.udp_ports = [80, 443, 4569, 1194, 5060, 51820]
 
+        # Could be passed via a property or passed in init
+        _settings = None
+
         self._vpnconnection_ctrl.connect(
             vpnserver,
-            self._session_orchestrator._account,
-            settings
+            self._session_orchestrator.credentials,
+            _settings
         )
         self._view.display_info(
             "Connected to {} with".format(vpnserver.servername)
@@ -48,12 +52,3 @@ class VPNConnectionOrchestrator:
     def disconnect(self):
         self._vpnconnection_ctrl.disconnect()
         self._view.display_info("Disconnected")
-
-    def _get_server_by_name(self, servername: str):
-        try:
-            return self._vpnserver_ctlr.get_vpn_server(servername)
-        except IndexError:
-            self._view.display_info(
-                "Could not find server {}".format(servername)
-            )
-            return False

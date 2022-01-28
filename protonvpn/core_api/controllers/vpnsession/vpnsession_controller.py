@@ -18,6 +18,37 @@ class VPNSessionController:
 
         self._session = sso.get_session(username)
 
+    def api_request(self, *args, **kwargs) -> dict:
+        return self._session.api_request(*args, **kwargs)
+
+    @property
+    def vpn_logicals(self) -> dict:
+        return self._session.api_request("/vpn/logicals")
+
+    @property
+    def vpn_loads(self) -> dict:
+        return self._session.api_request("/vpn/loads")
+
+    @property
+    def vpn_client_config(self) -> dict:
+        return self._session.api_request("/vpn/clientconfig")
+
+    @property
+    def vpn_location(self) -> dict:
+        return self._session.api_request("/vpn/location")
+
+    @property
+    def vpn_sessions(self) -> dict:
+        return self._session.api_request("/vpn/sessions")
+
+    @property
+    def vpn_streaming_services(self) -> dict:
+        return self._session.api_request("/vpn/streamingservices")
+
+    @property
+    def notification(self) -> dict:
+        return self._session.api_request("/core/v4/notifications")
+
     def login(self, user: str, password: str) -> bool:
         if self._session.authenticate(user, password):
             return True
@@ -39,10 +70,6 @@ class VPNSessionController:
             return True
 
         return False
-
-    @property
-    def session(self):
-        return self._session
 
     @property
     def username(self):

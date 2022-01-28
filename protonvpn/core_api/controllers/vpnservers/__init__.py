@@ -1,3 +1,3 @@
-from .servers_controller import VPNServersController, VPNServerConfigChoices
+from .servers_controller import VPNServersController
 
-__all__ = ['VPNServersController', 'VPNServerConfigChoices']
+__all__ = ['VPNServersController']

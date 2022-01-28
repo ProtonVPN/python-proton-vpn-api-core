@@ -80,7 +80,7 @@ class VPNSessionOrchestrator:
         return False
 
     @property
-    def session(self):
+    def vpnsession_ctrl(self):
         return self._vpnsession_ctrl
 
     @property
@@ -92,5 +92,5 @@ class VPNSessionOrchestrator:
         return self._vpncred_ctrl.vpnaccount.max_tier
 
     @property
-    def _account(self):
-        return self._vpncred_ctrl.vpnaccount
+    def credentials(self):
+        return self._vpncred_ctrl.vpnaccount.get_credentials()

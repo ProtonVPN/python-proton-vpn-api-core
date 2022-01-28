@@ -23,9 +23,12 @@ class Application:
     def authenticated(self) -> bool:
         return self._session_orchestrator.authenticated
 
-    def connect(self, servername, protocol):
-        self._connection_orchestrator.setup(protocol)
-        self._connection_orchestrator.connect(servername)
+    def connect(self, protocol=None, **kwargs):
+        _protocol = protocol
+        # if not _protocol:
+        # from user settings fetch protocol
+        self._connection_orchestrator.setup(_protocol)
+        self._connection_orchestrator.connect(**kwargs)
 
     def disconnect(self):
         self._connection_orchestrator.disconnect()
