@@ -9,7 +9,7 @@ from .abstract_user_settings import (AbstractUserSettings,
                                      VPNAcceleratorEnum,
                                      PortForwardingEnum,
                                      RandomNatEnum,
-                                     SafeModeEnum)
+                                     SafeModeEnum, IPv6Enum)
 from .persistence import FilePersistence
 
 
@@ -58,7 +58,8 @@ class BasicSettings(AbstractUserSettings):
         UserConfigTemplateEnum.VPN_ACCELERATOR: VPNAcceleratorEnum.ENABLE,
         UserConfigTemplateEnum.PORT_FORWARDING: PortForwardingEnum.DISABLE,
         UserConfigTemplateEnum.RANDOM_NAT: RandomNatEnum.ENABLE,
-        UserConfigTemplateEnum.SAFE_MODE : SafeModeEnum.DISABLE,
+        UserConfigTemplateEnum.SAFE_MODE: SafeModeEnum.DISABLE,
+        UserConfigTemplateEnum.IPV6: IPv6Enum.DISABLE,
         UserConfigTemplateEnum.ALTERNATIVE_ROUTING: AlternativeRoutingEnum.DISABLE,
         UserConfigTemplateEnum.SECURE_CORE: SecureCoreEnum.DISABLE,
         UserConfigTemplateEnum.EVENT_NOTIFICATION: NotificationEnum.UNKNOWN,
@@ -76,12 +77,12 @@ class BasicSettings(AbstractUserSettings):
             self._persistence = FilePersistence(_template, UserConfigTemplateEnum, fp)
 
     @property
-    def netshield(self) -> NetshieldEnum:
+    def netshield(self) -> "NetshieldEnum":
         """Get netshield to specified option."""
         return self._get(UserConfigTemplateEnum.NETSHIELD, NetshieldEnum.DISABLE, NetshieldEnum)
 
     @netshield.setter
-    def netshield(self, enum_value: NetshieldEnum):
+    def netshield(self, enum_value: "NetshieldEnum"):
         """Set user netshield setting.
 
         :param enum_value: enum constant, ie: NetshieldEnum.DISABLED
@@ -90,12 +91,12 @@ class BasicSettings(AbstractUserSettings):
         self._set(UserConfigTemplateEnum.NETSHIELD, NetshieldEnum(enum_value))
 
     @property
-    def killswitch(self) -> KillswitchEnum:
+    def killswitch(self) -> "KillswitchEnum":
         """Get user Kill Switch setting."""
         return self._get(UserConfigTemplateEnum.KILLSWITCH, KillswitchEnum.DISABLE, KillswitchEnum)
 
     @killswitch.setter
-    def killswitch(self, enum_value: KillswitchEnum):
+    def killswitch(self, enum_value: "KillswitchEnum"):
         """Set Kill Switch to specified option.
 
         :param enum_value: enum constant, ie: KillswitchEnum.PERMANENT
@@ -104,7 +105,7 @@ class BasicSettings(AbstractUserSettings):
         self._set(UserConfigTemplateEnum.KILLSWITCH, KillswitchEnum(enum_value))
 
     @property
-    def secure_core(self) -> SecureCoreEnum:
+    def secure_core(self) -> "SecureCoreEnum":
         """Get Secure Core setting.
 
         This is mostly for GUI as it might not be very
@@ -113,7 +114,7 @@ class BasicSettings(AbstractUserSettings):
         return self._get(UserConfigTemplateEnum.SECURE_CORE, SecureCoreEnum.DISABLE, SecureCoreEnum)
 
     @secure_core.setter
-    def secure_core(self, enum_value: SecureCoreEnum):
+    def secure_core(self, enum_value: "SecureCoreEnum"):
         """set Secure Core setting.
 
         :param enum_value: enum constant, ie: SecureCoreEnum.ENABLE
@@ -122,7 +123,7 @@ class BasicSettings(AbstractUserSettings):
         self._set(UserConfigTemplateEnum.SECURE_CORE, SecureCoreEnum(enum_value))
 
     @property
-    def alternative_routing(self) -> AlternativeRoutingEnum:
+    def alternative_routing(self) -> "AlternativeRoutingEnum":
         """Get alternative routing setting."""
         return self._get(
             UserConfigTemplateEnum.ALTERNATIVE_ROUTING, AlternativeRoutingEnum.DISABLE,
@@ -130,7 +131,7 @@ class BasicSettings(AbstractUserSettings):
         )
 
     @alternative_routing.setter
-    def alternative_routing(self, enum_value: AlternativeRoutingEnum):
+    def alternative_routing(self, enum_value: "AlternativeRoutingEnum"):
         """Set alternative routing setting.
 
         :param enum_value: enum constant, ie: AlternativeRoutingEnum.ENABLE
@@ -139,12 +140,12 @@ class BasicSettings(AbstractUserSettings):
         self._set(UserConfigTemplateEnum.ALTERNATIVE_ROUTING, AlternativeRoutingEnum(enum_value))
 
     @property
-    def protocol(self) -> ProtocolEnum:
+    def protocol(self) -> "ProtocolEnum":
         """Get default protocol."""
         return self._get(UserConfigTemplateEnum.PROTOCOL, ProtocolEnum.OPENVPN_UDP, ProtocolEnum)
 
     @protocol.setter
-    def protocol(self, enum_value: ProtocolEnum):
+    def protocol(self, enum_value: "ProtocolEnum"):
         """Set default protocol setting.
 
         :param enum_value: enum constant, ie: ProtocolEnum.OPENVPN_TCP
@@ -153,7 +154,7 @@ class BasicSettings(AbstractUserSettings):
         self._set(UserConfigTemplateEnum.PROTOCOL, ProtocolEnum(enum_value))
 
     @property
-    def split_tunneling(self) -> SplitTunnelingEnum:
+    def split_tunneling(self) -> "SplitTunnelingEnum":
         """Get split tunneling status."""
         return self._get(
             UserConfigTemplateEnum.SPLIT_TUNNELING_STATUS, SplitTunnelingEnum.DISABLE,
@@ -161,7 +162,7 @@ class BasicSettings(AbstractUserSettings):
         )
 
     @split_tunneling.setter
-    def split_tunneling(self, enum_value: SplitTunnelingEnum):
+    def split_tunneling(self, enum_value: "SplitTunnelingEnum"):
         """Set split tunneling status.
 
         :param enum_value: enum constant, ie: SplitTunnelingEnum.ENABLE
@@ -184,12 +185,12 @@ class BasicSettings(AbstractUserSettings):
         self._set(UserConfigTemplateEnum.SPLIT_TUNNELING_IP_LIST, ips_to_split_from_vpn)
 
     @property
-    def dns(self) -> DNSEnum:
+    def dns(self) -> "DNSEnum":
         """Get user DNS setting."""
         return self._get(UserConfigTemplateEnum.DNS_STATUS, DNSEnum.AUTOMATIC, DNSEnum)
 
     @dns.setter
-    def dns(self, enum_value: DNSEnum):
+    def dns(self, enum_value: "DNSEnum"):
         """Set DNS setting.
 
         :param enum_value: enum constant, ie: DNSEnum.AUTOMATIC
@@ -212,7 +213,7 @@ class BasicSettings(AbstractUserSettings):
         self._set(UserConfigTemplateEnum.DNS_IP_LIST, custom_ips)
 
     @property
-    def vpn_accelerator(self) -> VPNAcceleratorEnum:
+    def vpn_accelerator(self) -> "VPNAcceleratorEnum":
         """Get user VPN Accelerator setting."""
         return self._get(
             UserConfigTemplateEnum.VPN_ACCELERATOR, VPNAcceleratorEnum.ENABLE,
@@ -220,7 +221,7 @@ class BasicSettings(AbstractUserSettings):
         )
 
     @vpn_accelerator.setter
-    def vpn_accelerator(self, enum_value: VPNAcceleratorEnum):
+    def vpn_accelerator(self, enum_value: "VPNAcceleratorEnum"):
         """Set VPN Accelerator lis.
 
         :param enum_value: enum constant, ie: VPNAcceleratorEnum.ENABLE
@@ -229,7 +230,7 @@ class BasicSettings(AbstractUserSettings):
         self._set(UserConfigTemplateEnum.VPN_ACCELERATOR, enum_value)
 
     @property
-    def port_forwarding(self) -> PortForwardingEnum:
+    def port_forwarding(self) -> "PortForwardingEnum":
         """Get user VPN Port forwarding setting."""
         return self._get(
             UserConfigTemplateEnum.PORT_FORWARDING, PortForwardingEnum.DISABLE,
@@ -237,7 +238,7 @@ class BasicSettings(AbstractUserSettings):
         )
 
     @port_forwarding.setter
-    def port_forwarding(self, enum_value: PortForwardingEnum):
+    def port_forwarding(self, enum_value: "PortForwardingEnum"):
         """Set VPN Port forwarding value
 
         :param enum_value: enum constant, ie: PortForwardingEnum.ENABLE
@@ -246,7 +247,7 @@ class BasicSettings(AbstractUserSettings):
         self._set(UserConfigTemplateEnum.PORT_FORWARDING, enum_value)
 
     @property
-    def random_nat(self) -> RandomNatEnum:
+    def random_nat(self) -> "RandomNatEnum":
         """Get user VPN random nat settings."""
         return self._get(
             UserConfigTemplateEnum.RANDOM_NAT, RandomNatEnum.ENABLE,
@@ -254,7 +255,7 @@ class BasicSettings(AbstractUserSettings):
         )
 
     @random_nat.setter
-    def random_nat(self, enum_value: RandomNatEnum):
+    def random_nat(self, enum_value: "RandomNatEnum"):
         """Set VPN random nat value
 
         :param enum_value: enum constant, ie: RandomNatEnum.ENABLE
@@ -263,7 +264,7 @@ class BasicSettings(AbstractUserSettings):
         self._set(UserConfigTemplateEnum.RANDOM_NAT, enum_value)
 
     @property
-    def safe_mode(self) -> SafeModeEnum:
+    def safe_mode(self) -> "SafeModeEnum":
         """Get user VPN safe mode settings."""
         return self._get(
             UserConfigTemplateEnum.SAFE_MODE, SafeModeEnum.DISABLE,
@@ -271,7 +272,7 @@ class BasicSettings(AbstractUserSettings):
         )
 
     @safe_mode.setter
-    def safe_mode(self, enum_value: SafeModeEnum):
+    def safe_mode(self, enum_value: "SafeModeEnum"):
         """Set VPN safe mode value
 
         :param enum_value: enum constant, ie: SafeMode.ENABLE
@@ -280,7 +281,24 @@ class BasicSettings(AbstractUserSettings):
         self._set(UserConfigTemplateEnum.SAFE_MODE, enum_value)
 
     @property
-    def event_notification(self) -> NotificationEnum:
+    def ipv6(self) -> "IPv6Enum":
+        """Get user IPv6 settings."""
+        return self._get(
+            UserConfigTemplateEnum.IPV6, IPv6Enum.DISABLE,
+            IPv6Enum
+        )
+
+    @ipv6.setter
+    def ipv6(self, enum_value: "IPv6Enum"):
+        """Set VPN safe mode value
+
+        :param enum_value: enum constant, ie: IPv6Enum.ENABLE
+        :type enum_value: IPv6Enum
+        """
+        self._set(UserConfigTemplateEnum.IPV6, enum_value)
+
+    @property
+    def event_notification(self) -> "NotificationEnum":
         """Get event notification setting."""
         return self._get(
             UserConfigTemplateEnum.EVENT_NOTIFICATION, NotificationEnum.UNKNOWN,
@@ -288,7 +306,7 @@ class BasicSettings(AbstractUserSettings):
         )
 
     @event_notification.setter
-    def event_notification(self, enum_value: NotificationEnum):
+    def event_notification(self, enum_value: "NotificationEnum"):
         """Set event notification.
 
         :param enum_value: enum constant, ie: NotificationEnum.OPENED
@@ -314,6 +332,9 @@ class BasicSettings(AbstractUserSettings):
         """
         self._set(UserConfigTemplateEnum.UI_LANGUAGE, value)
 
+    def get_vpn_settings(self):
+        return VPNSettings(self)
+
     def reset_to_default_configs(self) -> bool:
         """Reset user configuration to default values."""
         pass
@@ -329,3 +350,41 @@ class BasicSettings(AbstractUserSettings):
 
     def _set(self, enum, new_value):
         self._persistence._set(enum, new_value)
+
+
+class VPNSettings:
+
+    def __init__(self, user_settings_orchestrator):
+        self.__vpn_settings_orch = user_settings_orchestrator
+
+    @property
+    def netshield(self) -> int:
+        return self.__vpn_settings_orch.netshield.value
+
+    @property
+    def dns_custom_ips(self) -> List[str]:
+        return self.__vpn_settings_orch.dns_custom_ips
+
+    @property
+    def split_tunneling_ips(self) -> List[str]:
+        return self.__vpn_settings_orch.split_tunneling_ips
+
+    @property
+    def safe_mode(self) -> bool:
+        return self.__vpn_settings_orch.safe_mode.value
+
+    @property
+    def random_nat(self) -> bool:
+        return self.__vpn_settings_orch.random_nat.value
+
+    @property
+    def vpn_accelerator(self) -> bool:
+        return self.__vpn_settings_orch.vpn_accelerator.value
+
+    @property
+    def port_forwarding(self) -> bool:
+        return self.__vpn_settings_orch.port_forwarding.value
+
+    @property
+    def ipv6(self) -> bool:
+        return self.__vpn_settings_orch.ipv6.value

@@ -4,12 +4,13 @@ class VPNConnectionOrchestrator:
         self,
         view,
         session_orchestrator,
+        usersettings_orchestrator=None,
         vpnconnection_ctrl=None,
-        vpnservers_orchestrator=None,
-        user_settings=None
+        vpnservers_orchestrator=None
     ):
         self._view = view
         self._session_orchestrator = session_orchestrator
+        self._usersettings_orchestrator = usersettings_orchestrator
 
         if not vpnconnection_ctrl:
             from protonvpn.core_api.controllers import VPNConnectionController
@@ -37,13 +38,10 @@ class VPNConnectionOrchestrator:
         vpnserver.tcp_ports = [443, 5995, 8443, 5060]
         vpnserver.udp_ports = [80, 443, 4569, 1194, 5060, 51820]
 
-        # Could be passed via a property or passed in init
-        _settings = None
-
         self._vpnconnection_ctrl.connect(
             vpnserver,
             self._session_orchestrator.credentials,
-            _settings
+            self._usersettings_orchestrator.get_vpn_settings()
         )
         self._view.display_info(
             "Connected to {} with".format(vpnserver.servername)
