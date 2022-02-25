@@ -23,7 +23,9 @@ class FilePersistence(JSONEnumSerializer):
     split-tunneling-status.
 
     Basic usage:
-    ::
+
+    .. code-block::
+
         from enum import Enum
 
         class SettingKeyEnum(Enum):
