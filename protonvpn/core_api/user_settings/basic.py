@@ -22,7 +22,9 @@ class BasicSettings(AbstractUserSettings):
     by default.
 
     Usage:
-    ::
+
+    .. code-block::
+
         from protonvpn.core_api.user_settings import BasicSettings
 
         s = BasicSettings()
