@@ -1,7 +1,5 @@
 from proton.session.exceptions import (ProtonAPI2FANeeded,
                                        ProtonAPIAuthenticationNeeded)
-from proton.vpn.session import VPNSession
-from proton.sso import ProtonSSO
 
 class VPNCredentialController:
 
@@ -24,6 +22,9 @@ class VPNCredentialController:
 
 
     def _get_vpnsession(self, username:str=None) -> VPNSession:
+        from proton.vpn.session import VPNSession
+        from proton.sso import ProtonSSO
+
         sso = ProtonSSO()
         if username is None:
             return sso.get_default_session(override_class=VPNSession)
