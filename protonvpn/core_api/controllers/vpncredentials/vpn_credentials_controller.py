@@ -21,7 +21,7 @@ class VPNCredentialController:
             self._cert_duration = wanted_cert_duration
 
 
-    def _get_vpnsession(self, username:str=None) -> VPNSession:
+    def _get_vpnsession(self, username:str=None) -> "VPNSession":
         from proton.vpn.session import VPNSession
         from proton.sso import ProtonSSO
 
