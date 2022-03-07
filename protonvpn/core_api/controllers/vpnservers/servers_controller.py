@@ -1,10 +1,3 @@
-from asyncio.base_events import Server
-from proton.session import Session
-from proton.vpn.servers import ServerList, CachedServerList
-from proton.vpn.servers.exceptions import EmptyServerListError
-from proton.vpn.servers.list import ServerFeatureEnum, ServerTierEnum
-from proton.vpn.servers.exceptions import ServerFileCacheNotFound, ProtonVPNServerListError
-from .country import Country
 from typing import Optional
 
 
