@@ -4,16 +4,16 @@ class VPNConnectionController:
         _vpnconn_factory = vpnconnection_factory
 
         if not _vpnconn_factory:
-            from protonvpn.vpnconnection import VPNConnection
+            from proton.vpn.connection import VPNConnection
             _vpnconn_factory = VPNConnection
 
         self._vpnconnection_factory = _vpnconn_factory
 
     def setup(self, protocol, backend=None):
-        _protocol = "openvpn_udp"
+        _protocol = "openvpn-udp"
 
         if "openvpn" in protocol.lower() and "tcp" in protocol.lower():
-            _protocol = "openvpn_tcp"
+            _protocol = "openvpn-tcp"
         elif "ikev2" in protocol.lower():
             _protocol = "ikev2"
         elif "wg" in protocol.lower() or "wireguard" in protocol.lower():

@@ -31,8 +31,8 @@ class VPNServersController:
             self._sl = cached_serverlist
 
     def _get_cached_server_list(self) -> "CachedServerList":
-        from protonvpn.servers import CachedServerList
-        from protonvpn.servers.exceptions import ServerFileCacheNotFound
+        from proton.vpn.servers import CachedServerList
+        from proton.vpn.servers.exceptions import ServerFileCacheNotFound
 
         try:
             sl = CachedServerList()

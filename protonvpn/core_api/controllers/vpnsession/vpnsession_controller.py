@@ -9,14 +9,15 @@ class VPNSessionController:
 
     def __set_session(self, username):
         from proton.sso import ProtonSSO
+        from proton.vpn.session import VPNSession
 
         sso = ProtonSSO()
 
         if username is None:
-            self._session = sso.get_default_session()
+            self._session = sso.get_default_session(override_class=VPNSession)
             return
 
-        self._session = sso.get_session(username)
+        self._session = sso.get_session(username, override_class=VPNSession)
 
     def api_request(self, *args, **kwargs) -> dict:
         return self._session.api_request(*args, **kwargs)

@@ -32,7 +32,6 @@ class VPNSessionOrchestrator:
                 self._vpncred_ctrl = VPNCredentialController(
                     self._vpnsession_ctrl.username, cert_duration
                 )
-                self._refresh()
                 self._view.display_info('login successfull')
                 return True
             except ProtonAPI2FANeeded:
@@ -40,7 +39,6 @@ class VPNSessionOrchestrator:
                 auth2fatoken = self._view.ask_for_2fa()
 
                 if self._vpnsession_ctrl.set2fa(auth2fatoken):
-                    self._refresh()
                     self._view.display_info('login successfull')
                     return True
 
@@ -52,7 +50,6 @@ class VPNSessionOrchestrator:
 
     def logout(self) -> bool:
         if self.authenticated:
-            self._vpncred_ctrl.vpnaccount.clear()
             self._vpnsession_ctrl.logout()
             self._view.display_info('logged out')
             return True
@@ -60,8 +57,6 @@ class VPNSessionOrchestrator:
         self._view.display_info('you are already logged out')
         return False
 
-    def _refresh(self):
-        self._vpncred_ctrl.refresh_vpn_credentials()
 
     def set2fa(self, code: str) -> bool:
         if self._session.provide_2fa(code):
@@ -93,4 +88,4 @@ class VPNSessionOrchestrator:
 
     @property
     def credentials(self):
-        return self._vpncred_ctrl.vpnaccount.get_credentials()
+        return self._vpncred_ctrl.vpnaccount.vpn_credentials
