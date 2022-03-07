@@ -1,7 +1,7 @@
 import os
 
-from protonvpn.core_api.controllers.usersettings import BasicSettings
-from protonvpn.core_api.controllers.usersettings.abstract_user_settings import (
+from proton.vpn.core_api.controllers.usersettings import BasicSettings
+from proton.vpn.core_api.controllers.usersettings.abstract_user_settings import (
     AlternativeRoutingEnum, DNSEnum, KillswitchEnum, NetshieldEnum,
     NotificationEnum, ProtocolEnum, SecureCoreEnum, SplitTunnelingEnum,
     VPNAcceleratorEnum)
