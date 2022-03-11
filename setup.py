@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 setup(
     name="python-protonvpn-api-core",
@@ -10,7 +10,7 @@ setup(
     author_email="contact@protonmail.com",
     url="https://github.com/ProtonMail/python-protonvpn-api-core",
     install_requires=["python-protonvpn-connection"],
-    packages=find_packages(include=['proton.vpn.core_api']),
+    packages=find_namespace_packages(include=['proton.vpn.core_api.*']),
     include_package_data=True,
     license="GPLv3",
     platforms="Linux",
