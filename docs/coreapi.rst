@@ -46,7 +46,7 @@ See :
 -  :class:`proton.vpn.core_api.controllers.vpnsession.VPNSessionController`
 -  :class:`proton.vpn.core_api.controllers.vpnconnection.VPNConnectionController`
 -  :class:`proton.vpn.core_api.controllers.vpncredentials.VPNCredentialController`
--  :class:`proton.vpn.core_api.controllers.vpnserver.VPNServersController`
+-  :class:`proton.vpn.core_api.controllers.vpnservers.VPNServersController`
 
 For controllers documentation.
 
