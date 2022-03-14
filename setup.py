@@ -3,13 +3,13 @@
 from setuptools import setup, find_namespace_packages
 
 setup(
-    name="python-protonvpn-api-core",
-    version="0.0.0",
+    name="proton-vpn-api-core",
+    version="0.0.1",
     description="Proton Technologies VPN Core API",
     author="Proton Technologies",
     author_email="contact@protonmail.com",
     url="https://github.com/ProtonMail/python-protonvpn-api-core",
-    install_requires=["python-protonvpn-connection"],
+    install_requires=["proton-vpn-connection"],
     packages=find_namespace_packages(include=['proton.vpn.core_api*']),
     include_package_data=True,
     license="GPLv3",
