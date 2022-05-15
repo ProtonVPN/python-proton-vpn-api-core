@@ -352,14 +352,35 @@ class BasicSettings(AbstractUserSettings):
         self._persistence._set(enum, new_value)
 
 
+class Features:
+
+    def __init__(self, settings):
+        self._settings = settings
+
+    @property
+    def netshield(self) -> int:
+        return self._settings.netshield.value
+
+    @property
+    def random_nat(self) -> bool:
+        return self._settings.random_nat == RandomNatEnum.ENABLE
+
+    @property
+    def vpn_accelerator(self) -> bool:
+        return self._settings.vpn_accelerator == VPNAcceleratorEnum.ENABLE
+
+    @property
+    def port_forwarding(self) -> bool:
+        return self._settings.port_forwarding == PortForwardingEnum.ENABLE
+
+    @property
+    def safe_mode(self) -> bool:
+        return self._settings.safe_mode == SafeModeEnum.ENABLE
+
 class VPNSettings:
 
     def __init__(self, user_settings_orchestrator):
         self.__vpn_settings_orch = user_settings_orchestrator
-
-    @property
-    def netshield(self) -> int:
-        return self.__vpn_settings_orch.netshield.value
 
     @property
     def dns_custom_ips(self) -> List[str]:
@@ -370,21 +391,9 @@ class VPNSettings:
         return self.__vpn_settings_orch.split_tunneling_ips
 
     @property
-    def safe_mode(self) -> bool:
-        return self.__vpn_settings_orch.safe_mode.value
-
-    @property
-    def random_nat(self) -> bool:
-        return self.__vpn_settings_orch.random_nat.value
-
-    @property
-    def vpn_accelerator(self) -> bool:
-        return self.__vpn_settings_orch.vpn_accelerator.value
-
-    @property
-    def port_forwarding(self) -> bool:
-        return self.__vpn_settings_orch.port_forwarding.value
-
-    @property
     def ipv6(self) -> bool:
         return self.__vpn_settings_orch.ipv6.value
+
+    @property
+    def features(self) -> "Features":
+        return Features(self.__vpn_settings_orch)
