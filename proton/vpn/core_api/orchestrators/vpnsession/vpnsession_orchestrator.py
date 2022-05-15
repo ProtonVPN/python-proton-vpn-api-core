@@ -5,10 +5,10 @@ class VPNSessionOrchestrator:
         self._vpncred_ctrl = None
 
         if (username or not username) and not session_controller and not vpn_credentials_controller:
-            from protonvpn.core_api.controllers.vpnsession import VPNSessionController
+            from proton.vpn.core_api.controllers.vpnsession import VPNSessionController
             self._vpnsession_ctrl = VPNSessionController(username)
 
-            from protonvpn.core_api.controllers.vpncredentials import VPNCredentialController
+            from proton.vpn.core_api.controllers.vpncredentials import VPNCredentialController
             self._vpncred_ctrl = VPNCredentialController(self._vpnsession_ctrl.username)
 
         elif not username and session_controller and vpn_credentials_controller:
@@ -25,7 +25,7 @@ class VPNSessionOrchestrator:
             password = self._view.ask_for_login()
 
         if self._vpnsession_ctrl.login(username, password):
-            from protonvpn.core_api.controllers.vpncredentials import VPNCredentialController
+            from proton.vpn.core_api.controllers.vpncredentials import VPNCredentialController
             from proton.session.exceptions import ProtonAPI2FANeeded
 
             try:

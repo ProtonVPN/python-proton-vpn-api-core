@@ -13,7 +13,7 @@ class VPNConnectionOrchestrator:
         self._usersettings_orchestrator = usersettings_orchestrator
 
         if not vpnconnection_ctrl:
-            from protonvpn.core_api.controllers import VPNConnectionController
+            from proton.vpn.core_api.controllers import VPNConnectionController
             self._vpnconnection_ctrl = VPNConnectionController()
         else:
             self._vpnconnection_ctrl = vpnconnection_ctrl

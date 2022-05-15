@@ -6,7 +6,7 @@ class UserSettingsOrchestrator:
 
     def __init__(self, settings=None):
         if not settings:
-            from protonvpn.core_api.controllers.usersettings import BasicSettings
+            from proton.vpn.core_api.controllers.usersettings import BasicSettings
             from proton.utils import ExecutionEnvironment
             path = os.path.join(ExecutionEnvironment().path_config, "settings.json")
             self.__settings = BasicSettings(path)
