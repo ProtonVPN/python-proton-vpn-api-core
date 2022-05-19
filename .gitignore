@@ -10,3 +10,5 @@ __SOURCE_APP
 cov.xml
 html
 .coverage
+.idea
+venv

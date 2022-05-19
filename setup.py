@@ -9,9 +9,13 @@ setup(
     author="Proton Technologies",
     author_email="contact@protonmail.com",
     url="https://github.com/ProtonMail/python-protonvpn-api-core",
-    install_requires=["proton-vpn-connection"],
+    install_requires=["proton-core", "proton-vpn-connection", "proton-vpn-session", "proton-vpn-servers"],
+    extras_require={
+        "development": ["pytest", "pytest-coverage"]
+    },
     packages=find_namespace_packages(include=['proton.vpn.core_api*']),
     include_package_data=True,
+    python_requires=">=3.8",
     license="GPLv3",
     platforms="Linux",
     classifiers=[
