@@ -1,3 +1,8 @@
+from proton.session.exceptions import ProtonAPI2FANeeded
+from proton.vpn.core_api.controllers.vpnsession import VPNSessionController
+from proton.vpn.core_api.controllers.vpncredentials import VPNCredentialController
+
+
 class VPNSessionOrchestrator:
     def __init__(self, view, username=None, session_controller=None, vpn_credentials_controller=None):
         self._view = view
@@ -5,10 +10,7 @@ class VPNSessionOrchestrator:
         self._vpncred_ctrl = None
 
         if (username or not username) and not session_controller and not vpn_credentials_controller:
-            from proton.vpn.core_api.controllers.vpnsession import VPNSessionController
             self._vpnsession_ctrl = VPNSessionController(username)
-
-            from proton.vpn.core_api.controllers.vpncredentials import VPNCredentialController
             self._vpncred_ctrl = VPNCredentialController(self._vpnsession_ctrl.username)
 
         elif not username and session_controller and vpn_credentials_controller:
@@ -21,32 +23,30 @@ class VPNSessionOrchestrator:
         if self.authenticated:
             self._view.display_info('You are already logged in')
             return True
-        else:
-            password = self._view.ask_for_login()
 
-        if self._vpnsession_ctrl.login(username, password):
-            from proton.vpn.core_api.controllers.vpncredentials import VPNCredentialController
-            from proton.session.exceptions import ProtonAPI2FANeeded
-
-            try:
-                self._vpncred_ctrl = VPNCredentialController(
-                    self._vpnsession_ctrl.username, cert_duration
-                )
-                self._view.display_info('login successfull')
-                return True
-            except ProtonAPI2FANeeded:
-                self._view.display_info('2FA needed')
-                auth2fatoken = self._view.ask_for_2fa()
-
-                if self._vpnsession_ctrl.set2fa(auth2fatoken):
-                    self._view.display_info('login successfull')
-                    return True
-
-            self._vpnsession_ctrl.logout()
+        password = self._view.ask_for_login()
+        if not self._vpnsession_ctrl.login(username, password):
+            self._view.display_info('wrong password')
             return False
 
-        self._view.display_info('wrong password')
-        return False
+        try:
+            # If 2FA is required, an exception will be raised on the first API request
+            self._vpnsession_ctrl.refresh()
+        except ProtonAPI2FANeeded:
+            self._view.display_info('2FA needed')
+            auth2fatoken = self._view.ask_for_2fa()
+            if not self._vpnsession_ctrl.set2fa(auth2fatoken):
+                self._vpnsession_ctrl.logout()
+                return False
+            # As the previous call failed due to 2FA, try to refresh the vpn session info again.
+            self._vpnsession_ctrl.refresh()
+
+        self._vpncred_ctrl = VPNCredentialController(
+            self._vpnsession_ctrl.username, cert_duration
+        )
+
+        self._view.display_info('login successfull')
+        return True
 
     def logout(self) -> bool:
         if self.authenticated:
