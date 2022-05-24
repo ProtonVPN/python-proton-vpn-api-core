@@ -1,3 +1,7 @@
+from proton.sso import ProtonSSO
+from proton.vpn.session import VPNSession
+
+
 class VPNSessionController:
 
     def __init__(self, username=None, session=None):
@@ -8,9 +12,6 @@ class VPNSessionController:
         self.__set_session(username)
 
     def __set_session(self, username):
-        from proton.sso import ProtonSSO
-        from proton.vpn.session import VPNSession
-
         sso = ProtonSSO()
 
         if username is None:
@@ -64,6 +65,9 @@ class VPNSessionController:
             return True
 
         return False
+
+    def refresh(self):
+        self._session.refresh()
 
     @property
     def authenticated(self) -> bool:
