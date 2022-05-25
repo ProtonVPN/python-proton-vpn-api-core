@@ -1,3 +1,9 @@
+protonvpn-coreapi (0.0.2~next-mickael) UNRELEASED; urgency=medium
+
+  * Fixing and simplifying 2FA logic
+
+ -- Mickaël Hoerdt <opensource@proton.me>  Mon, 25 May 2022 16:38:32 +0100
+
 protonvpn-coreapi (0.0.1~next-mickael) UNRELEASED; urgency=medium
 
   * First release
