@@ -5,8 +5,12 @@ include:
  - project: 'ProtonVPN/Linux/new-client/integration/ci-libraries'
    ref: develop
    file: 'gitlab-ci-build-publish-pypi.yml'
+ - project: 'ProtonVPN/Linux/new-client/integration/ci-libraries'
+   ref: develop
+   file: 'gitlab-ci-unit-tests-debian.yml'
 
 stages:
+  - unit-tests-debian
   - publish-pypi
   - build-debian
   - publish-debian
