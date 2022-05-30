@@ -10,7 +10,7 @@ include:
    file: 'gitlab-ci-unit-tests-debian.yml'
 
 stages:
-  - unit-tests-debian
+  - unit-tests
   - publish-pypi
-  - build-debian
-  - publish-debian
+  - build
+  - publish
