@@ -1,82 +1,77 @@
-from typing import Optional
+import logging
+
+from proton.vpn.servers import CachedServerList
+from proton.vpn.servers import ServerFeatureEnum
+from proton.vpn.servers.exceptions import ServerFileCacheNotFound
+from proton.vpn.servers.list import VPNServer
+
+from proton.vpn.core_api.session import SessionHolder
 
 
-class ServernameServerNotFound(Exception):
-    pass
+logger = logging.getLogger(__name__)
 
 
-class VPNServersController:
+class VPNServers:
     LOGICALS_ROUTE = '/vpn/logicals'
 
     """ This implements all the business logic related to ProtonVPN server list.
     """
 
-    def __init__(
-        self,
-        session_orchestrator: Optional["VPNSessionOrchestrator"],
-        cached_serverlist=None
-    ):
-        self._session_orchestrator = session_orchestrator
+    def __init__(self, session_holder: SessionHolder, cached_server_list: CachedServerList = None):
+        self._session_holder = session_holder
+        self._sl = cached_server_list
 
-        if not cached_serverlist:
-            self._sl = self._get_cached_server_list()
-        else:
-            self._sl = cached_serverlist
-
-    def _get_cached_server_list(self) -> "CachedServerList":
-        from proton.vpn.servers import CachedServerList
-        from proton.vpn.servers.exceptions import ServerFileCacheNotFound
+    @property
+    def list(self):
+        if self._sl:
+            return self._sl
 
         try:
-            sl = CachedServerList()
+            self._sl = CachedServerList()
+            return self._sl
         except ServerFileCacheNotFound:
-            sl = CachedServerList(
-                self._session_orchestrator.vpnsession_ctrl.vpn_logicals
-            )
-        return sl
+            logger.debug("Server list cache not found.")
+
+        servers = self._session_holder.session.api_request(self.LOGICALS_ROUTE)
+        self._sl = CachedServerList(servers)
+        return self._sl
+
+    @property
+    def tier(self):
+        return self._session_holder.session.vpn_account.max_tier
 
     def get_fastest_server(self):
-        logical_server = self._sl.get_fastest_server(
-            self._session_orchestrator.tier
-        )
+        logical_server = self.list.get_fastest_server(self.tier)
         return self._get_vpn_server(logical_server.name)
 
     def get_random_server(self):
-        logical_server = self._sl.get_random_server(
-            self._session_orchestrator.tier
-        )
+        logical_server = self.list.get_random_server(self.tier)
         return self._get_vpn_server(logical_server.name)
 
     def get_server_by_country_code(self, country_code):
-        logical_server = self._sl.filter(
+        logical_server = self.list.filter(
             lambda server: server.exit_country.lower() == country_code.lower()
-        ).get_fastest_server(self._session_orchestrator.tier)
+        ).get_fastest_server(self.tier)
 
         return self._get_vpn_server(logical_server.name)
 
     def get_server_with_p2p(self):
-        from protonvpn.servers import ServerFeatureEnum
-        logical_server = self._sl.filter(
-            lambda server: ServerFeatureEnum.P2P in server.features
-            and server.tier <= self._session_orchestrator.tier
+        logical_server = self.list.filter(
+            lambda server: ServerFeatureEnum.P2P in server.features and server.tier <= self.tier
         ).sort(lambda server: server.score)[0]
 
         return self._get_vpn_server(logical_server.name)
 
     def get_server_with_tor(self):
-        from protonvpn.servers import ServerFeatureEnum
-        logical_server = self._sl.filter(
-            lambda server: ServerFeatureEnum.TOR in server.features
-            and server.tier <= self._session_orchestrator.tier
+        logical_server = self.list.filter(
+            lambda server: ServerFeatureEnum.TOR in server.features and server.tier <= self.tier
         ).sort(lambda server: server.score)[0]
 
         return self._get_vpn_server(logical_server.name)
 
     def get_server_with_secure_core(self):
-        from protonvpn.servers import ServerFeatureEnum
-        logical_server = self._sl.filter(
-            lambda server: ServerFeatureEnum.SECURE_CORE in server.features
-            and server.tier <= self._session_orchestrator.tier
+        logical_server = self.list.filter(
+            lambda server: ServerFeatureEnum.SECURE_CORE in server.features and server.tier <= self.tier
         ).sort(lambda server: server.score)[0]
 
         return self._get_vpn_server(logical_server.name)
@@ -102,13 +97,13 @@ class VPNServersController:
         elif country_code:
             return self.get_server_by_country_code(country_code)
         elif p2p:
-           return self.get_server_with_p2p()
+            return self.get_server_with_p2p()
         elif tor:
             return self.get_server_with_tor()
         elif secure_core:
             return self.get_server_with_secure_core()
 
-    def _get_vpn_server(self, logical: str) -> "VPNServer":
+    def _get_vpn_server(self, logical: str) -> VPNServer:
         """
             return an :class:`protonvpn_connection.interfaces.VPNServer` interface from the logical name (DE#13) as a entry. Logical
             name can be secure core logical name also (like CH-FR#1 for ex). It can be directly used
@@ -117,4 +112,4 @@ class VPNServersController:
             :return: an instance of the default VPNServer
             :rtype: VPNServer
         """
-        return self._sl.get_vpn_server(logical)
+        return self.list.get_vpn_server(logical)
