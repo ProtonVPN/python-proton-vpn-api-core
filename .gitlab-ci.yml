@@ -4,6 +4,9 @@ include:
    file: 'gitlab-ci-build-publish-debian.yml'
  - project: 'ProtonVPN/Linux/new-client/integration/ci-libraries'
    ref: develop
+   file: 'gitlab-ci-build-publish-fedora.yml'
+ - project: 'ProtonVPN/Linux/new-client/integration/ci-libraries'
+   ref: develop
    file: 'gitlab-ci-build-publish-pypi.yml'
  - project: 'ProtonVPN/Linux/new-client/integration/ci-libraries'
    ref: develop
