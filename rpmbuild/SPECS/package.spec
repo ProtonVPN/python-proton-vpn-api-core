@@ -1,4 +1,4 @@
-%define unmangled_name proton-vpn-coreapi
+%define unmangled_name proton-vpn-api-core
 %define version 0.0.2
 %define release 1
 
@@ -46,7 +46,7 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 
 %files -f INSTALLED_FILES
 %{python3_sitelib}/proton/
-%{python3_sitelib}/proton_vpn_coreapi-%{version}*.egg-info/
+%{python3_sitelib}/proton_vpn_api_core-%{version}*.egg-info/
 %defattr(-,root,root)
 
 %changelog

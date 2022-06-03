@@ -1,13 +1,12 @@
-Source: protonvpn-coreapi
+Source: protonvpn-api-core
 Section: python
 Priority: optional
 Maintainer: Proton Technologies AG <opensource@proton.me>
-Build-Depends: debhelper (>= 9), dh-python, python3-all, python3-setuptools, python3-proton-vpn-servers, python3-proton-vpn-session, python3-proton-vpn-network-manager-openvpn, python3-proton-vpn-killswitch-network-manager
+Build-Depends: debhelper (>= 9), dh-python, python3-all, python3-setuptools, python3-proton-vpn-servers, python3-proton-vpn-session, python3-provon-vpn-connection, python3-proton-vpn-killswitch
 Standards-Version: 4.1.1
 X-Python3-Version: >= 3.2
 
-Package: python3-proton-vpn-coreapi
+Package: python3-proton-vpn-api-core
 Architecture: all
-Depends: ${python3:Depends}, ${misc:Depends}, python3-proton-vpn-servers, python3-proton-vpn-session, python3-proton-vpn-network-manager-openvpn, python3-proton-vpn-killswitch-network-manager
-Recommends: python3-tabulate
+Depends: ${python3:Depends}, ${misc:Depends}, python3-proton-vpn-servers, python3-proton-vpn-session, python3-proton-vpn-connection, python3-proton-vpn-killswitch
 Description: Python3 ProtonVPN Network Manager OpenVPN Core API
