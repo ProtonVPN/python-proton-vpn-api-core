@@ -16,6 +16,7 @@ class ProtonVPNAPI:
         self.settings = settings or BasicSettings(
             os.path.join(ExecutionEnvironment().path_config, "settings.json")
         )
+        self.__current_connection = None
 
     @property
     def session(self):
@@ -23,7 +24,9 @@ class ProtonVPNAPI:
 
     @property
     def current_connection(self):
-        return VPNConnection.get_current_connection()
+        if not self.__current_connection:
+            self.__current_connection = VPNConnection.get_current_connection()
+        return self.__current_connection
 
     def login(self, username: str, password: str) -> LoginResult:
         return self.session_holder.get_session_for(username).login(username, password)
@@ -34,7 +37,22 @@ class ProtonVPNAPI:
     def logout(self):
         self.session.logout()
 
-    def connect(self, protocol: str = None, backend: str = None, **kwargs):
+    def connect(self, protocol: str = None, backend: str = None, subscriber=None, **kwargs):
+        self._create_connection(protocol, backend, **kwargs)
+        if subscriber:
+            self.current_connection.register(subscriber)
+        self.current_connection.up()
+
+    def disconnect(self, subscriber=None):
+        if not self.current_connection:
+            raise VPNConnectionNotFound("No VPN connection was established yet.")
+
+        if subscriber:
+            self.current_connection.register(subscriber)
+
+        self.current_connection.down()
+
+    def _create_connection(self, protocol: str = None, backend: str = None, **kwargs):
         if self.current_connection:
             self.disconnect()
 
@@ -47,16 +65,8 @@ class ProtonVPNAPI:
         server.tcp_ports = [443, 5995, 8443, 5060]
         server.udp_ports = [80, 443, 4569, 1194, 5060, 51820]
 
-        current_connection = connection_backend(
+        self.__current_connection = connection_backend(
             server,
             self.session.vpn_account.vpn_credentials,
             self.settings.get_vpn_settings()
         )
-
-        current_connection.up()
-
-    def disconnect(self):
-        if not self.current_connection:
-            raise VPNConnectionNotFound("No VPN connection was established yet.")
-
-        self.current_connection.down()
