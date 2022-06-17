@@ -2,9 +2,9 @@ import threading
 
 from proton.vpn.connection import VPNConnection
 from proton.vpn.connection.enum import ConnectionStateEnum
+from proton.vpn.connection.interfaces import VPNServer
 
-from proton.vpn.core_api.exceptions import ServerNotFound, VPNConnectionNotFound
-from proton.vpn.core_api.servers import VPNServers
+from proton.vpn.core_api.exceptions import VPNConnectionNotFound
 from proton.vpn.core_api.session import SessionHolder
 from proton.vpn.core_api.settings import BasicSettings
 
@@ -14,11 +14,11 @@ class VPNConnectionHolder:
         self.current_connection = None
         self.session_holder = session_holder
         self.settings = settings
-        self.servers = VPNServers(session_holder)
+
         self._subscribers = []  # List of subscribers to be added on each new connection.
 
-    def connect(self, protocol: str = None, backend: str = None, **kwargs):
-        self._create_connection(protocol, backend, **kwargs)
+    def connect(self, server: VPNServer, protocol: str = None, backend: str = None):
+        self._create_connection(server, protocol, backend)
         self.current_connection.up()
 
     def disconnect(self):
@@ -43,16 +43,13 @@ class VPNConnectionHolder:
             self.current_connection.unregister(subscriber)
         self._subscribers.remove(subscriber)
 
-    def _create_connection(self, protocol: str = None, backend: str = None, **kwargs):
+    def _create_connection(self, server: VPNServer, protocol: str = None, backend: str = None):
         if self.current_connection:
             self.disconnect()
 
         connection_backend = VPNConnection.get_from_factory(protocol.lower(), backend)
-        server = self.servers.get_server_with_features(**kwargs)
-        if not server:
-            raise ServerNotFound("Server not found.")
 
-        # TODO find out why we need this.
+        # FIXME Do not hardcode ports
         server.tcp_ports = [443, 5995, 8443, 5060]
         server.udp_ports = [80, 443, 4569, 1194, 5060, 51820]
 
