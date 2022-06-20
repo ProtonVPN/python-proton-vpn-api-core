@@ -31,9 +31,12 @@ class VPNServers:
     def get_server_list(self, force_refresh: bool = False):
         if self.__server_list is None:
             local_cache = self.__cache_handler.load()
-            if not local_cache:
-                force_refresh = True
-                self._update_times_for_next_api_call(True)
+            self.__server_list = ServerList()
+
+            if local_cache:
+                self._update_local_cache(local_cache, True)
+
+            self._update_times_for_next_api_call(True)
 
         self._update_servers_if_needed(force_refresh)
 
@@ -71,11 +74,11 @@ class VPNServers:
 
     def _update_times_for_next_api_call(self, logicals_data_updated: bool = False):
         if logicals_data_updated:
-            self.__next_fetch_logicals = self \
+            self.__next_fetch_logicals = self.__server_list \
                 .logicals_update_timestamp.logicals_update_timestamp + \
                 self.FULL_CACHE_TIME_EXPIRE * self.__generate_random_component()
 
-        self.__next_fetch_load = self \
+        self.__next_fetch_load = self.__server_list \
             .logicals_update_timestamp.loads_update_timestamp + \
             self.LOADS_CACHE_TIME_EXPIRE * self.__generate_random_component()
 
@@ -97,46 +100,46 @@ class VPNServers:
             :return: an instance of the default VPNServer
             :rtype: VPNServer
         """
-        return self.server_list.get_vpn_server(servername)
+        return self.get_server_list().get_vpn_server(servername)
 
     def get_server_from_country_code(self, country_code):
-        logical_server = self.server_list.filter(
+        logical_server = self.get_server_list().filter(
             lambda server: server.exit_country.lower() == country_code.lower()
         ).get_fastest_server(self.tier)
 
         return self.get_vpn_server_from_name(logical_server.name)
 
     def get_fastest_server(self):
-        logical_server = self.server_list.get_fastest_server(self.tier)
+        logical_server = self.get_server_list().get_fastest_server(self.tier)
         return self.get_vpn_server_from_name(logical_server.name)
 
     def get_random_server(self):
-        logical_server = self.server_list.get_random_server(self.tier)
+        logical_server = self.get_server_list().get_random_server(self.tier)
         return self.get_vpn_server_from_name(logical_server.name)
 
     def get_server_with_p2p(self):
-        logical_server = self.server_list.filter(
+        logical_server = self.get_server_list().filter(
             lambda server: ServerFeatureEnum.P2P in server.features and server.tier <= self.tier
         ).sort(lambda server: server.score)[0]
 
         return self.get_vpn_server_from_name(logical_server.name)
 
     def get_server_with_streaming(self):
-        logical_server = self.server_list.filter(
+        logical_server = self.get_server_list().filter(
             lambda server: ServerFeatureEnum.STREAMING in server.features and server.tier <= self.tier
         ).sort(lambda server: server.score)[0]
 
         return self.get_vpn_server_from_name(logical_server.name)
 
     def get_server_with_tor(self):
-        logical_server = self.server_list.filter(
+        logical_server = self.get_server_list().filter(
             lambda server: ServerFeatureEnum.TOR in server.features and server.tier <= self.tier
         ).sort(lambda server: server.score)[0]
 
         return self.get_vpn_server_from_name(logical_server.name)
 
     def get_server_with_secure_core(self):
-        logical_server = self.server_list.filter(
+        logical_server = self.get_server_list().filter(
             lambda server: ServerFeatureEnum.SECURE_CORE in server.features and server.tier <= self.tier
         ).sort(lambda server: server.score)[0]
 
