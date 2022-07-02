@@ -5,7 +5,8 @@ from proton.utils import ExecutionEnvironment
 from proton.vpn.core_api.connection import VPNConnectionHolder
 from proton.vpn.core_api.servers import VPNServers
 from proton.vpn.core_api.settings import BasicSettings
-from proton.vpn.core_api.session import SessionHolder, LoginResult
+from proton.vpn.core_api.session import SessionHolder
+from proton.vpn.session.dataclasses import LoginResult
 
 
 class ProtonVPNAPI:
@@ -22,6 +23,9 @@ class ProtonVPNAPI:
 
     def submit_2fa_code(self, code: str) -> LoginResult:
         return self._session_holder.session.provide_2fa(code)
+
+    def is_user_logged_in(self) -> bool:
+        return self._session_holder.session.logged_in
 
     def logout(self):
         self._session_holder.session.logout()
