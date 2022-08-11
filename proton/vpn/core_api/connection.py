@@ -11,7 +11,7 @@ from proton.vpn.core_api.settings import BasicSettings
 
 class VPNConnectionHolder:
     def __init__(self, session_holder: SessionHolder, settings: BasicSettings):
-        self.__current_connection = None
+        self._current_connection = None
         self.session_holder = session_holder
         self.settings = settings
 
@@ -19,32 +19,33 @@ class VPNConnectionHolder:
 
     def connect(self, server: VPNServer, protocol: str = None, backend: str = None):
         self._create_connection(server, protocol, backend)
-        self.__current_connection.up()
+        self._current_connection.up()
 
     def disconnect(self):
-        self.__current_connection = self.__current_connection or VPNConnection.get_current_connection()
-        if self.__current_connection:
+        self._current_connection = self._current_connection or VPNConnection.get_current_connection()
+        if self._current_connection:
             self.register_all_subscribers_to_current_connection()
         else:
             raise VPNConnectionNotFound("No VPN connection was established yet.")
-        self.__current_connection.down()
+        self._current_connection.down()
+        self._current_connection = None
 
     def register(self, subscriber):
         if subscriber in self._subscribers:
             return
-        if self.__current_connection:
-            self.__current_connection.register(subscriber)
+        if self._current_connection:
+            self._current_connection.register(subscriber)
         self._subscribers.append(subscriber)
 
     def unregister(self, subscriber):
         if subscriber not in self._subscribers:
             return
-        if self.__current_connection:
-            self.__current_connection.unregister(subscriber)
+        if self._current_connection:
+            self._current_connection.unregister(subscriber)
         self._subscribers.remove(subscriber)
 
     def _create_connection(self, server: VPNServer, protocol: str = None, backend: str = None):
-        if self.__current_connection:
+        if self._current_connection:
             self.disconnect()
 
         connection_backend = VPNConnection.get_from_factory(protocol.lower(), backend)
@@ -55,7 +56,7 @@ class VPNConnectionHolder:
 
         self.unregister_all_subscribers_from_current_connection()
 
-        self.__current_connection = connection_backend(
+        self._current_connection = connection_backend(
             server,
             self.session_holder.session.vpn_account.vpn_credentials,
             self.settings.get_vpn_settings()
@@ -64,17 +65,18 @@ class VPNConnectionHolder:
         self.register_all_subscribers_to_current_connection()
 
     def register_all_subscribers_to_current_connection(self):
-        if self.__current_connection:
+        if self._current_connection:
             for subscriber in self._subscribers:
-                self.__current_connection.register(subscriber)
+                self._current_connection.register(subscriber)
 
     def unregister_all_subscribers_from_current_connection(self):
-        if self.__current_connection:
+        if self._current_connection:
             for subscriber in self._subscribers:
-                self.__current_connection.unregister(subscriber)
+                self._current_connection.unregister(subscriber)
 
     def get_current_connection(self):
-        return self.__current_connection or VPNConnection.get_current_connection()
+        current_connection = self._current_connection or VPNConnection.get_current_connection()
+        return current_connection
 
 
 class Subscriber:

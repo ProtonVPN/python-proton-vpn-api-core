@@ -7,6 +7,7 @@ from proton.vpn.core_api.servers import VPNServers
 from proton.vpn.core_api.settings import BasicSettings
 from proton.vpn.core_api.session import SessionHolder
 from proton.vpn.session.dataclasses import LoginResult
+from proton.vpn.core_api.exceptions import ActiveVPNConnectionFound
 
 
 class ProtonVPNAPI:
@@ -28,4 +29,7 @@ class ProtonVPNAPI:
         return self._session_holder.session.logged_in
 
     def logout(self):
+        if self.connection.get_current_connection():
+            raise ActiveVPNConnectionFound("Active connection was found")
+
         self._session_holder.session.logout()
