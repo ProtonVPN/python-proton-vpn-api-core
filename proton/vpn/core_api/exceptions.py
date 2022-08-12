@@ -16,8 +16,8 @@ class ServerNotFound(ProtonVPNError):
     pass
 
 
-class ActiveVPNConnectionFound(ProtonError):
-    """When there is an active connection, thus exception is raised.
+class VPNConnectionFoundAtLogout(ProtonError):
+    """An active connection was found when trying to log out.
 
     Its main purpose is to prevent logout while being connected to VPN.
     If a connection is detected then the exception is raised so that clients
