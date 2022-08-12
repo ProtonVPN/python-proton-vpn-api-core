@@ -75,14 +75,16 @@ class VPNServers:
     def _update_times_for_next_api_call(self, logicals_data_updated: bool = False):
         if logicals_data_updated:
             self.__next_fetch_logicals = self._server_list.logicals_update_timestamp + \
-                                         self.FULL_CACHE_TIME_EXPIRE * self.__generate_random_component()
+                                         self.FULL_CACHE_TIME_EXPIRE * \
+                                         self.__generate_random_component()  # noqa: E126
 
         self.__next_fetch_load = self._server_list.loads_update_timestamp + \
-                                 self.LOADS_CACHE_TIME_EXPIRE * self.__generate_random_component()
+                                 self.LOADS_CACHE_TIME_EXPIRE * \
+                                 self.__generate_random_component()  # noqa
 
     def __generate_random_component(self):
         # 1 +/- 0.22*random
-        return (1 + self.RANDOM_FRACTION * (2 * random.random() - 1))
+        return 1 + self.RANDOM_FRACTION * (2 * random.random() - 1)
 
     @property
     def _tier(self):

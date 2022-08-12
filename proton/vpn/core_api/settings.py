@@ -92,6 +92,7 @@ class SafeModeEnum(Enum):
     DISABLE = 0
     ENABLE = 1
 
+
 class IPv6Enum(Enum):
     DISABLE = 0
     ENABLE = 1
@@ -256,6 +257,7 @@ class JSONEnumSerializer:
 
             if val:
                 _internal[k] = val
+
 
 class FilePersistence(JSONEnumSerializer):
     """Persists settings to file.
