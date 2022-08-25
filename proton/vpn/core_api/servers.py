@@ -66,7 +66,7 @@ class VPNServers:
             self._server_list.update_load_data(apidata)
 
         try:
-            self._cache_handler.save()
+            self._cache_handler.save(newdata=apidata)
         except Exception as e:
             # This is not fatal, we only were not capable
             # of storing the cache.
