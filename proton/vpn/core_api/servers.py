@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 class VPNServers:
-    FULL_CACHE_TIME_EXPIRE = 3 * (60 * 60)  # 3h in seconds
-    LOADS_CACHE_TIME_EXPIRE = 15 * 60  # 15min in seconds
+    FULL_CACHE_EXPIRATION_TIME = 3 * (60 * 60)  # 3h in seconds
+    LOADS_CACHE_EXPIRATION_TIME = 15 * 60  # 15min in seconds
 
     RANDOM_FRACTION = 0.22
 
@@ -22,7 +22,10 @@ class VPNServers:
     """
 
     def __init__(
-        self, session_holder: SessionHolder, server_list: ServerList = None, cache_handler: CacheHandler = None
+            self,
+            session_holder: SessionHolder,
+            server_list: ServerList = None,
+            cache_handler: CacheHandler = None
     ):
         self._session_holder = session_holder
         self._cache_handler = cache_handler or CacheHandler
@@ -74,13 +77,13 @@ class VPNServers:
 
     def _update_times_for_next_api_call(self, logicals_data_updated: bool = False):
         if logicals_data_updated:
-            self.__next_fetch_logicals = self._server_list.logicals_update_timestamp + \
-                                         self.FULL_CACHE_TIME_EXPIRE * \
-                                         self.__generate_random_component()  # noqa: E126
+            full_cache_expiration_time = self.FULL_CACHE_EXPIRATION_TIME * \
+                                         self.__generate_random_component()
+            self.__next_fetch_logicals = time.time() + full_cache_expiration_time
 
-        self.__next_fetch_load = self._server_list.loads_update_timestamp + \
-                                 self.LOADS_CACHE_TIME_EXPIRE * \
-                                 self.__generate_random_component()  # noqa
+        loads_cache_expiration_time = self.LOADS_CACHE_EXPIRATION_TIME * \
+                                      self.__generate_random_component()
+        self.__next_fetch_load = time.time() + loads_cache_expiration_time
 
     def __generate_random_component(self):
         # 1 +/- 0.22*random
