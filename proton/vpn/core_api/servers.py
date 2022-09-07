@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 class VPNServers:
-    FULL_CACHE_EXPIRATION_TIME = 3 * (60 * 60)  # 3h in seconds
-    LOADS_CACHE_EXPIRATION_TIME = 15 * 60  # 15min in seconds
+    FULL_CACHE_EXPIRATION_TIME = 3 * 60 * 60  # 3 hours
+    LOADS_CACHE_EXPIRATION_TIME = 15 * 60  # 15 minutes in seconds
 
     RANDOM_FRACTION = 0.22
 
@@ -24,68 +24,66 @@ class VPNServers:
     def __init__(
             self,
             session_holder: SessionHolder,
-            server_list: ServerList = None,
             cache_handler: CacheHandler = None
     ):
         self._session_holder = session_holder
         self._cache_handler = cache_handler or CacheHandler
-        self._server_list = server_list
+        self._server_list = None
+
+        # Timestamps after which the logicals/load cache will expire.
+        self._logicals_expiration_time = 0
+        self._loads_expiration_time = 0
 
     def get_server_list(self, force_refresh: bool = False):
         if self._server_list is None:
             local_cache = self._cache_handler.load()
-            self._server_list = ServerList()
+            self._server_list = ServerList(apidata=local_cache)
+            self._logicals_expiration_time = self._get_logicals_expiration_time(
+                start_time=self._server_list.logicals_update_timestamp
+            )
+            self._loads_expiration_time = self._get_loads_expiration_time(
+                start_time=self._server_list.loads_update_timestamp
+            )
 
-            if local_cache:
-                self._update_local_cache(local_cache, True)
-
-            self._update_times_for_next_api_call(True)
-
-        self._update_servers_if_needed(force_refresh)
+        servers_updated = self._update_servers_if_needed(force_refresh)
+        if servers_updated:
+            try:
+                self._cache_handler.save(newdata=self._server_list.data)
+            except Exception:
+                logger.exception("Could not save server cache.")
 
         return self._server_list
 
-    def _update_servers_if_needed(self, force_refresh):
-        fetched_logicals = None
+    def _update_servers_if_needed(self, force_refresh) -> bool:
+        current_time = time.time()
+        api_response = None
+        if force_refresh or current_time > self._logicals_expiration_time:
+            api_response = self._session_holder.session.api_request(
+                VPNServers.LOGICALS_ROUTE
+            )
+            self._server_list.update_logical_data(api_response)
+            self._logicals_expiration_time = self._get_logicals_expiration_time()
+            self._loads_expiration_time = self._get_loads_expiration_time()
+        elif current_time > self._loads_expiration_time:
+            api_response = self._session_holder.session.api_request(
+                VPNServers.LOADS_ROUTE
+            )
+            self._server_list.update_load_data(api_response)
+            self._loads_expiration_time = self._get_loads_expiration_time()
 
-        if self.__next_fetch_logicals < time.time() or force_refresh:
-            apidata = self._session_holder.session.api_request(VPNServers.LOGICALS_ROUTE)
-            fetched_logicals = True
-        elif self.__next_fetch_load < time.time():
-            apidata = self._session_holder.session.api_request(VPNServers.LOADS_ROUTE)
-            fetched_logicals = False
+        servers_updated = (api_response is not None)
 
-        if fetched_logicals is not None:
-            assert "Code" in apidata
-            assert "LogicalServers" in apidata
+        return servers_updated
 
-            self._update_times_for_next_api_call(fetched_logicals)
-            self._update_local_cache(apidata, fetched_logicals)
+    def _get_logicals_expiration_time(self, start_time: int = None):
+        start_time = start_time if start_time is not None else time.time()
+        return start_time + self.FULL_CACHE_EXPIRATION_TIME * self._generate_random_component()
 
-    def _update_local_cache(self, apidata, update_logicals=False):
-        if update_logicals:
-            self._server_list.update_logical_data(apidata)
-        else:
-            self._server_list.update_load_data(apidata)
+    def _get_loads_expiration_time(self, start_time: int = None):
+        start_time = start_time if start_time is not None else time.time()
+        return start_time + self.LOADS_CACHE_EXPIRATION_TIME * self._generate_random_component()
 
-        try:
-            self._cache_handler.save(newdata=apidata)
-        except Exception as e:
-            # This is not fatal, we only were not capable
-            # of storing the cache.
-            logger.info("Could not save server cache {}".format(e))
-
-    def _update_times_for_next_api_call(self, logicals_data_updated: bool = False):
-        if logicals_data_updated:
-            full_cache_expiration_time = self.FULL_CACHE_EXPIRATION_TIME * \
-                                         self.__generate_random_component()
-            self.__next_fetch_logicals = time.time() + full_cache_expiration_time
-
-        loads_cache_expiration_time = self.LOADS_CACHE_EXPIRATION_TIME * \
-                                      self.__generate_random_component()
-        self.__next_fetch_load = time.time() + loads_cache_expiration_time
-
-    def __generate_random_component(self):
+    def _generate_random_component(self):
         # 1 +/- 0.22*random
         return 1 + self.RANDOM_FRACTION * (2 * random.random() - 1)
 
@@ -93,7 +91,7 @@ class VPNServers:
     def _tier(self):
         return self._session_holder.session.vpn_account.max_tier
 
-    def get_vpn_server_by_name(self, servername: str) -> "VPNServer":
+    def get_vpn_server_by_name(self, servername: str) -> VPNServer:
         """
             return an :class:`protonvpn_connection.interfaces.VPNServer` interface from the logical
             name (DE#13) as a entry. Logical name can be secure core logical name also (like CH-FR#1 for ex).
@@ -101,7 +99,6 @@ class VPNServers:
             (after having setup the ports).
 
             :return: an instance of the default VPNServer
-            :rtype: VPNServer
         """
         return self.get_server_list().get_vpn_server(servername)
 
