@@ -1,3 +1,9 @@
+protonvpn-api-core (0.0.3) UNRELEASED; urgency=medium
+
+  * VPN servers retrieval
+
+ -- Proton Technologies AG <opensource@proton.me>  Thu, 8 Sep 2022 09:30:00 +0200
+
 protonvpn-api-core (0.0.2~next-mickael) UNRELEASED; urgency=medium
 
   * Fixing and simplifying 2FA logic

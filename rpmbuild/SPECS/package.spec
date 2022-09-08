@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.0.2
+%define version 0.0.3
 %define release 1
 
 Prefix: %{_prefix}
@@ -50,5 +50,7 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Thu Sep 8 2022 Proton Technologies AG <opensource@proton.me> 0.0.3
+- VPN servers retrieval
 * Wed Jun 1 2022 Proton Technologies AG <opensource@proton.me> 0.0.2
 - First RPM release
