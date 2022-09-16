@@ -7,6 +7,7 @@ from proton.vpn.connection.interfaces import VPNServer
 from proton.vpn.core_api.exceptions import VPNConnectionNotFound
 from proton.vpn.core_api.session import SessionHolder
 from proton.vpn.core_api.settings import BasicSettings
+from proton.vpn.core_api.logger import logger
 
 
 class VPNConnectionHolder:
@@ -19,6 +20,15 @@ class VPNConnectionHolder:
 
     def connect(self, server: VPNServer, protocol: str = None, backend: str = None):
         self._create_connection(server, protocol, backend)
+
+        ports = server.udp_ports
+        if "tcp" in protocol:
+            ports = server.tcp_ports
+
+        logger.info(
+            f"Server: {server.server_ip} / Protocol: {protocol} / Ports: {ports} / Backend: {backend}",
+            category="CONN", subcategory="CONNECT", event="START"
+        )
         self._current_connection.up()
 
     def disconnect(self):

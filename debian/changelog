@@ -4,6 +4,12 @@ protonvpn-api-core (0.0.4) UNRELEASED; urgency=medium
 
  -- Josep Llaneras <josep.llaneras@proton.ch>  Mon, 19 Sep 2022 10:30:00 +0200
 
+protonvpn-api-core (0.1.0) UNRELEASED; urgency=medium
+
+  * Add logging
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Fri, 16 Sep 2022 09:30:00 +0000
+
 protonvpn-api-core (0.0.3) UNRELEASED; urgency=medium
 
   * VPN servers retrieval
@@ -14,10 +20,10 @@ protonvpn-api-core (0.0.2~next-mickael) UNRELEASED; urgency=medium
 
   * Fixing and simplifying 2FA logic
 
- -- Mickaël Hoerdt <opensource@proton.me>  Mon, 25 May 2022 16:38:32 +0100
+ -- Proton Technologies AG <opensource@proton.me>  Mon, 25 May 2022 16:38:32 +0100
 
 protonvpn-api-core (0.0.1~next-mickael) UNRELEASED; urgency=medium
 
   * First release
 
- -- Mickaël Hoerdt <opensource@proton.me>  Mon, 14 Mar 2022 16:38:32 +0100
+ -- Proton Technologies AG <opensource@proton.me>  Mon, 14 Mar 2022 16:38:32 +0100

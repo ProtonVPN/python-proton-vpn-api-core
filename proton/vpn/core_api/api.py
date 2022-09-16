@@ -8,6 +8,7 @@ from proton.vpn.core_api.settings import BasicSettings
 from proton.vpn.core_api.session import SessionHolder
 from proton.vpn.session.dataclasses import LoginResult
 from proton.vpn.core_api.exceptions import VPNConnectionFoundAtLogout
+from proton.vpn.core_api.logger import logger
 
 
 class ProtonVPNAPI:
