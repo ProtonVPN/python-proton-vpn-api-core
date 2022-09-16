@@ -27,6 +27,7 @@ class VPNConnectionHolder:
             self.register_all_subscribers_to_current_connection()
         else:
             raise VPNConnectionNotFound("No VPN connection was established yet.")
+
         self._current_connection.down()
         self._current_connection = None
 
@@ -75,8 +76,9 @@ class VPNConnectionHolder:
                 self._current_connection.unregister(subscriber)
 
     def get_current_connection(self):
-        current_connection = self._current_connection or VPNConnection.get_current_connection()
-        return current_connection
+        if not self._current_connection:
+            self._current_connection = VPNConnection.get_current_connection()
+        return self._current_connection
 
 
 class Subscriber:
