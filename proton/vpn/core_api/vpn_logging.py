@@ -1,9 +1,7 @@
 import datetime
 import logging
-from logging import Logger
 import os
 from logging.handlers import RotatingFileHandler
-
 from proton.utils.environment import ExecutionEnvironment
 
 
@@ -27,34 +25,11 @@ def _format_log_attributes(category, subcategory, event, optional, msg):
     _event = f":{event}" if event else ""
     _optional = f" | {optional}" if optional else ""
 
-    _msg = f" | {msg}" if msg else ""
+    _msg = ""
+    if msg:
+        _msg = f" | {msg}" if event else f"{msg}"
 
     return f"{_category.upper()}{_subcategory.upper()}{_event.upper()}{_msg}{_optional}"
-
-
-# def _patch_log_methods(logger: Logger, method_name: str):
-#     """Patch default log methods with custom ones.
-#
-#     Since the default logger does not accept any extra arguments, we need to wrap the
-#     default methods with our custom ones, so that we can allow clients to use the arguments
-#     exposed on `new_method()`.
-#     """
-#     original_method = getattr(logger, method_name)
-#
-#     def new_method(msg, *args, category="", subcategory="", event="", optional="", **kwargs):
-#         msg = _format_log_attributes(category, subcategory, event, optional, msg)
-#         original_method(msg, *args, **kwargs)
-#
-#     setattr(logger, method_name, new_method)
-#
-#
-# def getLogger(name):
-#     logger = logging.getLogger(name)
-#
-#     for method_name in ["debug", "info", "warning", "error", "exception", "critical"]:
-#         _patch_log_methods(logger, method_name)
-#
-#     return logger
 
 
 class ProtonAdapter(logging.LoggerAdapter):
@@ -108,7 +83,7 @@ def getLogger(name):
             event="my_event",
             optional="optional stuff"
         )
-    
+
     The resulting log message should look like this:
 
     2022-09-20T07:59:27.393743 | INFO | MY_CATEGORY.MY_SUBCATEGORY:MY_EVENT | my message | optional stuff

@@ -405,7 +405,6 @@ class FilePersistence(JSONEnumSerializer):
 
         Saves the current user settings to file for persistency.
         """
-        print(self._fp)
         json_friendly_format = self.recursive_parse_to_json_format(self.data)
         with open(self._fp, "w+") as f:
             json.dump(json_friendly_format, f, indent=4)
