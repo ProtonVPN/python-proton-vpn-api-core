@@ -22,11 +22,14 @@ class VPNConnectionHolder:
         self._current_connection.up()
 
     def disconnect(self):
-        self._current_connection = self._current_connection or VPNConnection.get_current_connection()
-        if self._current_connection:
-            self.register_all_subscribers_to_current_connection()
-        else:
-            raise VPNConnectionNotFound("No VPN connection was established yet.")
+        if not self._current_connection:
+            # Try to get connection persisted to disk.
+            self._current_connection = VPNConnection.get_current_connection()
+            if self._current_connection:
+                # If a persisted connection was found, register all connection subscribers to it.
+                self.register_all_subscribers_to_current_connection()
+            else:
+                raise VPNConnectionNotFound("No VPN connection was established yet.")
 
         self._current_connection.down()
         self._current_connection = None
