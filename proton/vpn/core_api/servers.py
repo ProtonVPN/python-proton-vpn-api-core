@@ -4,7 +4,10 @@ import time
 from proton.vpn.core_api.session import SessionHolder
 from proton.vpn.servers import ServerList, VPNServer, CacheHandler
 from proton.vpn.servers.enums import ServerFeatureEnum
-from proton.vpn.core_api.logger import logger
+from proton.vpn.core_api import vpn_logging as logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class VPNServers:
@@ -48,7 +51,7 @@ class VPNServers:
             try:
                 self._cache_handler.save(newdata=self._server_list.data)
             except Exception:
-                logger.exception("Could not save server cache.")
+                logger.exception("Could not save server cache.", category="CACHE", subcategory="SERVERS", event="SAVE")
 
         return self._server_list
 
@@ -56,20 +59,20 @@ class VPNServers:
         current_time = time.time()
         api_response = None
         if force_refresh or current_time > self._logicals_expiration_time:
-            logger.info(VPNServers.LOGICALS_ROUTE, category="API", event="REQUEST")
+            logger.info(f"'{VPNServers.LOGICALS_ROUTE}'", category="API", event="REQUEST")
             api_response = self._session_holder.session.api_request(
                 VPNServers.LOGICALS_ROUTE
             )
-            logger.info(VPNServers.LOGICALS_ROUTE, category="API", event="RESPONSE")
+            logger.info(f"'{VPNServers.LOGICALS_ROUTE}'", category="API", event="RESPONSE")
             self._server_list.update_logical_data(api_response)
             self._logicals_expiration_time = self._get_logicals_expiration_time()
             self._loads_expiration_time = self._get_loads_expiration_time()
         elif current_time > self._loads_expiration_time:
-            logger.info(VPNServers.LOADS_ROUTE, category="API", event="REQUEST")
+            logger.info(f"'{VPNServers.LOADS_ROUTE}'", category="API", event="REQUEST")
             api_response = self._session_holder.session.api_request(
                 VPNServers.LOADS_ROUTE
             )
-            logger.info(VPNServers.LOADS_ROUTE, category="API", event="RESPONSE")
+            logger.info(f"'{VPNServers.LOADS_ROUTE}'", category="API", event="RESPONSE")
             self._server_list.update_load_data(api_response)
             self._loads_expiration_time = self._get_loads_expiration_time()
 

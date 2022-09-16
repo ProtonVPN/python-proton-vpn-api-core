@@ -1,10 +1,5 @@
-import logging
-
 from proton.vpn.session import VPNSession
 from proton.sso import ProtonSSO
-
-
-logger = logging.getLogger(__name__)
 
 
 class SessionHolder:
