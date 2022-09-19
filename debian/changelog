@@ -1,8 +1,14 @@
+protonvpn-api-core (0.0.4) UNRELEASED; urgency=medium
+
+  * Cache VPN connection
+
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Mon, 19 Sep 2022 10:30:00 +0200
+
 protonvpn-api-core (0.0.3) UNRELEASED; urgency=medium
 
   * VPN servers retrieval
 
- -- Proton Technologies AG <opensource@proton.me>  Thu, 8 Sep 2022 09:30:00 +0200
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Thu, 8 Sep 2022 09:30:00 +0200
 
 protonvpn-api-core (0.0.2~next-mickael) UNRELEASED; urgency=medium
 
