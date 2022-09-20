@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.0.4
+%define version 0.1.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -50,12 +50,14 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
-* Fri Sep 16 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.1.0
+* Fri Sep 20 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.1.0
 - Add logging
 
 * Thu Sep 19 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.0.4
 - Cache VPN connection
+
 * Thu Sep 8 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.0.3
 - VPN servers retrieval
+
 * Wed Jun 1 2022 Proton Technologies AG <opensource@proton.me> 0.0.2
 - First RPM release
