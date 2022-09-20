@@ -94,6 +94,8 @@ class VPNConnectionHolder:
     def get_current_connection(self):
         if not self._current_connection:
             self._current_connection = VPNConnection.get_current_connection()
+            self.register_all_subscribers_to_current_connection()
+
         return self._current_connection
 
 
