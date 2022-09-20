@@ -26,34 +26,94 @@ def _format_log_attributes(category, subcategory, event, optional, msg):
     _subcategory = f".{subcategory}" if subcategory else ""
     _event = f":{event}" if event else ""
     _optional = f" | {optional}" if optional else ""
+
     _msg = f" | {msg}" if msg else ""
 
     return f"{_category.upper()}{_subcategory.upper()}{_event.upper()}{_msg}{_optional}"
 
 
-def _patch_log_methods(logger: Logger, method_name: str):
-    """Patch default log methods with custom ones.
+# def _patch_log_methods(logger: Logger, method_name: str):
+#     """Patch default log methods with custom ones.
+#
+#     Since the default logger does not accept any extra arguments, we need to wrap the
+#     default methods with our custom ones, so that we can allow clients to use the arguments
+#     exposed on `new_method()`.
+#     """
+#     original_method = getattr(logger, method_name)
+#
+#     def new_method(msg, *args, category="", subcategory="", event="", optional="", **kwargs):
+#         msg = _format_log_attributes(category, subcategory, event, optional, msg)
+#         original_method(msg, *args, **kwargs)
+#
+#     setattr(logger, method_name, new_method)
+#
+#
+# def getLogger(name):
+#     logger = logging.getLogger(name)
+#
+#     for method_name in ["debug", "info", "warning", "error", "exception", "critical"]:
+#         _patch_log_methods(logger, method_name)
+#
+#     return logger
 
-    Since the default logger does not accept any extra arguments, we need to wrap the
-    default methods with our custom ones, so that we can allow clients to use the arguments
-    exposed on `new_method()`.
-    """
-    original_method = getattr(logger, method_name)
 
-    def new_method(msg, *args, category="", subcategory="", event="", optional="", **kwargs):
-        msg = _format_log_attributes(category, subcategory, event, optional, msg)
-        original_method(msg, *args, **kwargs)
+class ProtonAdapter(logging.LoggerAdapter):
+    """Adapter to add the allowed Proton attributes"""
+    ALLOWED_PROTON_ATTRS = ["category", "subcategory", "event", "optional"]
 
-    setattr(logger, method_name, new_method)
+    def process(self, msg, kwargs):
+        # Obtain all Proton logging attributes from kwargs
+        category = kwargs.get("category", None)
+        subcategory = kwargs.get("subcategory", None)
+        event = kwargs.get("event", None)
+        optional = kwargs.get("optional", None)
+
+        # Remove all Proton logging attributes from kwargs before delegating
+        # to logging.Logger as otherwise we would get an error due to
+        # unrecognized kwargs.
+        for proton_attr in ProtonAdapter.ALLOWED_PROTON_ATTRS:
+            try:
+                kwargs.pop(proton_attr)
+            except KeyError:
+                pass
+
+        return _format_log_attributes(category, subcategory, event, optional, msg), kwargs
 
 
 def getLogger(name):
-    logger = logging.getLogger(name)
+    """
+    Returns the logger with the specified name, wrapped in a
+    logging.LoggerAdapter which adds the Proton attributes to the log message.
 
-    for method_name in ["debug", "info", "warning", "error", "exception", "critical"]:
-        _patch_log_methods(logger, method_name)
+    The allowed proton attributes are: category, subcategory, event and optional.
 
-    return logger
+    Usage:
+    .. highlight:: python
+    .. code-block:: python
+
+        import proton.vpn.core_api.vpn_logging as logging
+
+         # 1. config should be called asap, but only once.
+        logging.config("my_log_file")
+
+        # 2. Get a logger per module.
+        logger = logging.getLogger(__name__)
+
+        # 3. Use any of the logger methods (debug, warning, info, error, exception,..)
+        # passing the allowed Proton attributes (or not).
+        logger.info(
+            "my message",
+            category="my_category",
+            subcategory="my_subcategory",
+            event="my_event",
+            optional="optional stuff"
+        )
+    
+    The resulting log message should look like this:
+
+    2022-09-20T07:59:27.393743 | INFO | MY_CATEGORY.MY_SUBCATEGORY:MY_EVENT | my message | optional stuff
+    """
+    return ProtonAdapter(logging.getLogger(name), extra={})
 
 
 def config(filename, logdirpath=None):
@@ -66,19 +126,17 @@ def config(filename, logdirpath=None):
     """
     logger = logging.getLogger()
     logging_level = logging.INFO
-    log_filepath = logdirpath
 
     if filename is None:
         raise ValueError("Filename must be set")
 
     filename = filename + ".log"
 
-    if logdirpath is None:
-        logdirpath = ExecutionEnvironment().path_cache
-        log_filepath = os.path.join(logdirpath, filename)
+    logdirpath = logdirpath or ExecutionEnvironment().path_cache
+    log_filepath = os.path.join(logdirpath, filename)
 
     _formatter = logging.Formatter(
-        fmt="%(asctime)s | %(levelname)s| %(message)s",
+        fmt="%(asctime)s | %(levelname)s | %(message)s",
     )
     _formatter.formatTime = (
         lambda record, datefmt=None: datetime.datetime.utcnow().isoformat()
