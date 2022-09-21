@@ -28,6 +28,9 @@ class ProtonVPNAPI:
     def is_user_logged_in(self) -> bool:
         return self._session_holder.session.logged_in
 
+    def get_user_tier(self):
+        return self._session_holder.session.vpn_account.max_tier
+
     def logout(self):
         if self.connection.get_current_connection():
             raise VPNConnectionFoundAtLogout("Active connection was found")
