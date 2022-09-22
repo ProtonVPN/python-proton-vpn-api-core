@@ -1,4 +1,4 @@
-Source: protonvpn-api-core
+Source: proton-vpn-api-core
 Section: python
 Priority: optional
 Maintainer: Proton Technologies AG <opensource@proton.me>

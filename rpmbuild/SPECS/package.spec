@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.1.0
+%define version 0.2.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -50,6 +50,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Thu Sep 22 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.2.0
+- Add method to obtain the user's tier
+
 * Fri Sep 20 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.1.0
 - Add logging
 
