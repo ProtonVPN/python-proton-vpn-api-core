@@ -37,20 +37,14 @@ class ProtonAdapter(logging.LoggerAdapter):
     ALLOWED_PROTON_ATTRS = ["category", "subcategory", "event", "optional"]
 
     def process(self, msg, kwargs):
-        # Obtain all Proton logging attributes from kwargs
-        category = kwargs.get("category", None)
-        subcategory = kwargs.get("subcategory", None)
-        event = kwargs.get("event", None)
-        optional = kwargs.get("optional", None)
-
-        # Remove all Proton logging attributes from kwargs before delegating
-        # to logging.Logger as otherwise we would get an error due to
-        # unrecognized kwargs.
-        for proton_attr in ProtonAdapter.ALLOWED_PROTON_ATTRS:
-            try:
-                kwargs.pop(proton_attr)
-            except KeyError:
-                pass
+        # Obtain all Proton logging attributes from kwargs.
+        # Note that they should be removed from the kwargs dict as well
+        # before delegating to logging.Logger. Otherwise, logging.Logger
+        # would raise an error due to unrecognized kwargs.
+        category = kwargs.pop("category", None)
+        subcategory = kwargs.pop("subcategory", None)
+        event = kwargs.pop("event", None)
+        optional = kwargs.pop("optional", None)
 
         return _format_log_attributes(category, subcategory, event, optional, msg), kwargs
 
