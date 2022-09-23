@@ -36,3 +36,4 @@ class ProtonVPNAPI:
             raise VPNConnectionFoundAtLogout("Active connection was found")
 
         self._session_holder.session.logout()
+        self.servers.invalidate_cache()

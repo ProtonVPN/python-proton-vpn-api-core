@@ -35,6 +35,20 @@ class VPNServers:
         self._logicals_expiration_time = 0
         self._loads_expiration_time = 0
 
+    def invalidate_cache(self):
+        """
+        Invalidates the server list cache.
+
+        Note that the current server list is not deleted, it's just flagged
+        as expired.
+        """
+        self._logicals_expiration_time = 0
+        self._loads_expiration_time = 0
+        self._cache_handler.remove()
+        # Note that self._server_list is not set to None. Otherwise,
+        # next time get_server_list() is called, we would try to load it
+        # from disk, which would be unnecessary.
+
     def get_server_list(self, force_refresh: bool = False):
         if self._server_list is None:
             local_cache = self._cache_handler.load()
