@@ -1,3 +1,6 @@
+"""
+Proton VPN API.
+"""
 import os
 
 from proton.utils import ExecutionEnvironment
@@ -11,6 +14,7 @@ from proton.vpn.core_api.exceptions import VPNConnectionFoundAtLogout
 
 
 class ProtonVPNAPI:
+    """Class exposing the Proton VPN facade."""
     def __init__(self):
         self._session_holder = SessionHolder()
         self.settings = BasicSettings(
@@ -20,18 +24,44 @@ class ProtonVPNAPI:
         self.servers = VPNServers(self._session_holder)
 
     def login(self, username: str, password: str) -> LoginResult:
+        """
+        Logs the user in provided the right credentials.
+        :param username: Proton account username.
+        :param password: Proton account password.
+        :return: The login result.
+        """
         return self._session_holder.get_session_for(username).login(username, password)
 
     def submit_2fa_code(self, code: str) -> LoginResult:
+        """
+        Submits the 2-factor authentication code.
+        :param code: 2FA code.
+        :return: The login result.
+        """
         return self._session_holder.session.provide_2fa(code)
 
     def is_user_logged_in(self) -> bool:
+        """Returns True if a user is logged in and False otherwise."""
         return self._session_holder.session.logged_in
 
-    def get_user_tier(self):
+    def get_user_tier(self) -> int:
+        """
+        Returns the Proton VPN tier.
+
+        Current possible values are:
+         * 0: Free
+         * 2: Plus
+         * 3: Proton employee
+
+        Note: tier 1 is no longer in use.
+        """
         return self._session_holder.session.vpn_account.max_tier
 
     def logout(self):
+        """
+        Logs the current user out.
+        :raises: VPNConnectionFoundAtLogout if the users is still connected to the VPN.
+        """
         if self.connection.get_current_connection():
             raise VPNConnectionFoundAtLogout("Active connection was found")
 

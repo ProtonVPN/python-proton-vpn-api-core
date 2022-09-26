@@ -1,4 +1,8 @@
+"""
+Proton VPN Connection API.
+"""
 import threading
+from typing import Optional
 
 from proton.vpn.connection import VPNConnection
 from proton.vpn.connection.enum import ConnectionStateEnum
@@ -14,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 class VPNConnectionHolder:
+    """Holds a reference to the active VPN connection."""
+
     def __init__(self, session_holder: SessionHolder, settings: BasicSettings):
         self._current_connection = None
         self.session_holder = session_holder
@@ -22,6 +28,12 @@ class VPNConnectionHolder:
         self._subscribers = []  # List of subscribers to be added on each new connection.
 
     def connect(self, server: VPNServer, protocol: str = None, backend: str = None):
+        """
+        Connects asynchronously to the specified VPN server .
+        :param server: VPN server to connect to.
+        :param protocol: One of the supported protocols (e.g. openvpn-tcp or openvpn-udp).
+        :param backend: Backend to user (e.g. networkmanager).
+        """
         self._create_connection(server, protocol, backend)
 
         ports = server.udp_ports
@@ -29,18 +41,20 @@ class VPNConnectionHolder:
             ports = server.tcp_ports
 
         logger.info(
-            f"'Server: {server.server_ip} / Protocol: {protocol} / Ports: {ports} / Backend: {backend}'",
+            f"Server: {server.server_ip} / Protocol: {protocol} "
+            f"/ Ports: {ports} / Backend: {backend}",
             category="CONN", subcategory="CONNECT", event="START"
         )
         self._current_connection.up()
 
     def disconnect(self):
+        """Disconnects asynchronously from the current server."""
         if not self._current_connection:
             # Try to get connection persisted to disk.
             self._current_connection = VPNConnection.get_current_connection()
             if self._current_connection:
                 # If a persisted connection was found, register all connection subscribers to it.
-                self.register_all_subscribers_to_current_connection()
+                self._register_all_subscribers_to_current_connection()
             else:
                 raise VPNConnectionNotFound("No VPN connection was established yet.")
 
@@ -48,6 +62,14 @@ class VPNConnectionHolder:
         self._current_connection = None
 
     def register(self, subscriber):
+        """
+        Registers a new subscriber to connection status updates.
+
+        The subscriber should have a ```status_update``` method, which will
+        be called passing it the new connection status whenever it changes.
+
+        :param subscriber: Subscriber to register.
+        """
         if subscriber in self._subscribers:
             return
         if self._current_connection:
@@ -55,6 +77,10 @@ class VPNConnectionHolder:
         self._subscribers.append(subscriber)
 
     def unregister(self, subscriber):
+        """
+        Unregisters a subscriber from connection status updates.
+        :param subscriber: Subscriber to unregister.
+        """
         if subscriber not in self._subscribers:
             return
         if self._current_connection:
@@ -67,11 +93,11 @@ class VPNConnectionHolder:
 
         connection_backend = VPNConnection.get_from_factory(protocol.lower(), backend)
 
-        # FIXME Do not hardcode ports
+        # FIXME Do not hardcode ports (VPNLINUX-447) # pylint: disable=W0511
         server.tcp_ports = [443, 5995, 8443, 5060]
         server.udp_ports = [80, 443, 4569, 1194, 5060, 51820]
 
-        self.unregister_all_subscribers_from_current_connection()
+        self._unregister_all_subscribers_from_current_connection()
 
         self._current_connection = connection_backend(
             server,
@@ -79,22 +105,24 @@ class VPNConnectionHolder:
             self.settings.get_vpn_settings()
         )
 
-        self.register_all_subscribers_to_current_connection()
+        self._register_all_subscribers_to_current_connection()
 
-    def register_all_subscribers_to_current_connection(self):
+    def _register_all_subscribers_to_current_connection(self):
         if self._current_connection:
             for subscriber in self._subscribers:
                 self._current_connection.register(subscriber)
 
-    def unregister_all_subscribers_from_current_connection(self):
+    def _unregister_all_subscribers_from_current_connection(self):
         if self._current_connection:
             for subscriber in self._subscribers:
                 self._current_connection.unregister(subscriber)
 
-    def get_current_connection(self):
+    def get_current_connection(self) -> Optional[VPNConnection]:
+        """Returns the current VPN connection if there is one. Otherwise,
+        it returns None."""
         if not self._current_connection:
             self._current_connection = VPNConnection.get_current_connection()
-            self.register_all_subscribers_to_current_connection()
+            self._register_all_subscribers_to_current_connection()
 
         return self._current_connection
 
@@ -119,7 +147,8 @@ class Subscriber:
         Blocks until the specified VPN connection state is reached.
 
         :param state: target connection state.
-        :param timeout: if specified, a TimeoutError will be raised when the target state is reached.
+        :param timeout: if specified, a TimeoutError will be raised
+        when the target state is reached.
         """
         state_reached = self.events[state].wait(timeout)
         if not state_reached:

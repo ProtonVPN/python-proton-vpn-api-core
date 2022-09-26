@@ -1,3 +1,6 @@
+"""
+Proton VPN Logging API.
+"""
 import datetime
 import logging
 import os
@@ -49,7 +52,7 @@ class ProtonAdapter(logging.LoggerAdapter):
         return _format_log_attributes(category, subcategory, event, optional, msg), kwargs
 
 
-def getLogger(name):
+def getLogger(name):  # noqa # pylint: disable=C0103
     """
     Returns the logger with the specified name, wrapped in a
     logging.LoggerAdapter which adds the Proton attributes to the log message.
@@ -80,7 +83,8 @@ def getLogger(name):
 
     The resulting log message should look like this:
 
-    2022-09-20T07:59:27.393743 | INFO | MY_CATEGORY.MY_SUBCATEGORY:MY_EVENT | my message | optional stuff
+    2022-09-20T07:59:27.393743 | INFO | MY_CATEGORY.MY_SUBCATEGORY:MY_EVENT
+    | my message | optional stuff
     """
     return ProtonAdapter(logging.getLogger(name), extra={})
 
