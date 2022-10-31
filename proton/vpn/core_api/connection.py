@@ -34,6 +34,10 @@ class VPNConnectionHolder:
         :param protocol: One of the supported protocols (e.g. openvpn-tcp or openvpn-udp).
         :param backend: Backend to user (e.g. networkmanager).
         """
+        if self._current_connection:
+            self._reconnect(self._current_connection, server, protocol, backend)
+            return
+
         self._create_connection(server, protocol, backend)
 
         ports = server.udp_ports
@@ -58,8 +62,24 @@ class VPNConnectionHolder:
             else:
                 raise VPNConnectionNotFound("No VPN connection was established yet.")
 
+        outer_self = self
+        current_connection = self._current_connection
+
+        class ConnectionStatusTracker:  # pylint: disable=R0903
+            """Throw-away class to ensure that before establishing a connection
+            we stop the previous one."""
+            def status_update(self, status):
+                """Receives status updates from connection."""
+                if status.state == ConnectionStateEnum.DISCONNECTED:
+                    # Connect to the new server as soon as the current connection reaches the
+                    # disconnected state.
+                    current_connection.unregister(self)
+                    outer_self._current_connection = None  # pylint: disable=W0212
+                elif status.state is ConnectionStateEnum.ERROR:
+                    current_connection.unregister(self)
+
+        self._current_connection.register(ConnectionStatusTracker())
         self._current_connection.down()
-        self._current_connection = None
 
     def register(self, subscriber):
         """
@@ -88,9 +108,6 @@ class VPNConnectionHolder:
         self._subscribers.remove(subscriber)
 
     def _create_connection(self, server: VPNServer, protocol: str = None, backend: str = None):
-        if self._current_connection:
-            self.disconnect()
-
         connection_backend = VPNConnection.get_from_factory(protocol.lower(), backend)
 
         # FIXME Do not hardcode ports (VPNLINUX-447) # pylint: disable=W0511
@@ -116,6 +133,31 @@ class VPNConnectionHolder:
         if self._current_connection:
             for subscriber in self._subscribers:
                 self._current_connection.unregister(subscriber)
+
+    def _reconnect(
+        self, current_connection: VPNConnection,
+        server: VPNServer, protocol: str = None, backend: str = None
+    ):
+        """Disconnects the current connection and starts a connection to the specified server
+        as soon as the current connection is in DISCONNECTED state."""
+        outer_self = self
+
+        class ConnectionStatusTracker:  # pylint: disable=R0903
+            """Throw-away class to ensure that before establishing a connection
+            we stop the previous one."""
+            def status_update(self, status):
+                """Receives status updates from connection."""
+                if status.state == ConnectionStateEnum.DISCONNECTED:
+                    # Set the current connection being held to None only after the connection
+                    # status is DISCONNECTED.
+                    current_connection.unregister(self)
+                    outer_self._current_connection = None  # pylint: disable=W0212
+                    outer_self.connect(server, protocol, backend)
+                elif status.state is ConnectionStateEnum.ERROR:
+                    current_connection.unregister(self)
+
+        current_connection.register(ConnectionStatusTracker())
+        self.disconnect()
 
     def get_current_connection(self) -> Optional[VPNConnection]:
         """Returns the current VPN connection if there is one. Otherwise,
