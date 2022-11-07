@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.2.2
+%define version 0.2.3
 %define release 1
 
 Prefix: %{_prefix}
@@ -22,11 +22,13 @@ BuildRequires: python3-proton-vpn-connection
 BuildRequires: python3-proton-vpn-session
 BuildRequires: python3-proton-vpn-servers
 BuildRequires: python3-setuptools
+BuildRequires: python3-distro
 
 Requires: python3-proton-core
 Requires: python3-proton-vpn-connection
 Requires: python3-proton-vpn-session
 Requires: python3-proton-vpn-servers
+Requires: python3-distro
 
 %{?python_disable_dependency_generator}
 
@@ -50,6 +52,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Fri Nov 8 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.2.3
+- Ensure that appversion and user-agent are passed when making API calls
+
 * Fri Nov 4 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.2.2
 - Ensure that before establishing a new connection, the previous connection is disconnected, if there is one
 

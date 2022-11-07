@@ -3,13 +3,20 @@ Proton VPN Session API.
 """
 from proton.vpn.session import VPNSession
 from proton.sso import ProtonSSO
+import distro
+
+DISTRIBUTION, VERSION, _ = distro.linux_distribution()
 
 
 class SessionHolder:
     """Holds the current session object, initializing it lazily when requested."""
 
     def __init__(self, session: VPNSession = None):
-        self._proton_sso = ProtonSSO()
+
+        self._proton_sso = ProtonSSO(
+            appversion="linux-vpn@4.0.0",
+            user_agent=f"ProtonVPN/4.0.0 (Linux; {DISTRIBUTION}/{VERSION})"
+        )
         self._session = session
 
     def get_session_for(self, username: str) -> VPNSession:
