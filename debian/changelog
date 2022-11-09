@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.2.4) unstable; urgency=medium
+
+  * Lazy load the currently active Proton VPN connection, if existing
+
+ -- Josep Llaneras <josep.llaneras@proton.ch> Wed, 09 Nov 2022 17:20:44 +0100
+
 proton-vpn-api-core (0.2.3) unstable; urgency=medium
 
   * Ensure that appversion and user-agent are passed when making API calls
