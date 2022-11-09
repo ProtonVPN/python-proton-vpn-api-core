@@ -11,7 +11,7 @@ setup(
     url="https://github.com/ProtonMail/python-protonvpn-api-core",
     install_requires=["proton-core", "proton-vpn-connection", "proton-vpn-session", "proton-vpn-servers", "distro"],
     extras_require={
-        "development": ["pytest", "pytest-coverage", "freezegun"]
+        "development": ["pytest", "pytest-coverage", "freezegun", "pylint", "flake8"]
     },
     packages=find_namespace_packages(include=['proton.vpn.core_api*']),
     include_package_data=True,

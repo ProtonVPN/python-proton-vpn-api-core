@@ -73,7 +73,7 @@ class VPNServers:
         if servers_updated:
             try:
                 self._cache_handler.save(newdata=self._server_list.data)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 logger.exception(
                     "Could not save server cache.",
                     category="CACHE", subcategory="SERVERS", event="SAVE"
@@ -168,8 +168,7 @@ class VPNServers:
     def get_server_with_p2p(self):
         """Returns the fastest server allowing P2P."""
         logical_server = self.get_server_list().filter(
-            lambda server: ServerFeatureEnum.P2P in server.features
-                           and server._tier <= self._tier  # noqa: E131
+            lambda server: ServerFeatureEnum.P2P in server.features and server.tier <= self._tier
         ).sort(lambda server: server.score)[0]
 
         return self.get_vpn_server_by_name(logical_server.name)
@@ -178,7 +177,7 @@ class VPNServers:
         """Returns the fastest server allowing streaming."""
         logical_server = self.get_server_list().filter(
             lambda server: ServerFeatureEnum.STREAMING in server.features
-                           and server._tier <= self._tier  # noqa: E131
+                           and server.tier <= self._tier  # noqa: E131
         ).sort(lambda server: server.score)[0]
 
         return self.get_vpn_server_by_name(logical_server.name)
@@ -186,8 +185,7 @@ class VPNServers:
     def get_server_with_tor(self):
         """Returns the fastest server allowing TOR."""
         logical_server = self.get_server_list().filter(
-            lambda server: ServerFeatureEnum.TOR in server.features
-                           and server._tier <= self._tier  # noqa: E131
+            lambda server: ServerFeatureEnum.TOR in server.features and server.tier <= self._tier
         ).sort(lambda server: server.score)[0]
 
         return self.get_vpn_server_by_name(logical_server.name)
@@ -196,11 +194,12 @@ class VPNServers:
         """Returns the fastest server offering secure core."""
         logical_server = self.get_server_list().filter(
             lambda server: ServerFeatureEnum.SECURE_CORE in server.features
-                           and server._tier <= self._tier  # noqa: E131
+                           and server.tier <= self._tier  # noqa: E131
         ).sort(lambda server: server.score)[0]
 
         return self.get_vpn_server_by_name(logical_server.name)
 
+    # pylint: disable=too-many-return-statements
     def get_server_with_features(self, **kwargs_feature):
         """
         Gets the server name with the specified features.
@@ -227,17 +226,23 @@ class VPNServers:
 
         if servername:
             return self.get_vpn_server_by_name(servername)
-        elif fastest:
+
+        if fastest:
             return self.get_fastest_server()
-        elif random:
+
+        if random:
             return self.get_random_server()
-        elif country_code:
+
+        if country_code:
             return self.get_server_by_country_code(country_code)
-        elif p2p:
+
+        if p2p:
             return self.get_server_with_p2p()
-        elif tor:
+
+        if tor:
             return self.get_server_with_tor()
-        elif secure_core:
+
+        if secure_core:
             return self.get_server_with_secure_core()
-        else:
-            return None
+
+        return None

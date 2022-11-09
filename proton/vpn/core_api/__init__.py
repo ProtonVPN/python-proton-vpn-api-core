@@ -1,3 +1,4 @@
+"""Proton VPN Core API"""
 from importlib.metadata import version, PackageNotFoundError
 
 try:

@@ -1,11 +1,13 @@
 """
 Proton VPN Session API.
 """
-from proton.vpn.session import VPNSession
-from proton.sso import ProtonSSO
 import distro
 
-DISTRIBUTION, VERSION, _ = distro.linux_distribution()
+from proton.vpn.session import VPNSession
+from proton.sso import ProtonSSO
+
+DISTRIBUTION = distro.id()
+VERSION = distro.version()
 
 
 class SessionHolder:
