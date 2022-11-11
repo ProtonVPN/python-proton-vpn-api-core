@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.2.5) unstable; urgency=medium
+
+  * Add Proton VPN logging library
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> Fri, 11 Nov 2022 17:00:00 +0100
+ 
 proton-vpn-api-core (0.2.4) unstable; urgency=medium
 
   * Lazy load the currently active Proton VPN connection, if existing

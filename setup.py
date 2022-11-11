@@ -4,12 +4,15 @@ from setuptools import setup, find_namespace_packages
 
 setup(
     name="proton-vpn-api-core",
-    version="0.2.4",
+    version="0.2.5",
     description="Proton Technologies VPN Core API",
     author="Proton Technologies",
     author_email="contact@protonmail.com",
     url="https://github.com/ProtonMail/python-protonvpn-api-core",
-    install_requires=["proton-core", "proton-vpn-connection", "proton-vpn-session", "proton-vpn-servers", "distro"],
+    install_requires=[
+        "proton-core", "proton-vpn-connection", "proton-vpn-session",
+        "proton-vpn-servers", "proton-vpn-logger", "distro"
+    ],
     extras_require={
         "development": ["pytest", "pytest-coverage", "freezegun", "pylint", "flake8"]
     },

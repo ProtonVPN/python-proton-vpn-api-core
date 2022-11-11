@@ -11,7 +11,7 @@ from proton.vpn.connection.interfaces import VPNServer
 from proton.vpn.core_api.exceptions import VPNConnectionNotFound
 from proton.vpn.core_api.session import SessionHolder
 from proton.vpn.core_api.settings import BasicSettings
-from proton.vpn.core_api import vpn_logging as logging
+from proton.vpn import logging
 
 
 logger = logging.getLogger(__name__)

@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.2.4
+%define version 0.2.5
 %define release 1
 
 Prefix: %{_prefix}
@@ -21,6 +21,7 @@ BuildRequires: python3-proton-core
 BuildRequires: python3-proton-vpn-connection
 BuildRequires: python3-proton-vpn-session
 BuildRequires: python3-proton-vpn-servers
+BuildRequires: python3-proton-vpn-logger
 BuildRequires: python3-setuptools
 BuildRequires: python3-distro
 
@@ -28,6 +29,7 @@ Requires: python3-proton-core
 Requires: python3-proton-vpn-connection
 Requires: python3-proton-vpn-session
 Requires: python3-proton-vpn-servers
+Requires: python3-proton-vpn-logger
 Requires: python3-distro
 
 %{?python_disable_dependency_generator}
@@ -52,6 +54,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Fri Nov 11 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.2.5
+- Add Proton VPN logging library
+
 * Wed Nov 09 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.2.4
 - Lazy load the currently active Proton VPN connection, if existing
 

@@ -9,7 +9,7 @@ from proton.vpn.core_api.session import SessionHolder
 from proton.vpn.servers import ServerList, VPNServer, CacheHandler
 from proton.vpn.servers.server_types import LogicalServer
 from proton.vpn.servers.enums import ServerFeatureEnum
-from proton.vpn.core_api import vpn_logging as logging
+from proton.vpn import logging
 
 
 logger = logging.getLogger(__name__)
