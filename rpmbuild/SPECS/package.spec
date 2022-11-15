@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.2.6
+%define version 0.2.7
 %define release 1
 
 Prefix: %{_prefix}
@@ -54,6 +54,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Tue Nov 15 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.2.7
+- Allow cancelling a VPN connection before it is established
+
 * Tue Nov 15 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.2.6
 - Check connection status before connecting/disconnecting
 

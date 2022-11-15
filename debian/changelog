@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.2.7) unstable; urgency=medium
+
+  * Allow cancelling a VPN connection before it is established
+
+ -- Josep Llaneras <josep.llaneras@proton.ch> Tue, 15 Nov 2022 18:47:57 +0100
+
 proton-vpn-api-core (0.2.6) unstable; urgency=medium
 
   * Check connection status before connecting/disconnecting
