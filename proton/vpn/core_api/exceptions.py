@@ -17,7 +17,7 @@ class ServerNotFound(ProtonVPNError):
     """A VPN server was expected but was not found."""
 
 
-class VPNConnectionFoundAtLogout(ProtonError):
+class VPNConnectionFoundAtLogout(ProtonVPNError):
     """An active connection was found when trying to log out.
 
     Its main purpose is to prevent logout while being connected to VPN.

@@ -2,7 +2,7 @@ from unittest.mock import patch, Mock
 
 import pytest
 
-from proton.vpn.connection.states import Disconnected
+from proton.vpn.connection.states import Disconnected, Connected
 from proton.vpn.core_api.connection import VPNConnectionHolder
 from proton.vpn.core_api.exceptions import VPNConnectionNotFound
 
@@ -94,6 +94,7 @@ def test_connect_with_a_previous_connection(patched_disconnect, PatchedVPNConnec
 
     # Simulate that there **is** an active VPN connection
     current_connection_mock = Mock()
+    current_connection_mock.status = Connected()
     PatchedVPNConnection.get_current_connection.return_value = current_connection_mock
 
     # Mock connection backend
@@ -121,7 +122,9 @@ def test_connect_with_a_previous_connection(patched_disconnect, PatchedVPNConnec
     connection_status_tracker = vpn_connection_holder.current_connection.register.call_args[0][0]
 
     # Simulate that the current connection has reached DISCONNECTED state.
-    connection_status_tracker.status_update(status=Disconnected())
+    current_connection_mock.status = Disconnected()
+    connection_status_tracker.status_update(status=current_connection_mock.status)
+
     # At this point, the new connection should've been started
     new_connection_mock.up.assert_called_once()
 
@@ -141,6 +144,7 @@ def test_disconnect_without_an_existing_vpn_connection_should_fail(PatchedVPNCon
 def test_disconnect_existing_vpn_connection(PatchedVPNConnection):
     # Simulate that there **is** an active VPN connection
     current_connection_mock = Mock()
+    current_connection_mock.status = Connected()
     PatchedVPNConnection.get_current_connection.return_value = current_connection_mock
 
     vpn_connection_holder = VPNConnectionHolder(session_holder=None, settings=None)
@@ -149,14 +153,3 @@ def test_disconnect_existing_vpn_connection(PatchedVPNConnection):
 
     # The current connection should've been brought down.
     current_connection_mock.down.assert_called_once()
-
-    # A new subscriber should've been registered to detect when the current
-    # connection reaches the DISCONNECTED state.
-    vpn_connection_holder.current_connection.register.assert_called_once()
-    connection_status_tracker = vpn_connection_holder.current_connection.register.call_args[0][0]
-
-    # Simulate that the current connection has reached DISCONNECTED state.
-    connection_status_tracker.status_update(status=Disconnected())
-
-    # There should not be a current connection now.
-    assert not vpn_connection_holder.current_connection
