@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.2.6) unstable; urgency=medium
+
+  * Check connection status before connecting/disconnecting
+
+ -- Josep Llaneras <josep.llaneras@proton.ch> Tue, 15 Nov 2022 16:07:50 +0100
+
 proton-vpn-api-core (0.2.5) unstable; urgency=medium
 
   * Add Proton VPN logging library
