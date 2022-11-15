@@ -38,11 +38,14 @@ class VPNConnectionHolder:
         return self._current_connection
 
     @property
-    def is_connection_established(self) -> bool:
-        """Returns whether the current connection reached the Connected state or not."""
+    def is_connection_active(self) -> bool:
+        """Returns whether the current connection is in connecting/connected state or not."""
         return (
             self.current_connection
-            and self.current_connection.status.state is ConnectionStateEnum.CONNECTED
+            and self.current_connection.status.state in [
+                ConnectionStateEnum.CONNECTED,
+                ConnectionStateEnum.CONNECTING
+            ]
         )
 
     @current_connection.setter
@@ -57,7 +60,7 @@ class VPNConnectionHolder:
         :param protocol: One of the supported protocols (e.g. openvpn-tcp or openvpn-udp).
         :param backend: Backend to user (e.g. networkmanager).
         """
-        if self.is_connection_established:
+        if self.is_connection_active:
             self._reconnect(self.current_connection, server, protocol, backend)
             return
 
@@ -76,8 +79,8 @@ class VPNConnectionHolder:
 
     def disconnect(self):
         """Disconnects asynchronously from the current server."""
-        if not self.is_connection_established:
-            raise VPNConnectionNotFound("No VPN connection was established yet.")
+        if not self.is_connection_active:
+            raise VPNConnectionNotFound("There isn't any VPN connection to be disconnected.")
 
         self.current_connection.down()
 
