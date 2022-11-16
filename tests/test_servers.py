@@ -62,7 +62,7 @@ def test_get_server_list_calls_api_when_cache_does_not_exist_and_updates_cache(
     cache_handler_mock.load.assert_called_once()
     session_holder_mock.session.api_request.assert_called_once_with("/vpn/logicals")
     assert server_list.data is api_response
-    cache_handler_mock.save.assert_called_once_with(newdata=server_list.data)
+    cache_handler_mock.save.assert_called_once_with(server_list.data)
 
 
 def test_get_server_list_calls_api_when_cache_is_expired_and_updates_cache(
@@ -84,7 +84,7 @@ def test_get_server_list_calls_api_when_cache_is_expired_and_updates_cache(
     session_holder_mock.session.api_request.assert_called_once_with("/vpn/logicals")
     assert server_list.data is api_response
     # Assert that cache is updated.
-    cache_handler_mock.save.assert_called_once_with(newdata=server_list.data)
+    cache_handler_mock.save.assert_called_once_with(server_list.data)
 
 
 def test_get_server_list_calls_api_after_cache_has_been_invalidated(
@@ -154,4 +154,4 @@ def test_get_server_list_calls_api_and_updated_cache_when_force_refresh_paramete
     session_holder_mock.session.api_request.assert_called_once_with("/vpn/logicals")
     assert server_list.data is api_response
     # Assert that cache is updated.
-    cache_handler_mock.save.assert_called_once_with(newdata=server_list.data)
+    cache_handler_mock.save.assert_called_once_with(server_list.data)
