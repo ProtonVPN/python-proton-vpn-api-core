@@ -98,6 +98,5 @@ class ClientConfig:
 
     @property
     def is_expired(self) -> bool:
-        print(self.cache_expiration)
         current_time = time.time()
         return current_time > self.cache_expiration

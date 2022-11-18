@@ -54,14 +54,21 @@ class SessionHolder:
 
         return self._session
 
-    def get_client_config(self, force_refresh: bool = False) -> ClientConfig:
+    def get_client_config(
+        self, force_refresh: bool = False,
+        skip_refresh: bool = False
+    ) -> ClientConfig:
         if self._client_config is None:
             data = self._cache_handler.load()
 
             if data:
                 self._client_config = ClientConfig.from_dict(data)
 
-        if force_refresh or not self._client_config or self._client_config.is_expired:
+        if not skip_refresh and (
+            force_refresh
+            or not self._client_config
+            or self._client_config.is_expired
+        ):
             data = self._get_data_from_api()
             self._client_config = ClientConfig.from_dict(data)
 

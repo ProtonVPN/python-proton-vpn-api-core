@@ -113,10 +113,6 @@ class VPNConnectionHolder:
     def _create_connection(self, server: VPNServer, protocol: str = None, backend: str = None):
         connection_backend = VPNConnection.get_from_factory(protocol.lower(), backend)
 
-        # FIXME Do not hardcode ports (VPNLINUX-447) # pylint: disable=W0511
-        server.tcp_ports = [443, 5995, 8443, 5060]
-        server.udp_ports = [80, 443, 4569, 1194, 5060, 51820]
-
         self.current_connection = connection_backend(
             server,
             self.session_holder.session.vpn_account.vpn_credentials,
