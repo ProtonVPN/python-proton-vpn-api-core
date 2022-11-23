@@ -11,6 +11,7 @@ from proton.vpn.core_api.settings import BasicSettings
 from proton.vpn.core_api.session import SessionHolder
 from proton.vpn.session.dataclasses import LoginResult
 from proton.vpn.core_api.exceptions import VPNConnectionFoundAtLogout
+from proton.vpn.core_api.client_config import ClientConfig
 
 
 class ProtonVPNAPI:
@@ -56,6 +57,16 @@ class ProtonVPNAPI:
         Note: tier 1 is no longer in use.
         """
         return self._session_holder.session.vpn_account.max_tier
+
+    def get_client_config(self, force_refresh: bool = False) -> ClientConfig:
+        """Returns Proton VPN client configuration.
+
+        If force refresh is not passed then current cached version is passed.
+        """
+        if force_refresh:
+            return self._session_holder.get_client_config(force_refresh)
+
+        return self._session_holder.client_config or self._session_holder.get_client_config()
 
     def logout(self):
         """

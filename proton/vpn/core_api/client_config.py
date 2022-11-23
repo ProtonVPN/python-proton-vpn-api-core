@@ -6,6 +6,33 @@ from dataclasses import dataclass
 from typing import List
 import time
 
+DEFAULT_CLIENT_CONFIG = {
+    "OpenVPNConfig": {
+        "DefaultPorts": {
+            "UDP": [80, 51820, 4569, 1194, 5060],
+            "TCP": [443, 7770, 8443]
+        }
+    },
+    "HolesIPs": ["62.112.9.168", "104.245.144.186"],
+    "ServerRefreshInterval": 10,
+    "FeatureFlags": {
+        "NetShield": 0,
+        "GuestHoles": 0,
+        "ServerRefresh": 1,
+        "StreamingServicesLogos": 1,
+        "PortForwarding": 0,
+        "ModerateNAT": 1,
+        "SafeMode": 0,
+        "StartConnectOnBoot": 1,
+        "PollNotificationAPI": 1,
+        "VpnAccelerator": 1,
+        "SmartReconnect": 1,
+        "PromoCode": 0,
+        "WireGuardTls": 1
+    },
+    "CacheExpiration": time.time() - 60 * 3
+}
+
 
 @dataclass
 class OpenVPNPorts:

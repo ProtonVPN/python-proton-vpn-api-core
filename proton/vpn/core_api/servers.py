@@ -177,10 +177,8 @@ class VPNServers:
             self._server_list.update_load_data(api_response)
             self._loads_expiration_time = self._get_loads_expiration_time()
 
-        if self._session_holder.get_client_config(skip_refresh=True).is_expired:
-            self._session_holder.client_config.get_client_config(
-                force_refresh=True
-            )
+        if self._session_holder.client_config.is_expired:
+            self._session_holder.get_client_config(force_refresh=True)
 
         servers_updated = (api_response is not None)
 
@@ -343,7 +341,7 @@ class VPNServers:
         physical = self._server_list.match_server_domain(
             server.get_random_physical_server()
         )
-        client_config = self._session_holder.get_client_config(skip_refresh=True)
+        client_config = self._session_holder.client_config
         return VPNServer(
             entry_ip=physical.entry_ip,
             domain=physical.domain,
