@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.3.1) unstable; urgency=medium
+
+  * Check if there is an active connection before logging out
+
+ -- Josep Llaneras <josep.llaneras@proton.ch> Fri, 25 Nov 2022 17:44:50 +0100
+
 proton-vpn-api-core (0.3.0) unstable; urgency=medium
 
   * Fetch and cache clientconfig data from API
