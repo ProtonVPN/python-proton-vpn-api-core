@@ -1,3 +1,10 @@
+proton-vpn-api-core (0.4.0) unstable; urgency=medium
+
+  * Decoupled VPNServers and ClientConfig
+  * All methods that return a server will now return a LogicalServer instead of VPNServer
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> Tue, 29 Nov 2022 17:00:00 +0100
+
 proton-vpn-api-core (0.3.1) unstable; urgency=medium
 
   * Check if there is an active connection before logging out

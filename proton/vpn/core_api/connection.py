@@ -2,12 +2,10 @@
 Proton VPN Connection API.
 """
 import threading
-from typing import Optional
+from typing import Optional, Sequence
 
 from proton.vpn.connection import VPNConnection
 from proton.vpn.connection.enum import ConnectionStateEnum
-from proton.vpn.connection.interfaces import VPNServer
-
 from proton.vpn.core_api.exceptions import VPNConnectionNotFound
 from proton.vpn.core_api.session import SessionHolder
 from proton.vpn.core_api.settings import BasicSettings
@@ -15,6 +13,85 @@ from proton.vpn import logging
 
 
 logger = logging.getLogger(__name__)
+
+
+class VPNServer:
+    """ Implement :class:`proton.vpn.connection.interfaces.VPNServer` to
+            provide an interface readily usable to instanciate a
+        :class:`proton.vpn.connection.VPNConnection`
+        See :meth:`ServerList.get_vpn_server()` to get a VPNServer by
+            logical name (DE#13, CH-FR#1)
+
+    """
+    def __init__(
+        self, entry_ip, servername: str = None, udp_ports: Sequence[int] = None,
+        tcp_ports: Sequence[int] = None, domain: str = None, x25519pk: str = None
+    ):  # pylint: disable=R0913
+        if udp_ports:
+            self._ensure_ports_are_in_expected_format(udp_ports)
+        if tcp_ports:
+            self._ensure_ports_are_in_expected_format(tcp_ports)
+
+        self._entry_ip = entry_ip
+        self._udp_ports = udp_ports
+        self._tcp_ports = tcp_ports
+
+        self._x25519pk = x25519pk
+        self._domain = domain
+        self._servername = servername
+
+    @property
+    def server_ip(self) -> str:
+        """Returns server IP"""
+        return self._entry_ip
+
+    @property
+    def servername(self) -> Optional[str]:
+        """Returns the name of the server"""
+        return self._servername
+
+    @property
+    def udp_ports(self) -> Sequence[str]:
+        """Returns OpenVPN UDP ports"""
+        return self._udp_ports
+
+    @udp_ports.setter
+    def udp_ports(self, ports: Sequence[str]):
+        """Sets OpenVPN UDP ports"""
+        self._ensure_ports_are_in_expected_format(ports)
+        self._udp_ports = ports
+
+    @property
+    def tcp_ports(self) -> Sequence[str]:
+        """Returns OpenVPN TCP ports"""
+        return self._tcp_ports
+
+    @tcp_ports.setter
+    def tcp_ports(self, ports: Sequence[str]):
+        """Sets OpenVPN TCP ports"""
+        self._ensure_ports_are_in_expected_format(ports)
+        self._tcp_ports = ports
+
+    @property
+    def wg_public_key_x25519(self):
+        """Returns Wireguard x25519 public key"""
+        return self._x25519pk
+
+    @property
+    def domain(self):
+        """Returns server domain"""
+        return self._domain
+
+    def _ensure_ports_are_in_expected_format(self, ports: Sequence[str]):
+        """Ensures taht ports have the expected format that is required."""
+        if (
+            not ports
+            or not isinstance(ports, list)
+            or not all(isinstance(port, int) for port in ports)
+        ):
+            raise TypeError(
+                f"Ports should be specified as a list of integers: {ports}"
+            )
 
 
 class VPNConnectionHolder:

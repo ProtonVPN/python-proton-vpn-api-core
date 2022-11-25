@@ -6,76 +6,14 @@ import random
 import time
 
 from proton.vpn.core_api.session import SessionHolder
-from typing import Sequence, Optional
 from proton.vpn.servers import ServerList
+from proton.vpn.servers.server_types import LogicalServer
 from proton.vpn.core_api.cache_handler import CacheHandler, SERVER_LIST
 from proton.vpn.servers.enums import ServerFeatureEnum
 from proton.vpn import logging
 
 
 logger = logging.getLogger(__name__)
-
-
-class VPNServer:
-    """ Implement :class:`proton.vpn.connection.interfaces.VPNServer` to
-        provide an interface readily usable to instanciate a :class:`proton.vpn.connection.VPNConnection`
-        See :meth:`ServerList.get_vpn_server()` to get a VPNServer by logical name (DE#13, CH-FR#1)
-
-    """
-    def __init__(
-        self, entry_ip, servername: str = None, udp_ports: Sequence[int] = None,
-        tcp_ports: Sequence[int] = None, domain: str = None, x25519pk: str = None
-    ):
-        if udp_ports:
-            self._ensure_ports_are_in_expected_format(udp_ports)
-        if tcp_ports:
-            self._ensure_ports_are_in_expected_format(tcp_ports)
-
-        self._entry_ip = entry_ip
-        self._udp_ports = udp_ports
-        self._tcp_ports = tcp_ports
-
-        self._x25519pk = x25519pk
-        self._domain = domain
-        self._servername = servername
-
-    @property
-    def server_ip(self) -> str:
-        return self._entry_ip
-
-    @property
-    def servername(self) -> Optional[str]:
-        return self._servername
-
-    @property
-    def udp_ports(self) -> Sequence[str]:
-        return self._udp_ports
-
-    @udp_ports.setter
-    def udp_ports(self, ports: Sequence[str]):
-        self._ensure_ports_are_in_expected_format(ports)
-        self._udp_ports = ports
-
-    @property
-    def tcp_ports(self) -> Sequence[str]:
-        return self._tcp_ports
-
-    @tcp_ports.setter
-    def tcp_ports(self, ports: Sequence[str]):
-        self._ensure_ports_are_in_expected_format(ports)
-        self._tcp_ports = ports
-
-    @property
-    def wg_public_key_x25519(self):
-        return self._x25519pk
-
-    @property
-    def domain(self):
-        return self._domain
-
-    def _ensure_ports_are_in_expected_format(self, ports: Sequence[str]):
-        if not ports or not isinstance(ports, list) or not all(isinstance(port, int) for port in ports):
-            raise TypeError(f"Ports should be specified as a list of integers: {ports}")
 
 
 class VPNServers:
@@ -177,9 +115,6 @@ class VPNServers:
             self._server_list.update_load_data(api_response)
             self._loads_expiration_time = self._get_loads_expiration_time()
 
-        if self._session_holder.client_config.is_expired:
-            self._session_holder.get_client_config(force_refresh=True)
-
         servers_updated = (api_response is not None)
 
         return servers_updated
@@ -200,7 +135,7 @@ class VPNServers:
     def _tier(self):
         return self._session_holder.session.vpn_account.max_tier
 
-    def get_vpn_server_by_name(self, servername: str) -> VPNServer:
+    def get_vpn_server_by_name(self, servername: str) -> LogicalServer:
         """
             return an :class:`protonvpn_connection.interfaces.VPNServer`
             interface from the logical name (DE#13) as a entry.
@@ -211,62 +146,62 @@ class VPNServers:
 
             :return: an instance of the default VPNServer
         """
-        return self.get_vpn_server(servername)
+        return self._server_list.get_by_name(servername)
 
-    def get_server_by_country_code(self, country_code) -> VPNServer:
+    def get_server_by_country_code(self, country_code) -> LogicalServer:
         """Returns the fastest server by country code."""
         logical_server = self._server_list.filter(
             lambda server: server.exit_country.lower() == country_code.lower()
         ).get_fastest_server_in_tier(self._tier)
 
-        return self.get_vpn_server_by_name(logical_server.name)
+        return logical_server
 
-    def get_fastest_server(self) -> VPNServer:
+    def get_fastest_server(self) -> LogicalServer:
         """Gets the fastest server."""
         logical_server = self._server_list.get_fastest_server_in_tier(self._tier)
-        return self.get_vpn_server_by_name(logical_server.name)
+        return logical_server
 
-    def get_random_server(self) -> VPNServer:
+    def get_random_server(self) -> LogicalServer:
         """Returns a VPN server randomly."""
         logical_server = self._server_list.get_random_server_in_tier(self._tier)
-        return self.get_vpn_server_by_name(logical_server.name)
+        return logical_server
 
-    def get_server_with_p2p(self) -> VPNServer:
+    def get_server_with_p2p(self) -> LogicalServer:
         """Returns the fastest server allowing P2P."""
         logical_server = self._server_list.filter(
             lambda server: ServerFeatureEnum.P2P in server.features and server.tier <= self._tier
         ).sort(lambda server: server.score)[0]
 
-        return self.get_vpn_server_by_name(logical_server.name)
+        return logical_server
 
-    def get_server_with_streaming(self) -> VPNServer:
+    def get_server_with_streaming(self) -> LogicalServer:
         """Returns the fastest server allowing streaming."""
         logical_server = self._server_list.filter(
             lambda server: ServerFeatureEnum.STREAMING in server.features
                            and server.tier <= self._tier  # noqa: E131
         ).sort(lambda server: server.score)[0]
 
-        return self.get_vpn_server_by_name(logical_server.name)
+        return logical_server
 
-    def get_server_with_tor(self) -> VPNServer:
+    def get_server_with_tor(self) -> LogicalServer:
         """Returns the fastest server allowing TOR."""
         logical_server = self._server_list.filter(
             lambda server: ServerFeatureEnum.TOR in server.features and server.tier <= self._tier
         ).sort(lambda server: server.score)[0]
 
-        return self.get_vpn_server_by_name(logical_server.name)
+        return logical_server
 
-    def get_server_with_secure_core(self) -> VPNServer:
+    def get_server_with_secure_core(self) -> LogicalServer:
         """Returns the fastest server offering secure core."""
         logical_server = self._server_list.filter(
             lambda server: ServerFeatureEnum.SECURE_CORE in server.features
                            and server.tier <= self._tier  # noqa: E131
         ).sort(lambda server: server.score)[0]
 
-        return self.get_vpn_server_by_name(logical_server.name)
+        return logical_server
 
     # pylint: disable=too-many-return-statements
-    def get_server_with_features(self, **kwargs_feature) -> VPNServer:
+    def get_server_with_features(self, **kwargs_feature) -> LogicalServer:
         """
         Gets the server name with the specified features.
 
@@ -312,41 +247,3 @@ class VPNServers:
             return self.get_server_with_secure_core()
 
         return None
-
-    def get_vpn_server(self, servername: str) -> VPNServer:
-        """
-            return an :class:`proton.vpn.vpnconnection.interfaces.VPNServer` interface from
-            the `servername` (DE#13) as a entry. A `servername` can be secure core name also (like CH-FR#1 for ex).
-            It can be directly used with :class:`proton.vpn.vpnconnection.VPNConnection` (after having setup the ports).
-
-            :return: an instance of the default VPNServer
-            :rtype: VPNServer
-
-            Example of use :
-
-                .. code-block::
-
-                    from proton.vpn.servers import ServerList, CacheHandler
-                    from proton.vpn.connection import VPNConnection
-                    from proton.vpn.servers import VPNConnection
-
-                    s = ServerList(apidata=CacheHandler.load())
-                    VPN = VPNconnection.get_from_factory()
-                    ch13_server = s.get_vpn_server('CH#13')
-                    ch_fr1_secure_core_server = s.get_vpn_server('CH-FR#1')
-                    connection = VPN(ch13_vpn_server, ...)
-
-        """
-        server = self._server_list.get_by_name(servername)
-        physical = self._server_list.match_server_domain(
-            server.get_random_physical_server()
-        )
-        client_config = self._session_holder.client_config
-        return VPNServer(
-            entry_ip=physical.entry_ip,
-            domain=physical.domain,
-            x25519pk=physical.x25519_pk,
-            servername=servername,
-            udp_ports=client_config.openvpn_ports.udp,
-            tcp_ports=client_config.openvpn_ports.tcp
-        )

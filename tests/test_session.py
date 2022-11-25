@@ -1,7 +1,7 @@
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
-from proton.vpn.core_api.session import SessionHolder, CacheHandler
+from proton.vpn.core_api.session import SessionHolder
 import time
 
 
@@ -28,7 +28,8 @@ def apidata():
     }
 
 
-def test_get_client_config_from_api_with_no_cache(apidata):
+def test_get_client_config_from_api_with_default_cache(apidata):
+    apidata["CacheExpiration"] -= 1
     session_mock = Mock()
     cache_handler_mock = Mock()
 

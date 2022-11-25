@@ -32,8 +32,7 @@ class SessionHolder:
         )
         self._session = session
         self._cache_handler = cache_handler or CacheHandler(CLIENT_CONFIG)
-        self.client_config = ClientConfig.from_dict(DEFAULT_CLIENT_CONFIG)
-        self._loaded_default_client_config = True
+        self.client_config = None
 
     def get_session_for(self, username: str) -> VPNSession:
         """
@@ -58,17 +57,20 @@ class SessionHolder:
         return self._session
 
     def get_client_config(self, force_refresh: bool = False) -> ClientConfig:
-        if self._loaded_default_client_config:
+        """Returns client config for the current session."""
+        if not self.client_config:
+            # Try to load from cache
             data = self._cache_handler.load()
 
-            if data:
-                self.client_config = ClientConfig.from_dict(data)
-                self._loaded_default_client_config = False
+            if not data:
+                # If no cache is found then load the default config
+                data = DEFAULT_CLIENT_CONFIG
+
+            self.client_config = ClientConfig.from_dict(data)
 
         if force_refresh or not self.client_config or self.client_config.is_expired:
             data = self._get_data_from_api()
             self.client_config = ClientConfig.from_dict(data)
-            self._loaded_default_client_config = False
 
         return self.client_config
 

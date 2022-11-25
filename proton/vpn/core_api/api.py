@@ -5,7 +5,7 @@ import os
 
 from proton.utils import ExecutionEnvironment
 
-from proton.vpn.core_api.connection import VPNConnectionHolder
+from proton.vpn.core_api.connection import VPNConnectionHolder, VPNServer
 from proton.vpn.core_api.servers import VPNServers
 from proton.vpn.core_api.settings import BasicSettings
 from proton.vpn.core_api.session import SessionHolder
@@ -57,6 +57,42 @@ class ProtonVPNAPI:
         Note: tier 1 is no longer in use.
         """
         return self._session_holder.session.vpn_account.max_tier
+
+    def get_vpn_server(self, logical_server, client_config) -> VPNServer:
+        """
+        return an :class:`proton.vpn.vpnconnection.interfaces.VPNServer` interface from
+        the `servername` (DE#13) as a entry. A `servername` can be secure core name
+        also (like CH-FR#1 for ex).
+        It can be directly used with :class:`proton.vpn.vpnconnection.VPNConnection`
+        (after having setup the ports).
+
+        :return: an instance of the default VPNServer
+        :rtype: VPNServer
+
+        Example of use :
+
+            .. code-block::
+
+                from proton.vpn.servers import ServerList, CacheHandler
+                from proton.vpn.connection import VPNConnection
+                from proton.vpn.servers import VPNConnection
+
+                s = ServerList(apidata=CacheHandler.load())
+                VPN = VPNconnection.get_from_factory()
+                ch13_server = s.get_vpn_server('CH#13')
+                ch_fr1_secure_core_server = s.get_vpn_server('CH-FR#1')
+                connection = VPN(ch13_vpn_server, ...)
+
+        """
+        physical_server = logical_server.get_random_physical_server()
+        return VPNServer(
+            entry_ip=physical_server.entry_ip,
+            domain=physical_server.domain,
+            x25519pk=physical_server.x25519_pk,
+            servername=logical_server.name,
+            udp_ports=client_config.openvpn_ports.udp,
+            tcp_ports=client_config.openvpn_ports.tcp
+        )
 
     def get_client_config(self, force_refresh: bool = False) -> ClientConfig:
         """Returns Proton VPN client configuration.

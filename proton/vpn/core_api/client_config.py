@@ -52,7 +52,7 @@ class OpenVPNPorts:
 
 
 @dataclass
-class FeatureFlags:
+class FeatureFlags:  # pylint: disable=R0902
     """Dataclass for feature flags ports.
 
     Flags are important since they can let us know which feature are enabled
@@ -99,7 +99,7 @@ class ClientConfig:
         self, openvpn_ports, holes_ips,
         server_refresh_interval, feature_flags,
         cache_expiration
-    ):
+    ):  # pylint: disable=R0913
         self.openvpn_ports = openvpn_ports
         self.holes_ips = holes_ips
         self.server_refresh_interval = server_refresh_interval
@@ -125,5 +125,6 @@ class ClientConfig:
 
     @property
     def is_expired(self) -> bool:
+        """Returns if data has expired"""
         current_time = time.time()
         return current_time > self.cache_expiration
