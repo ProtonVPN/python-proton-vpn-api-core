@@ -62,7 +62,7 @@ class ProtonVPNAPI:
         Logs the current user out.
         :raises: VPNConnectionFoundAtLogout if the users is still connected to the VPN.
         """
-        if self.connection.current_connection:
+        if self.connection.is_connection_active:
             raise VPNConnectionFoundAtLogout("Active connection was found")
 
         self._session_holder.session.logout()
