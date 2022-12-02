@@ -60,38 +60,19 @@ class ProtonVPNAPI:
 
     def get_vpn_server(self, logical_server, client_config) -> VPNServer:
         """
-        return an :class:`proton.vpn.vpnconnection.interfaces.VPNServer` interface from
-        the `servername` (DE#13) as a entry. A `servername` can be secure core name
-        also (like CH-FR#1 for ex).
-        It can be directly used with :class:`proton.vpn.vpnconnection.VPNConnection`
-        (after having setup the ports).
-
-        :return: an instance of the default VPNServer
-        :rtype: VPNServer
-
-        Example of use :
-
-            .. code-block::
-
-                from proton.vpn.servers import ServerList, CacheHandler
-                from proton.vpn.connection import VPNConnection
-                from proton.vpn.servers import VPNConnection
-
-                s = ServerList(apidata=CacheHandler.load())
-                VPN = VPNconnection.get_from_factory()
-                ch13_server = s.get_vpn_server('CH#13')
-                ch_fr1_secure_core_server = s.get_vpn_server('CH-FR#1')
-                connection = VPN(ch13_vpn_server, ...)
-
+        :return: a :class:`proton.vpn.vpnconnection.interfaces.VPNServer` that
+        can be used to establish a VPN connection with
+        :class:`proton.vpn.vpnconnection.VPNConnection`.
         """
         physical_server = logical_server.get_random_physical_server()
         return VPNServer(
-            entry_ip=physical_server.entry_ip,
+            server_ip=physical_server.entry_ip,
             domain=physical_server.domain,
             x25519pk=physical_server.x25519_pk,
-            servername=logical_server.name,
             udp_ports=client_config.openvpn_ports.udp,
-            tcp_ports=client_config.openvpn_ports.tcp
+            tcp_ports=client_config.openvpn_ports.tcp,
+            server_id=logical_server.id,
+            server_name=logical_server.name
         )
 
     def get_client_config(self, force_refresh: bool = False) -> ClientConfig:
