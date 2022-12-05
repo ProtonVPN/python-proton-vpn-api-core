@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.5.0) unstable; urgency=medium
+
+  * Persist VPN server to disk
+
+ -- Josep Llaneras <josep.llaneras@proton.ch> Mon, 05 Dec 2022 18:39:00 +0100
+
 proton-vpn-api-core (0.4.0) unstable; urgency=medium
 
   * Decoupled VPNServers and ClientConfig

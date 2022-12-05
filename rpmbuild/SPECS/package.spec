@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.4.0
+%define version 0.5.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -54,6 +54,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Mon Dec 05 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.5.0
+- Persist VPN server to disk
+
 * Tue Nov 29 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.4.0
 - Decoupled VPNServers and ClientConfig
 - All methods that return a server will now return a LogicalServer instead of VPNServer
