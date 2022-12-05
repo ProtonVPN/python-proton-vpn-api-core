@@ -1,33 +1,40 @@
+"""
+This module manages the Proton VPN user settings.
+"""
+
 import json
 import os
 from enum import Enum
 from typing import List
 
-# TODO This module is way too complex. The goal here is to serialize/deserialize a json file with the following content:
-"""
-{
-    "protocol": "openvpn-udp",
-    "killswitch": 0,
-    "dns": {
-        "d-status": 1,
-        "d-ip-list": []
-    },
-    "split-tunneling": {
-        "sp-status": 0,
-        "sp-ip-list": []
-    },
-    "netshield-level": 0,
-    "vpn-accelerator": 1,
-    "port-forwarding": 0,
-    "random-nat": 1,
-    "safe-mode": 0,
-    "ipv6-support": 0,
-    "alternative_routing": 0,
-    "secure-core": 0,
-    "event-notification": 2,
-    "ui-language": "en"
-}
-"""
+# pylint: disable=missing-class-docstring, invalid-name, missing-function-docstring, fixme
+
+# TODO This module is way too complex.
+# The goal here is to serialize/deserialize a json file with the following content:
+# """
+# {
+#     "protocol": "openvpn-udp",
+#     "killswitch": 0,
+#     "dns": {
+#         "d-status": 1,
+#         "d-ip-list": []
+#     },
+#     "split-tunneling": {
+#         "sp-status": 0,
+#         "sp-ip-list": []
+#     },
+#     "netshield-level": 0,
+#     "vpn-accelerator": 1,
+#     "port-forwarding": 0,
+#     "random-nat": 1,
+#     "safe-mode": 0,
+#     "ipv6-support": 0,
+#     "alternative_routing": 0,
+#     "secure-core": 0,
+#     "event-notification": 2,
+#     "ui-language": "en"
+# }
+# """
 
 
 class ClientSuffixEnum(Enum):
@@ -138,9 +145,9 @@ class JSONEnumSerializer:
     def __init__(self, enum_json_keys):
         """Initializes object.
 
-            :param enum_json_keys: dict with required structured, where keys are derived from Enum and
-                values either primitive or complex objects.
-            :type enum_json_keys: Enum
+        :param enum_json_keys: dict with required structured, where keys are
+        derived from Enum and values either primitive or complex objects.
+        :type enum_json_keys: Enum
 
         It expected that the self.data variable to contain a dict with the content, either in full
         JSON format or dict format with keys being enums.
@@ -151,11 +158,11 @@ class JSONEnumSerializer:
     def recursive_parse_to_json_format(self, _data: dict) -> dict:
         """Recursively extract enum values from template.
 
-            :return: json friendly formatted settings dict
-            :rtype: dict
+        :return: json friendly formatted settings dict
 
-        This method will recursively run over the provided template, replacing its enum keys for the
-        defined values. It does the same for the values in case they're also enums.
+        This method will recursively run over the provided template,
+        replacing its enum keys for the defined values.
+        It does the same for the values in case they're also enums.
         """
         _dict = {}
 
@@ -210,21 +217,25 @@ class JSONEnumSerializer:
             :return: object
             :rtype: enum | str | lst
 
-        All data read form file come from known sources (based on self._enum_json_keys).
-        Data is converted from json format to python dict objects where Enum objects are used for keys.
-        These "known" values are extracted from the enum_json_keys provided in the constructor.
-        Regardless of how deep this enum can be within the tree, as long as key defined in _enum_json_keys
+        All data read form file come from known sources (based on
+        self._enum_json_keys). Data is converted from json format to
+        python dict objects where Enum objects are used for keys.
+        These "known" values are extracted from the enum_json_keys
+        provided in the constructor. Regardless of how deep this enum
+        can be within the tree, as long as key defined in _enum_json_keys
         is found in the file, the value will be found and returned.
         """
 
         if enum in data:
             return data[enum]
 
-        for k, v in data.items():
+        for _, v in data.items():
             if isinstance(v, dict):
                 item = self.recursive_get(v, enum)
                 if item is not None:
                     return item
+
+        return None
 
     def recursive_set(self, enum, updated_value, local_data=None):
         """Recurisvely set the desired value to selected enum in memory.
@@ -253,6 +264,7 @@ class JSONEnumSerializer:
             if k == enum:
                 val = updated_value
             elif isinstance(v, dict):
+                # pylint: disable=assignment-from-none
                 val = self.recursive_set(enum, updated_value, v)
 
             if val:
@@ -349,24 +361,24 @@ class FilePersistence(JSONEnumSerializer):
     def _create_settings_file(self):
         """Creates settings file.
 
-        Creates the file based on the provided template. After storing it to file it will maintaing it
-        in memory.
+        Creates the file based on the provided template. After storing it
+        to file it will maintain it in memory.
         """
         json_friendly_format = self.recursive_parse_to_json_format(self._template)
 
-        with open(self._fp, "w+") as f:
+        with open(self._fp, "w+", encoding="utf-8") as f:
             json.dump(json_friendly_format, f, indent=4)
 
         self.data = self._template
 
     def _load_settings_file(self):
         """Load settings into memory from file."""
-        with open(self._fp, "r") as f:
+        with open(self._fp, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         self.data = self.recursive_parse_from_json_format(data)
 
-    def _get(self, enum, _return=None):
+    def get(self, enum, _return=None):
         """Getter function to retrieve a specific setting regardless of its position in the tree.
 
             :param enum: the enum type to fetch
@@ -382,10 +394,10 @@ class FilePersistence(JSONEnumSerializer):
 
         try:
             return self.recursive_get(self.data, enum)
-        except: # noqa
+        except: # noqa  # pylint: disable=bare-except
             return _return
 
-    def _set(self, enum, updated_value):
+    def set(self, enum, updated_value):
         """Set values to user settings file.
 
             :param enum: the Enum to be updated
@@ -406,17 +418,18 @@ class FilePersistence(JSONEnumSerializer):
         Saves the current user settings to file for persistency.
         """
         json_friendly_format = self.recursive_parse_to_json_format(self.data)
-        with open(self._fp, "w+") as f:
+        with open(self._fp, "w+", encoding="utf-8") as f:
             json.dump(json_friendly_format, f, indent=4)
 
 
 class BasicSettings:
     """Simple and basic user settings implementation.
 
-    Most of its properties either accept Enum objects or any expected value type for the enum.
-    By not enforcing the enum and allowing some breathing room this could be easily scripted as long
-    as correct types are passed to each property. Settings are persistent ( see :meth:`__init__` method)
-    by default.
+    Most of its properties either accept Enum objects or any expected
+    value type for the enum. By not enforcing the enum and allowing some
+    breathing room this could be easily scripted as long as correct
+    types are passed to each property. Settings are persistent
+    (see :meth:`__init__` method) by default.
 
     Usage:
 
@@ -734,19 +747,18 @@ class BasicSettings:
 
     def reset_to_default_configs(self) -> bool:
         """Reset user configuration to default values."""
-        pass
 
     def _get(self, enum, default_value=None, to_enum=None):
         if default_value and to_enum:
             try:
-                return to_enum(self._persistence._get(enum, default_value))
+                return to_enum(self._persistence.get(enum, default_value))
             except ValueError:
                 return default_value
 
-        return self._persistence._get(enum, default_value)
+        return self._persistence.get(enum, default_value)
 
     def _set(self, enum, new_value):
-        self._persistence._set(enum, new_value)
+        self._persistence.set(enum, new_value)
 
 
 class Features:
@@ -793,5 +805,5 @@ class VPNSettings:
         return self.__settings.ipv6.value
 
     @property
-    def features(self) -> "Features":
+    def features(self) -> Features:
         return Features(self.__settings)
