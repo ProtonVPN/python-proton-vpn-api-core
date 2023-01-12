@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.5.0
+%define version 0.6.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -54,6 +54,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Thu Jan 12 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.6.0
+- Expose methods to load api data from the cache stored in disk
+
 * Mon Dec 05 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.5.0
 - Persist VPN server to disk
 

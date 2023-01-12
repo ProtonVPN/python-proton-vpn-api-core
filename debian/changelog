@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.6.0) unstable; urgency=medium
+
+  * Expose methods to load api data from the cache stored in disk
+
+ -- Josep Llaneras <josep.llaneras@proton.ch> Thu, 12 Jan 2023 10:31:17 +0000
+
 proton-vpn-api-core (0.5.0) unstable; urgency=medium
 
   * Persist VPN server to disk
