@@ -75,15 +75,25 @@ class ProtonVPNAPI:
             server_name=logical_server.name
         )
 
-    def get_client_config(self, force_refresh: bool = False) -> ClientConfig:
-        """Returns Proton VPN client configuration.
-
-        If force refresh is not passed then current cached version is passed.
+    def get_fresh_client_config(self, force_refresh: bool = False) -> ClientConfig:
         """
-        if force_refresh:
-            return self._session_holder.get_client_config(force_refresh)
+        Returns a fresh Proton VPN client configuration.
 
-        return self._session_holder.client_config or self._session_holder.get_client_config()
+        By "fresh" we mean an up-to-date (not expired) version.
+
+        :param force_refresh: when True, the cache is never used
+        even when it is not expired.
+
+        :returns: the fresh client configuration.
+        """
+        return self._session_holder.get_fresh_client_config(force_refresh)
+
+    def get_cached_client_config(self) -> ClientConfig:
+        """
+        Loads the client configuration from the cache stored in disk
+        and returns it, ignoring whether the cache is expired or not.
+        """
+        return self._session_holder.get_cached_client_config()
 
     def logout(self):
         """

@@ -40,7 +40,7 @@ def test_get_server_list_loads_data_from_cache(
 ):
     cache_handler_mock.load.return_value = dummy_cache_content
 
-    server_list = vpn_servers.get_server_list(force_refresh=False)
+    server_list = vpn_servers.get_fresh_server_list(force_refresh=False)
 
     cache_handler_mock.load.assert_called_once()
     session_holder_mock.session.api_request.assert_not_called()
@@ -57,7 +57,7 @@ def test_get_server_list_calls_api_when_cache_does_not_exist_and_updates_cache(
     api_response = {"LogicalServers": []}
     session_holder_mock.session.api_request.return_value = api_response
 
-    server_list = vpn_servers.get_server_list(force_refresh=False)
+    server_list = vpn_servers.get_fresh_server_list(force_refresh=False)
 
     cache_handler_mock.load.assert_called_once()
     session_holder_mock.session.api_request.assert_called_once_with("/vpn/logicals")
@@ -77,7 +77,7 @@ def test_get_server_list_calls_api_when_cache_is_expired_and_updates_cache(
     # Travel to the future so that the cache content is expired.
     cache_expired_time = time.time() + VPNServers.FULL_CACHE_EXPIRATION_TIME * 1.5
     with freeze_time(datetime.fromtimestamp(cache_expired_time)):
-        server_list = vpn_servers.get_server_list(force_refresh=False)
+        server_list = vpn_servers.get_fresh_server_list(force_refresh=False)
 
     cache_handler_mock.load.assert_called_once()
     # Assert that the server list was retrieved from /vpn/logicals
@@ -96,10 +96,10 @@ def test_get_server_list_calls_api_after_cache_has_been_invalidated(
     session_holder_mock.session.api_request.return_value = api_response
 
     # Initially the server list will be obtained from the cache.
-    vpn_servers.get_server_list(force_refresh=False)
+    vpn_servers.get_fresh_server_list(force_refresh=False)
     vpn_servers.invalidate_cache()
     # This time the list should be retrieved from /vpn/logicals.
-    vpn_servers.get_server_list(force_refresh=False)
+    vpn_servers.get_fresh_server_list(force_refresh=False)
 
     # Assert that the server list was initially loaded from the cache.
     cache_handler_mock.load.assert_called_once()
@@ -125,7 +125,7 @@ def test_get_server_list_updates_server_loads_when_expired(
     # Travel to the future so that the cache content is expired.
     cache_expired_time = time.time() + VPNServers.LOADS_CACHE_EXPIRATION_TIME * 1.5
     with freeze_time(datetime.fromtimestamp(cache_expired_time)):
-        server_list = vpn_servers.get_server_list(force_refresh=False)
+        server_list = vpn_servers.get_fresh_server_list(force_refresh=False)
 
     cache_handler_mock.load.assert_called_once()
     session_holder_mock.session.api_request.assert_called_once_with("/vpn/loads")
@@ -147,7 +147,7 @@ def test_get_server_list_calls_api_and_updated_cache_when_force_refresh_paramete
     api_response = {"LogicalServers": []}
     session_holder_mock.session.api_request.return_value = api_response
 
-    server_list = vpn_servers.get_server_list(force_refresh=True)
+    server_list = vpn_servers.get_fresh_server_list(force_refresh=True)
 
     cache_handler_mock.load.assert_called_once()
     # Assert that the server list was retrieved from /vpn/logicals

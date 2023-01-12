@@ -54,21 +54,33 @@ class VPNServers:
         # next time get_server_list() is called, we would try to load it
         # from disk, which would be unnecessary.
 
-    def get_server_list(self, force_refresh: bool = False) -> ServerList:
+    def get_cached_server_list(self) -> ServerList:
         """
-        Returns the server list.
-        :param force_refresh: When True, no cache is used.
+        Loads the server list from the cache stored in disk and returns it,
+        ignoring whether it's expired or not.
+        """
+        local_cache = self._cache_handler.load()
+        self._server_list = ServerList(apidata=local_cache)
+        self._logicals_expiration_time = self._get_logicals_expiration_time(
+            start_time=self._server_list.logicals_update_timestamp
+        )
+        self._loads_expiration_time = self._get_loads_expiration_time(
+            start_time=self._server_list.loads_update_timestamp
+        )
+        return self._server_list
+
+    def get_fresh_server_list(self, force_refresh: bool = False) -> ServerList:
+        """
+        Returns a fresh server list.
+
+        By "fresh" we mean up-to-date or not expired.
+
+        :param force_refresh: When True, the cache is never used,
+        even when it's not expired.
         :return: The list of VPN servers.
         """
         if self._server_list is None:
-            local_cache = self._cache_handler.load()
-            self._server_list = ServerList(apidata=local_cache)
-            self._logicals_expiration_time = self._get_logicals_expiration_time(
-                start_time=self._server_list.logicals_update_timestamp
-            )
-            self._loads_expiration_time = self._get_loads_expiration_time(
-                start_time=self._server_list.loads_update_timestamp
-            )
+            self.get_cached_server_list()
 
         servers_updated = self._update_servers_if_needed(force_refresh)
         if servers_updated:

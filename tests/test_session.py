@@ -37,7 +37,7 @@ def test_get_client_config_from_api_with_default_cache(apidata):
     session_mock.api_request.return_value = apidata
 
     s = SessionHolder(session_mock, cache_handler_mock)
-    s.get_client_config()
+    s.get_fresh_client_config()
 
     cache_handler_mock.load.assert_called_once()
     cache_handler_mock.save.assert_called_once_with(apidata)
@@ -50,7 +50,7 @@ def test_get_client_config_from_cache(apidata):
     cache_handler_mock.load.return_value = apidata
 
     s = SessionHolder(Mock(), cache_handler_mock)
-    s.get_client_config()
+    s.get_fresh_client_config()
 
     cache_handler_mock.load.assert_called_once()
 
@@ -64,7 +64,7 @@ def test_get_client_config_refreshes_cache_when_expired(apidata):
     session_mock.api_request.return_value = apidata
 
     s = SessionHolder(session_mock, cache_handler_mock)
-    s.get_client_config()
+    s.get_fresh_client_config()
 
     cache_handler_mock.load.assert_called_once()
     session_mock.api_request.assert_called_once_with(SessionHolder.CLIENT_CONFIG)

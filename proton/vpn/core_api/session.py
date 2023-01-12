@@ -56,17 +56,32 @@ class SessionHolder:
 
         return self._session
 
-    def get_client_config(self, force_refresh: bool = False) -> ClientConfig:
-        """Returns client config for the current session."""
+    def get_cached_client_config(self) -> ClientConfig:
+        """
+        Loads the client configuration from the cache stored in disk
+        and returns it, ignoring whether the cache is expired or not.
+        """
+        data = self._cache_handler.load()
+        if not data:
+            # If no cache is found then load the default config
+            data = DEFAULT_CLIENT_CONFIG
+
+        self.client_config = ClientConfig.from_dict(data)
+        return self.client_config
+
+    def get_fresh_client_config(self, force_refresh: bool = False) -> ClientConfig:
+        """
+        Returns a fresh Proton VPN client configuration.
+
+        By "fresh" we mean an up-to-date (not expired) version.
+
+        :param force_refresh: when True, the cache is never used
+        even when it is not expired.
+
+        :returns: the fresh client configuration.
+        """
         if not self.client_config:
-            # Try to load from cache
-            data = self._cache_handler.load()
-
-            if not data:
-                # If no cache is found then load the default config
-                data = DEFAULT_CLIENT_CONFIG
-
-            self.client_config = ClientConfig.from_dict(data)
+            self.get_cached_client_config()
 
         if force_refresh or not self.client_config or self.client_config.is_expired:
             data = self._get_data_from_api()
