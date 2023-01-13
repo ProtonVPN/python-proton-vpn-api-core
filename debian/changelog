@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.7.0) unstable; urgency=medium
+
+  * Move get_vpn_server to VPNConnectionHolder
+
+ -- Josep Llaneras <josep.llaneras@proton.ch> Fri, 13 Jan 2023 17:38:26 +0000
+
 proton-vpn-api-core (0.6.0) unstable; urgency=medium
 
   * Expose methods to load api data from the cache stored in disk

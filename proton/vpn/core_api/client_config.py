@@ -45,9 +45,10 @@ class OpenVPNPorts:
     @staticmethod
     def from_dict(openvpn_ports: dict) -> OpenVPNPorts:
         """Creates OpenVPNPorts object from data."""
+        # The lists are copied to avoid side effects if the dict is modified.
         return OpenVPNPorts(
-            openvpn_ports["UDP"],
-            openvpn_ports["TCP"]
+            openvpn_ports["UDP"].copy(),
+            openvpn_ports["TCP"].copy()
         )
 
 
@@ -93,7 +94,7 @@ class FeatureFlags:  # pylint: disable=R0902
 
 
 class ClientConfig:
-    """Holds the main structure for obtaning various types of information.
+    """Holds the main structure for obtaining various types of information.
     """
     def __init__(
         self, openvpn_ports, holes_ips,
@@ -116,12 +117,19 @@ class ClientConfig:
         cache_expiration = apidata["CacheExpiration"]
 
         return ClientConfig(
+            # No need to copy openvpn_ports, OpenVPNPorts takes care of it.
             OpenVPNPorts.from_dict(openvpn_ports),
-            holes_ips,
+            # We copy the holes_ips list to avoid side effects if it's modified.
+            holes_ips.copy(),
             server_refresh_interval,
             FeatureFlags.from_dict(feature_flags),
             cache_expiration
         )
+
+    @staticmethod
+    def default() -> ClientConfig:
+        """":returns: the default client configuration."""
+        return ClientConfig.from_dict(DEFAULT_CLIENT_CONFIG)
 
     @property
     def is_expired(self) -> bool:

@@ -5,12 +5,14 @@ import threading
 from dataclasses import dataclass
 from typing import Optional, Sequence
 
+from proton.vpn import logging
 from proton.vpn.connection import VPNConnection
 from proton.vpn.connection.enum import ConnectionStateEnum
+from proton.vpn.core_api.client_config import ClientConfig
 from proton.vpn.core_api.exceptions import VPNConnectionNotFound
 from proton.vpn.core_api.session import SessionHolder
 from proton.vpn.core_api.settings import BasicSettings
-from proton.vpn import logging
+from proton.vpn.servers.server_types import LogicalServer
 
 
 logger = logging.getLogger(__name__)
@@ -67,6 +69,25 @@ class VPNConnectionHolder:
     def current_connection(self, current_connection: VPNConnection):
         """Sets the current VPN connection."""
         self._set_current_connection(current_connection)
+
+    def get_vpn_server(
+            self, logical_server: LogicalServer, client_config: ClientConfig
+    ) -> VPNServer:
+        """
+        :return: a :class:`proton.vpn.vpnconnection.interfaces.VPNServer` that
+        can be used to establish a VPN connection with
+        :class:`proton.vpn.vpnconnection.VPNConnection`.
+        """
+        physical_server = logical_server.get_random_physical_server()
+        return VPNServer(
+            server_ip=physical_server.entry_ip,
+            domain=physical_server.domain,
+            x25519pk=physical_server.x25519_pk,
+            udp_ports=client_config.openvpn_ports.udp,
+            tcp_ports=client_config.openvpn_ports.tcp,
+            server_id=logical_server.id,
+            server_name=logical_server.name
+        )
 
     def connect(self, server: VPNServer, protocol: str = None, backend: str = None):
         """
