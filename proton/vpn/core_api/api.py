@@ -12,6 +12,7 @@ from proton.vpn.core_api.settings import BasicSettings
 from proton.vpn.core_api.session import SessionHolder
 from proton.vpn.session.dataclasses import LoginResult
 from proton.vpn.core_api.exceptions import VPNConnectionFoundAtLogout
+from proton.vpn.core_api.reports import BugReport
 
 
 class ProtonVPNAPI:
@@ -23,6 +24,7 @@ class ProtonVPNAPI:
         )
         self.connection = VPNConnectionHolder(self._session_holder, self.settings)
         self.servers = VPNServers(self._session_holder)
+        self.bug_report = BugReport()
 
     def login(self, username: str, password: str) -> LoginResult:
         """

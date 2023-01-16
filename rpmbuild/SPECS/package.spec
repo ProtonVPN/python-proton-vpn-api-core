@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.7.0
+%define version 0.8.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -54,6 +54,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Tue Jan 17 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.8.0
+- Feature: Report a bug
+
 * Fri Jan 13 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.7.0
 - Move get_vpn_server to VPNConnectionHolder
 
