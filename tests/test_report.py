@@ -1,5 +1,6 @@
 from proton.vpn.core_api.reports import BugReport, BugReportForm
-from proton.session.exceptions import ProtonAPIError
+from proton.session.exceptions import ProtonAPIError, ProtonAPINotReachable
+import requests
 from unittest.mock import Mock, patch, MagicMock
 import tempfile
 import pytest
@@ -10,6 +11,8 @@ import os
 def test_submit_bug_report_successfully_when_provided_with_all_required_fields(post_mock):
     mock_api_response = Mock()
     mock_api_response.status_code = 200
+    mock_api_response.headers = {"content-type": "application/json"}
+    mock_api_response.json.return_value = {"Code": 1000}
     post_mock.return_value = mock_api_response
 
     bug_report = BugReport()
@@ -41,9 +44,11 @@ def test_submit_bug_report_successfully_when_provided_with_all_required_fields(p
 
 
 @patch("proton.vpn.core_api.reports.requests.Session.post")
-def test_submit_bug_report_raises_exception_when_api_request_failed(post_mock):
+def test_submit_bug_report_raises_exception_when_api_returns_error(post_mock):
     mock_api_response = MagicMock()
     mock_api_response.status_code = 100
+    mock_api_response.headers = {"content-type": "application/json"}
+    mock_api_response.json.return_value = {"Code": 2000, "Error": ""}
     mock_api_response.reason = "Invalid API"
     post_mock.return_value = mock_api_response
 
@@ -58,6 +63,24 @@ def test_submit_bug_report_raises_exception_when_api_request_failed(post_mock):
     )
 
     with pytest.raises(ProtonAPIError):
+        bug_report.submit(report_form)
+
+
+@patch("proton.vpn.core_api.reports.requests.Session.post")
+def test_submit_bug_report_raises_exception_when_api_is_not_reachable(post_mock):
+    post_mock.side_effect = requests.RequestException("API Unreachable")
+
+    bug_report = BugReport()
+    report_form = BugReportForm(
+        username="test_user",
+        email="email@pm.me",
+        title="This is a title example",
+        description="This is a description example",
+        client_version="1.0.0",
+        client="Example",
+    )
+
+    with pytest.raises(ProtonAPINotReachable):
         bug_report.submit(report_form)
 
 

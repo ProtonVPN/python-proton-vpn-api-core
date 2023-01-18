@@ -3,8 +3,8 @@ Bug Report feature module.
 """
 
 from __future__ import annotations
+
 import os
-from json import JSONDecodeError
 from dataclasses import dataclass, field
 from typing import List
 import typing
@@ -54,7 +54,7 @@ class BugReport:  # pylint: disable=too-few-public-methods
         files = self._form_attachments_to_dict(report_form)
 
         logger.info(
-            f"'{BugReport.BASE_URL+BugReport.BUG_ROUTE}'",
+            f"'{BugReport.BUG_ROUTE}'",
             category="API", event="REQUEST",
         )
         try:
@@ -64,32 +64,22 @@ class BugReport:  # pylint: disable=too-few-public-methods
                 files=files
             )
         except requests.RequestException as excp:
-            raise ProtonAPINotReachable from excp
+            raise ProtonAPINotReachable("Unable to reach API") from excp
 
         logger.info(
-            f"'{BugReport.BASE_URL+BugReport.BUG_ROUTE}'",
+            f"'{BugReport.BUG_ROUTE}'",
             category="API", event="RESPONSE",
             optional=f"Status code: {api_response.status_code}; "
             f"Reason: {api_response.reason}; "
         )
 
-        try:
-            json_response = api_response.json()
-        except (AttributeError, JSONDecodeError):
-            json_response = {}
+        if api_response.headers["content-type"] != "application/json":
+            raise ProtonAPINotReachable("Unable to reach API.")
 
-        if api_response.status_code != 200:
-            logger.error(
-                f"'{BugReport.BUG_ROUTE}'",
-                category="API", event="RESPONSE",
-                optional=f"Code: {json_response.get('Code')}; "
-                f"Error: {json_response.get('Error')}"
-            )
-            raise ProtonAPIError(
-                api_response.status_code,
-                api_response.headers,
-                json_response
-            )
+        ret_json = api_response.json()
+
+        if ret_json['Code'] not in [1000, 1001]:
+            raise ProtonAPIError(api_response.status_code, dict(api_response.headers), ret_json)
 
     def _form_data_to_dict(self, report_form: BugReportForm) -> dict:
         return {
