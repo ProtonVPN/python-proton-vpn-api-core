@@ -1,6 +1,10 @@
+import tempfile
+from os.path import basename
 from unittest.mock import Mock
 
 import pytest
+
+from proton.vpn.core_api.reports import BugReportForm
 from proton.vpn.core_api.session import SessionHolder
 import time
 
@@ -67,5 +71,73 @@ def test_get_client_config_refreshes_cache_when_expired(apidata):
     s.get_fresh_client_config()
 
     cache_handler_mock.load.assert_called_once()
-    session_mock.api_request.assert_called_once_with(SessionHolder.CLIENT_CONFIG)
+    session_mock.api_request.assert_called_once_with(SessionHolder.CLIENT_CONFIG_ENDPOINT)
     cache_handler_mock.save.assert_called_once_with(apidata)
+
+
+def test_submit_report():
+    session_mock = Mock()
+    s = SessionHolder(session=session_mock, cache_handler=Mock())
+
+    with tempfile.NamedTemporaryFile(mode="rb") as attachment:
+        bug_report = BugReportForm(
+            username="test_user",
+            email="email@pm.me",
+            title="This is a title example",
+            description="This is a description example",
+            client_version="1.0.0",
+            client="Example",
+            attachments=[attachment]
+        )
+
+        s.submit_bug_report(bug_report)
+
+        session_mock.api_request.assert_called_once()
+        api_request_kwargs = session_mock.api_request.call_args.kwargs
+
+        assert api_request_kwargs["endpoint"] == SessionHolder.BUG_REPORT_ENDPOINT
+
+        submitted_data = api_request_kwargs["data"]
+
+        assert len(submitted_data.fields) == 10
+
+        form_field = submitted_data.fields[0]
+        assert form_field.name == "OS"
+        assert form_field.value == bug_report.os
+
+        form_field = submitted_data.fields[1]
+        assert form_field.name == "OSVersion"
+        assert form_field.value == bug_report.os_version
+
+        form_field = submitted_data.fields[2]
+        assert form_field.name == "Client"
+        assert form_field.value == bug_report.client
+
+        form_field = submitted_data.fields[3]
+        assert form_field.name == "ClientVersion"
+        assert form_field.value == bug_report.client_version
+
+        form_field = submitted_data.fields[4]
+        assert form_field.name == "ClientType"
+        assert form_field.value == bug_report.client_type
+
+        form_field = submitted_data.fields[5]
+        assert form_field.name == "Title"
+        assert form_field.value == bug_report.title
+
+        form_field = submitted_data.fields[6]
+        assert form_field.name == "Description"
+        assert form_field.value == bug_report.description
+
+        form_field = submitted_data.fields[7]
+        assert form_field.name == "Username"
+        assert form_field.value == bug_report.username
+
+        form_field = submitted_data.fields[8]
+        assert form_field.name == "Email"
+        assert form_field.value == bug_report.email
+
+        form_field = submitted_data.fields[9]
+        assert form_field.name == "Attachment"
+        assert form_field.value == bug_report.attachments[0]
+        assert form_field.filename == basename(form_field.value.name)

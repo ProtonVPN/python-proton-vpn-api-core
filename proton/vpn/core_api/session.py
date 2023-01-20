@@ -4,13 +4,17 @@ Proton VPN Session API.
 from __future__ import annotations
 import time
 import random
+from os.path import basename
+
 import distro
-from proton.vpn.session import VPNSession
+
+from proton.session import FormData, FormField
 from proton.sso import ProtonSSO
+from proton.vpn import logging
+from proton.vpn.session import VPNSession
 from proton.vpn.core_api.client_config import ClientConfig, DEFAULT_CLIENT_CONFIG
 from proton.vpn.core_api.cache_handler import CacheHandler, CLIENT_CONFIG
-from proton.vpn import logging
-
+from proton.vpn.core_api.reports import BugReportForm
 
 logger = logging.getLogger(__name__)
 DISTRIBUTION = distro.id()
@@ -20,7 +24,8 @@ VERSION = distro.version()
 class SessionHolder:
     """Holds the current session object, initializing it lazily when requested."""
 
-    CLIENT_CONFIG = "/vpn/clientconfig"
+    BUG_REPORT_ENDPOINT = "/core/v4/reports/bug"
+    CLIENT_CONFIG_ENDPOINT = "/vpn/clientconfig"
     CLIENT_CONFIG_EXPIRATION_TIME = 3 * 60 * 60  # 3 hours
     RANDOM_FRACTION = 0.22  # 22%
 
@@ -84,20 +89,42 @@ class SessionHolder:
             self.get_cached_client_config()
 
         if force_refresh or not self.client_config or self.client_config.is_expired:
-            data = self._get_data_from_api()
+            data = self._get_client_config_from_api()
             self.client_config = ClientConfig.from_dict(data)
 
         return self.client_config
 
-    def _get_data_from_api(self) -> dict:
-        """Gets the data from API and caches it to disk."""
+    def submit_bug_report(self, bug_report: BugReportForm):
+        """Submits a bug report to customer support."""
+        data = FormData()
+        data.add(FormField(name="OS", value=bug_report.os))
+        data.add(FormField(name="OSVersion", value=bug_report.os_version))
+        data.add(FormField(name="Client", value=bug_report.client))
+        data.add(FormField(name="ClientVersion", value=bug_report.client_version))
+        data.add(FormField(name="ClientType", value=bug_report.client_type))
+        data.add(FormField(name="Title", value=bug_report.title))
+        data.add(FormField(name="Description", value=bug_report.description))
+        data.add(FormField(name="Username", value=bug_report.username))
+        data.add(FormField(name="Email", value=bug_report.email))
+        for attachment in bug_report.attachments:
+            data.add(FormField(
+                name="Attachment", value=attachment,
+                filename=basename(attachment.name)
+            ))
+
+        return self._session.api_request(
+            endpoint=SessionHolder.BUG_REPORT_ENDPOINT, data=data
+        )
+
+    def _get_client_config_from_api(self) -> dict:
+        """Gets the client configuration from the API and caches it to disk."""
         logger.info(
-            f"'{SessionHolder.CLIENT_CONFIG}'",
+            f"'{SessionHolder.CLIENT_CONFIG_ENDPOINT}'",
             category="API", event="REQUEST"
         )
-        data = self._session.api_request(SessionHolder.CLIENT_CONFIG)
+        data = self._session.api_request(SessionHolder.CLIENT_CONFIG_ENDPOINT)
         logger.info(
-            f"'{SessionHolder.CLIENT_CONFIG}'",
+            f"'{SessionHolder.CLIENT_CONFIG_ENDPOINT}'",
             category="API", event="RESPONSE"
         )
         data["CacheExpiration"] = self._get_client_config_expiration_time()

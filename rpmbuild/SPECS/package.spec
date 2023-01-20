@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.8.0
+%define version 0.8.1
 %define release 1
 
 Prefix: %{_prefix}
@@ -54,6 +54,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Fri Jan 20 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.8.1
+- Send bug report using proton-core
+
 * Tue Jan 17 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.8.0
 - Feature: Report a bug
 

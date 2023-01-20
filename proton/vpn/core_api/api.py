@@ -12,7 +12,7 @@ from proton.vpn.core_api.settings import BasicSettings
 from proton.vpn.core_api.session import SessionHolder
 from proton.vpn.session.dataclasses import LoginResult
 from proton.vpn.core_api.exceptions import VPNConnectionFoundAtLogout
-from proton.vpn.core_api.reports import BugReport
+from proton.vpn.core_api.reports import BugReportForm
 
 
 class ProtonVPNAPI:
@@ -24,7 +24,6 @@ class ProtonVPNAPI:
         )
         self.connection = VPNConnectionHolder(self._session_holder, self.settings)
         self.servers = VPNServers(self._session_holder)
-        self.bug_report = BugReport()
 
     def login(self, username: str, password: str) -> LoginResult:
         """
@@ -78,6 +77,12 @@ class ProtonVPNAPI:
         and returns it, ignoring whether the cache is expired or not.
         """
         return self._session_holder.get_cached_client_config()
+
+    def submit_bug_report(self, bug_report: BugReportForm):
+        """
+        Submits the specified bug report to customer support.
+        """
+        return self._session_holder.submit_bug_report(bug_report)
 
     def logout(self):
         """
