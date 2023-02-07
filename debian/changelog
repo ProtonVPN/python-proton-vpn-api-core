@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.8.2) unstable; urgency=medium
+
+  * Do not raise exception during logout if there is an active connection
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> Tue, 07 Feb 2023 16:00:00 +0100
+
 proton-vpn-api-core (0.8.1) unstable; urgency=medium
 
   * Send bug report using proton-core

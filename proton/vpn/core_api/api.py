@@ -11,7 +11,6 @@ from proton.vpn.core_api.servers import VPNServers
 from proton.vpn.core_api.settings import BasicSettings
 from proton.vpn.core_api.session import SessionHolder
 from proton.vpn.session.dataclasses import LoginResult
-from proton.vpn.core_api.exceptions import VPNConnectionFoundAtLogout
 from proton.vpn.core_api.reports import BugReportForm
 
 
@@ -89,8 +88,5 @@ class ProtonVPNAPI:
         Logs the current user out.
         :raises: VPNConnectionFoundAtLogout if the users is still connected to the VPN.
         """
-        if self.connection.is_connection_active:
-            raise VPNConnectionFoundAtLogout("Active connection was found")
-
         self._session_holder.session.logout()
         self.servers.invalidate_cache()
