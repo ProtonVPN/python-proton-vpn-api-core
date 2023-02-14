@@ -5,14 +5,14 @@ Cache Handler module.
 import json
 import os
 
-from proton.utils import ExecutionEnvironment
+from proton.utils.environment import VPNExecutionEnvironment
 
 SERVER_LIST = os.path.join(
-    ExecutionEnvironment().path_cache,
+    VPNExecutionEnvironment().path_cache,
     "serverlist.json"
 )
 CLIENT_CONFIG = os.path.join(
-    ExecutionEnvironment().path_cache,
+    VPNExecutionEnvironment().path_cache,
     "clientconfig.json"
 )
 

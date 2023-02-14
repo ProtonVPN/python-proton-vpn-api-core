@@ -127,7 +127,7 @@ class VPNServers:
             self._server_list.update_load_data(api_response)
             self._loads_expiration_time = self._get_loads_expiration_time()
 
-        servers_updated = (api_response is not None)
+        servers_updated = api_response is not None
 
         return servers_updated
 

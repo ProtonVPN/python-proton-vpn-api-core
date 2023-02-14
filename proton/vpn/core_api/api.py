@@ -3,7 +3,7 @@ Proton VPN API.
 """
 import os
 
-from proton.utils import ExecutionEnvironment
+from proton.utils.environment import VPNExecutionEnvironment
 
 from proton.vpn.core_api.client_config import ClientConfig
 from proton.vpn.core_api.connection import VPNConnectionHolder
@@ -19,7 +19,7 @@ class ProtonVPNAPI:
     def __init__(self):
         self._session_holder = SessionHolder()
         self.settings = BasicSettings(
-            os.path.join(ExecutionEnvironment().path_config, "settings.json")
+            os.path.join(VPNExecutionEnvironment().path_config, "settings.json")
         )
         self.connection = VPNConnectionHolder(self._session_holder, self.settings)
         self.servers = VPNServers(self._session_holder)

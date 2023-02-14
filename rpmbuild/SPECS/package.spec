@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.8.2
+%define version 0.9.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -54,7 +54,10 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
-* Fri Fev 07 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.8.2
+* Tue Feb 14 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.9.0
+- Use standardized paths for cache and settings
+
+* Tue Feb 07 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.8.2
 - Do not raise exception during logout if there is an active connection
 
 * Fri Jan 20 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.8.1
