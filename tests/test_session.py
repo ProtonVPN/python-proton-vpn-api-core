@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import pytest
 
 from proton.vpn.core_api.reports import BugReportForm
-from proton.vpn.core_api.session import SessionHolder
+from proton.vpn.core_api.session import SessionHolder, ClientTypeMetadata
 import time
 
 
@@ -32,7 +32,20 @@ def apidata():
     }
 
 
-def test_get_client_config_from_api_with_default_cache(apidata):
+@pytest.fixture
+def client_type_metadata():
+    return ClientTypeMetadata(
+        type="test",
+        version="4.0.0"
+    )
+
+
+def test_initialize_session_raises_exception_when_passing_client_type_data_in_unexpected_format():
+    with pytest.raises(RuntimeError):
+        SessionHolder(Mock(), Mock(), Mock())
+
+
+def test_get_client_config_from_api_with_default_cache(apidata, client_type_metadata):
     apidata["CacheExpiration"] -= 1
     session_mock = Mock()
     cache_handler_mock = Mock()
@@ -40,26 +53,26 @@ def test_get_client_config_from_api_with_default_cache(apidata):
     cache_handler_mock.load.return_value = None
     session_mock.api_request.return_value = apidata
 
-    s = SessionHolder(session_mock, cache_handler_mock)
+    s = SessionHolder(client_type_metadata, session_mock, cache_handler_mock)
     s.get_fresh_client_config()
 
     cache_handler_mock.load.assert_called_once()
     cache_handler_mock.save.assert_called_once_with(apidata)
 
 
-def test_get_client_config_from_cache(apidata):
+def test_get_client_config_from_cache(apidata, client_type_metadata):
     # Ensure that the cache expires later for test purpose
     cache_handler_mock = Mock()
     apidata["CacheExpiration"] = time.time() + 24 * 60 * 60
     cache_handler_mock.load.return_value = apidata
 
-    s = SessionHolder(Mock(), cache_handler_mock)
+    s = SessionHolder(client_type_metadata, Mock(), cache_handler_mock)
     s.get_fresh_client_config()
 
     cache_handler_mock.load.assert_called_once()
 
 
-def test_get_client_config_refreshes_cache_when_expired(apidata):
+def test_get_client_config_refreshes_cache_when_expired(apidata, client_type_metadata):
     session_mock = Mock()
     cache_handler_mock = Mock()
     # Ensure that the cache is expired for test purpose
@@ -67,7 +80,7 @@ def test_get_client_config_refreshes_cache_when_expired(apidata):
     cache_handler_mock.load.return_value = apidata
     session_mock.api_request.return_value = apidata
 
-    s = SessionHolder(session_mock, cache_handler_mock)
+    s = SessionHolder(client_type_metadata, session_mock, cache_handler_mock)
     s.get_fresh_client_config()
 
     cache_handler_mock.load.assert_called_once()
@@ -75,9 +88,9 @@ def test_get_client_config_refreshes_cache_when_expired(apidata):
     cache_handler_mock.save.assert_called_once_with(apidata)
 
 
-def test_submit_report():
+def test_submit_report(client_type_metadata):
     session_mock = Mock()
-    s = SessionHolder(session=session_mock, cache_handler=Mock())
+    s = SessionHolder(client_type_metadata, session_mock, Mock())
 
     with tempfile.NamedTemporaryFile(mode="rb") as attachment:
         bug_report = BugReportForm(

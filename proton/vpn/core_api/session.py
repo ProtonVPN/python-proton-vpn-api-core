@@ -2,6 +2,7 @@
 Proton VPN Session API.
 """
 from __future__ import annotations
+from dataclasses import dataclass
 import time
 import random
 from os.path import basename
@@ -21,6 +22,12 @@ DISTRIBUTION = distro.id()
 VERSION = distro.version()
 
 
+@dataclass
+class ClientTypeMetadata:  # pylint: disable=missing-class-docstring
+    type: str
+    version: str
+
+
 class SessionHolder:
     """Holds the current session object, initializing it lazily when requested."""
 
@@ -29,11 +36,16 @@ class SessionHolder:
     CLIENT_CONFIG_EXPIRATION_TIME = 3 * 60 * 60  # 3 hours
     RANDOM_FRACTION = 0.22  # 22%
 
-    def __init__(self, session: VPNSession = None, cache_handler: CacheHandler = None):
+    def __init__(
+        self, client_type_metadata: ClientTypeMetadata,
+        session: VPNSession = None, cache_handler: CacheHandler = None
+    ):
+        if not isinstance(client_type_metadata, ClientTypeMetadata):
+            raise RuntimeError(f"Unexpected client type: {client_type_metadata}")
 
         self._proton_sso = ProtonSSO(
-            appversion="linux-vpn@4.0.0",
-            user_agent=f"ProtonVPN/4.0.0 (Linux; {DISTRIBUTION}/{VERSION})"
+            appversion=f"linux-vpn-{client_type_metadata.type}@{client_type_metadata.version}",
+            user_agent=f"ProtonVPN/{client_type_metadata.version} (Linux; {DISTRIBUTION}/{VERSION})"
         )
         self._session = session
         self._cache_handler = cache_handler or CacheHandler(CLIENT_CONFIG)

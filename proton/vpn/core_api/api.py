@@ -9,15 +9,17 @@ from proton.vpn.core_api.client_config import ClientConfig
 from proton.vpn.core_api.connection import VPNConnectionHolder
 from proton.vpn.core_api.servers import VPNServers
 from proton.vpn.core_api.settings import BasicSettings
-from proton.vpn.core_api.session import SessionHolder
+from proton.vpn.core_api.session import SessionHolder, ClientTypeMetadata
 from proton.vpn.session.dataclasses import LoginResult
 from proton.vpn.core_api.reports import BugReportForm
 
 
 class ProtonVPNAPI:
     """Class exposing the Proton VPN facade."""
-    def __init__(self):
-        self._session_holder = SessionHolder()
+    def __init__(self, client_type_metadata: ClientTypeMetadata):
+        self._session_holder = SessionHolder(
+            client_type_metadata=client_type_metadata
+        )
         self.settings = BasicSettings(
             os.path.join(VPNExecutionEnvironment().path_config, "settings.json")
         )

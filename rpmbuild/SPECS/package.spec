@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.9.0
+%define version 0.10.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -54,6 +54,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Tue Feb 28 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.10.0
+- Implement new appversion format
+
 * Tue Feb 14 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.9.0
 - Use standardized paths for cache and settings
 

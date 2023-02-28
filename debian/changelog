@@ -1,111 +1,117 @@
+proton-vpn-api-core (0.10.0) unstable; urgency=medium
+
+  * Implement new appversion format
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Tue, 28 Feb 2023 10:00:00 +0100
+
 proton-vpn-api-core (0.9.0) unstable; urgency=medium
 
   * Use standardized paths for cache and settings
 
- -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> Tue, 14 Feb 2023 12:00:00 +0100
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Tue, 14 Feb 2023 12:00:00 +0100
 
 proton-vpn-api-core (0.8.2) unstable; urgency=medium
 
   * Do not raise exception during logout if there is an active connection
 
- -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> Tue, 07 Feb 2023 16:00:00 +0100
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Tue, 07 Feb 2023 16:00:00 +0100
 
 proton-vpn-api-core (0.8.1) unstable; urgency=medium
 
   * Send bug report using proton-core
 
- -- Josep Llaneras <josep.llaneras@proton.ch> Fri, 20 Jan 2023 15:12:24 +0100
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Fri, 20 Jan 2023 15:12:24 +0100
 
 proton-vpn-api-core (0.8.0) unstable; urgency=medium
 
   * Feature: Report a bug
 
- -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> Tue, 17 Jan 2023 12:00:00 +0100
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Tue, 17 Jan 2023 12:00:00 +0100
  
 proton-vpn-api-core (0.7.0) unstable; urgency=medium
 
   * Move get_vpn_server to VPNConnectionHolder
 
- -- Josep Llaneras <josep.llaneras@proton.ch> Fri, 13 Jan 2023 17:38:26 +0000
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Fri, 13 Jan 2023 17:38:26 +0000
 
 proton-vpn-api-core (0.6.0) unstable; urgency=medium
 
   * Expose methods to load api data from the cache stored in disk
 
- -- Josep Llaneras <josep.llaneras@proton.ch> Thu, 12 Jan 2023 10:31:17 +0000
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Thu, 12 Jan 2023 10:31:17 +0000
 
 proton-vpn-api-core (0.5.0) unstable; urgency=medium
 
   * Persist VPN server to disk
 
- -- Josep Llaneras <josep.llaneras@proton.ch> Mon, 05 Dec 2022 18:39:00 +0100
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Mon, 05 Dec 2022 18:39:00 +0100
 
 proton-vpn-api-core (0.4.0) unstable; urgency=medium
 
   * Decoupled VPNServers and ClientConfig
   * All methods that return a server will now return a LogicalServer instead of VPNServer
 
- -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> Tue, 29 Nov 2022 17:00:00 +0100
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Tue, 29 Nov 2022 17:00:00 +0100
 
 proton-vpn-api-core (0.3.1) unstable; urgency=medium
 
   * Check if there is an active connection before logging out
 
- -- Josep Llaneras <josep.llaneras@proton.ch> Fri, 25 Nov 2022 17:44:50 +0100
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Fri, 25 Nov 2022 17:44:50 +0100
 
 proton-vpn-api-core (0.3.0) unstable; urgency=medium
 
   * Fetch and cache clientconfig data from API
 
- -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> Thu, 17 Nov 2022 17:00:00 +0100
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Thu, 17 Nov 2022 17:00:00 +0100
 
 proton-vpn-api-core (0.2.7) unstable; urgency=medium
 
   * Allow cancelling a VPN connection before it is established
 
- -- Josep Llaneras <josep.llaneras@proton.ch> Tue, 15 Nov 2022 18:47:57 +0100
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Tue, 15 Nov 2022 18:47:57 +0100
 
 proton-vpn-api-core (0.2.6) unstable; urgency=medium
 
   * Check connection status before connecting/disconnecting
 
- -- Josep Llaneras <josep.llaneras@proton.ch> Tue, 15 Nov 2022 16:07:50 +0100
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Tue, 15 Nov 2022 16:07:50 +0100
 
 proton-vpn-api-core (0.2.5) unstable; urgency=medium
 
   * Add Proton VPN logging library
 
- -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> Fri, 11 Nov 2022 17:00:00 +0100
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Fri, 11 Nov 2022 17:00:00 +0100
  
 proton-vpn-api-core (0.2.4) unstable; urgency=medium
 
   * Lazy load the currently active Proton VPN connection, if existing
 
- -- Josep Llaneras <josep.llaneras@proton.ch> Wed, 09 Nov 2022 17:20:44 +0100
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Wed, 09 Nov 2022 17:20:44 +0100
 
 proton-vpn-api-core (0.2.3) unstable; urgency=medium
 
   * Ensure that appversion and user-agent are passed when making API calls
 
- -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> Tue, 8 Nov 2022 11:00:00 +0100
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Tue, 8 Nov 2022 11:00:00 +0100
 
 proton-vpn-api-core (0.2.2) unstable; urgency=medium
 
   * Ensure that before establishing a new connection, the previous connection is disconnected, if there is one
 
- -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> Fri, 4 Nov 2022 11:00:00 +0100
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Fri, 4 Nov 2022 11:00:00 +0100
  
 proton-vpn-api-core (0.2.1) unstable; urgency=medium
 
   * Delete cache at logout
 
- -- Josep Llaneras <josep.llaneras@proton.ch> Mon, 26 Sep 2022 17:49:01 +0200
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Mon, 26 Sep 2022 17:49:01 +0200
 
 proton-vpn-api-core (0.2.0) unstable; urgency=medium
 
   * Add method to obtain the user's tier
 
- -- Josep Llaneras <josep.llaneras@proton.ch> Thu, 22 Sep 2022 11:05:22 +0200
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Thu, 22 Sep 2022 11:05:22 +0200
 
 proton-vpn-api-core (0.1.0) UNRELEASED; urgency=medium
 
