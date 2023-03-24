@@ -6,7 +6,7 @@ import os
 from proton.utils.environment import VPNExecutionEnvironment
 
 from proton.vpn.core_api.client_config import ClientConfig
-from proton.vpn.core_api.connection import VPNConnectionHolder
+from proton.vpn.core_api.connection import VPNConnectorWrapper
 from proton.vpn.core_api.servers import VPNServers
 from proton.vpn.core_api.settings import BasicSettings
 from proton.vpn.core_api.session import SessionHolder, ClientTypeMetadata
@@ -23,7 +23,7 @@ class ProtonVPNAPI:
         self.settings = BasicSettings(
             os.path.join(VPNExecutionEnvironment().path_config, "settings.json")
         )
-        self.connection = VPNConnectionHolder(self._session_holder, self.settings)
+        self.connection = VPNConnectorWrapper(self._session_holder, self.settings)
         self.servers = VPNServers(self._session_holder)
 
     def login(self, username: str, password: str) -> LoginResult:

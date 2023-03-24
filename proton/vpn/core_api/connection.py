@@ -3,13 +3,15 @@ Proton VPN Connection API.
 """
 import threading
 from dataclasses import dataclass
-from typing import Optional, Sequence
+from typing import Optional, Sequence, runtime_checkable, Protocol
+
+from proton.vpn.connection.states import State
 
 from proton.vpn import logging
 from proton.vpn.connection import VPNConnection
 from proton.vpn.connection.enum import ConnectionStateEnum
+from proton.vpn.connection.vpnconnector import VPNConnector
 from proton.vpn.core_api.client_config import ClientConfig
-from proton.vpn.core_api.exceptions import VPNConnectionNotFound
 from proton.vpn.core_api.session import SessionHolder
 from proton.vpn.core_api.settings import BasicSettings
 from proton.vpn.servers.server_types import LogicalServer
@@ -34,41 +36,60 @@ class VPNServer:
     server_name: str
 
 
-class VPNConnectionHolder:
+@runtime_checkable
+class VPNStateSubscriber(Protocol):  # pylint: disable=too-few-public-methods
+    """Subscriber to connection status updates."""
+
+    def status_update(self, status: "BaseState"):  # noqa
+        """This method is called by the publisher whenever a VPN connection status
+        update occurs.
+        :param status: new connection status.
+        """
+
+
+class VPNConnectorWrapper:
     """Holds a reference to the active VPN connection."""
 
-    def __init__(self, session_holder: SessionHolder, settings: BasicSettings):
-        self._current_connection_initialized = False
-        self._current_connection = None
+    def __init__(
+            self, session_holder: SessionHolder, settings: BasicSettings,
+            vpn_connector: VPNConnector = None
+    ):
         self.session_holder = session_holder
         self.settings = settings
+        self._lazy_loaded_connector = vpn_connector
 
-        self._subscribers = []  # List of subscribers to be added on each new connection.
+    @property
+    def _connector(self) -> VPNConnector:
+        if not self._lazy_loaded_connector:
+            self._lazy_loaded_connector = VPNConnector.get_instance()
+        return self._lazy_loaded_connector
+
+    @property
+    def current_state(self) -> State:
+        """Returns the current VPN connection state."""
+        return self._connector.current_state
 
     @property
     def current_connection(self) -> Optional[VPNConnection]:
         """Returns the current VPN connection if there is one. Otherwise,
         it returns None."""
-        if not self._current_connection_initialized:
-            self._set_current_connection(VPNConnection.get_current_connection())
+        logger.warning(f"{VPNConnectorWrapper.__name__}.current_connection is deprecated.")
+        return self._connector.current_connection
 
-        return self._current_connection
+    @property
+    def current_server_id(self):
+        """Returns the ID of the server currently connected to, or None when there
+        is not a current VPN connection.
+
+        The server ID is the one that was passed in the `VPNServer` instance passed to
+        the `connect`.
+        """
+        return self._connector.current_server_id
 
     @property
     def is_connection_active(self) -> bool:
-        """Returns whether the current connection is in connecting/connected state or not."""
-        return (
-            self.current_connection
-            and self.current_connection.status.state in [
-                ConnectionStateEnum.CONNECTED,
-                ConnectionStateEnum.CONNECTING
-            ]
-        )
-
-    @current_connection.setter
-    def current_connection(self, current_connection: VPNConnection):
-        """Sets the current VPN connection."""
-        self._set_current_connection(current_connection)
+        """Returns whether there is a VPN connection ongoing or not."""
+        return self._connector.is_connection_ongoing
 
     def get_vpn_server(
             self, logical_server: LogicalServer, client_config: ClientConfig
@@ -96,31 +117,26 @@ class VPNConnectionHolder:
         :param protocol: One of the supported protocols (e.g. openvpn-tcp or openvpn-udp).
         :param backend: Backend to user (e.g. networkmanager).
         """
-        if self.is_connection_active:
-            self._reconnect(self.current_connection, server, protocol, backend)
-            return
-
-        self._create_connection(server, protocol, backend)
-
-        ports = server.udp_ports
-        if "tcp" in protocol:
-            ports = server.tcp_ports
-
+        ports = server.tcp_ports if "tcp" in protocol else server.udp_ports
         logger.info(
             f"Server: {server.server_ip} / Protocol: {protocol} "
             f"/ Ports: {ports} / Backend: {backend}",
             category="CONN", subcategory="CONNECT", event="START"
         )
-        self.current_connection.up()
+
+        self._connector.connect(
+            server,
+            self.session_holder.session.vpn_account.vpn_credentials,
+            self.settings.get_vpn_settings(),
+            protocol,
+            backend
+        )
 
     def disconnect(self):
         """Disconnects asynchronously from the current server."""
-        if not self.is_connection_active:
-            raise VPNConnectionNotFound("There isn't any VPN connection to be disconnected.")
+        self._connector.disconnect()
 
-        self.current_connection.down()
-
-    def register(self, subscriber):
+    def register(self, subscriber: VPNStateSubscriber):
         """
         Registers a new subscriber to connection status updates.
 
@@ -129,76 +145,28 @@ class VPNConnectionHolder:
 
         :param subscriber: Subscriber to register.
         """
-        if subscriber in self._subscribers:
-            return
-        if self.current_connection:
-            self.current_connection.register(subscriber)
-        self._subscribers.append(subscriber)
+        if not isinstance(subscriber, VPNStateSubscriber):
+            raise ValueError(
+                "The specified subscriber does not implement the "
+                f"{VPNStateSubscriber.__name__} protocol.")
+        self._connector.register(subscriber.status_update)
 
-    def unregister(self, subscriber):
+    def unregister(self, subscriber: VPNStateSubscriber):
         """
         Unregisters a subscriber from connection status updates.
         :param subscriber: Subscriber to unregister.
         """
-        if subscriber not in self._subscribers:
-            return
-        if self.current_connection:
-            self.current_connection.unregister(subscriber)
-        self._subscribers.remove(subscriber)
-
-    def _create_connection(self, server: VPNServer, protocol: str = None, backend: str = None):
-        connection_backend = VPNConnection.get_from_factory(protocol.lower(), backend)
-
-        self.current_connection = connection_backend(
-            server,
-            self.session_holder.session.vpn_account.vpn_credentials,
-            self.settings.get_vpn_settings()
-        )
-
-    def _set_current_connection(self, vpn_connection: Optional[VPNConnection]):
-        self._unregister_all_subscribers_from_current_connection()
-        self._current_connection = vpn_connection
-        self._register_all_subscribers_to_current_connection()
-        self._current_connection_initialized = True
-
-    def _register_all_subscribers_to_current_connection(self):
-        if self._current_connection:
-            for subscriber in self._subscribers:
-                self._current_connection.register(subscriber)
-
-    def _unregister_all_subscribers_from_current_connection(self):
-        if self._current_connection:
-            for subscriber in self._subscribers:
-                self._current_connection.unregister(subscriber)
-
-    def _reconnect(
-        self, current_connection: VPNConnection,
-        server: VPNServer, protocol: str = None, backend: str = None
-    ):
-        """Disconnects the current connection and starts a connection to the specified server
-        as soon as the current connection is in DISCONNECTED state."""
-        outer_self = self
-
-        class ConnectionStatusTracker:  # pylint: disable=too-few-public-methods
-            """Throw-away class to ensure that before establishing a connection
-            we stop the previous one."""
-            def status_update(self, status):
-                """Receives status updates from connection."""
-                if status.state is ConnectionStateEnum.DISCONNECTED:
-                    # Set the current connection being held to None after the connection
-                    # status is DISCONNECTED and then start the new connection.
-                    current_connection.unregister(self)
-                    outer_self.connect(server, protocol, backend)
-                elif status.state is ConnectionStateEnum.ERROR:
-                    # If there is an ERROR disconnecting just unregister this subscriber.
-                    current_connection.unregister(self)
-
-        current_connection.register(ConnectionStatusTracker())
-        self.disconnect()
+        if not isinstance(subscriber, VPNStateSubscriber):
+            raise ValueError(
+                "The specified subscriber does not implement the "
+                f"{VPNStateSubscriber.__name__} protocol.")
+        self._connector.unregister(subscriber.status_update)
 
 
 class Subscriber:
-    """Simple connection subscriber implementation."""
+    """
+    Connection subscriber implementation that allows blocking until a certain state is reached.
+    """
     def __init__(self):
         self.state: ConnectionStateEnum = None
         self.events = {state: threading.Event() for state in ConnectionStateEnum}
@@ -208,7 +176,7 @@ class Subscriber:
         This method will be called whenever a VPN connection state update occurs.
         :param state: new state.
         """
-        self.state = state.state
+        self.state = state.type
         self.events[self.state].set()
         self.events[self.state].clear()
 
