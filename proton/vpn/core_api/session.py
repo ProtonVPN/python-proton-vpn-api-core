@@ -136,9 +136,9 @@ class SessionHolder:
         data.add(FormField(name="Description", value=bug_report.description))
         data.add(FormField(name="Username", value=bug_report.username))
         data.add(FormField(name="Email", value=bug_report.email))
-        for attachment in bug_report.attachments:
+        for i, attachment in enumerate(bug_report.attachments):
             data.add(FormField(
-                name="Attachment", value=attachment,
+                name=f"Attachment-{i}", value=attachment,
                 filename=basename(attachment.name)
             ))
 

@@ -109,8 +109,12 @@ def test_get_client_config_refreshes_cache_when_expired(apidata, client_type_met
 def test_submit_report(client_type_metadata):
     session_mock = Mock()
     s = SessionHolder(client_type_metadata, session_mock, Mock())
+    attachments = []
 
-    with tempfile.NamedTemporaryFile(mode="rb") as attachment:
+    with tempfile.NamedTemporaryFile(mode="rb") as attachment1, tempfile.NamedTemporaryFile(mode="rb") as attachment2:
+        attachments.append(attachment1)
+        attachments.append(attachment2)
+
         bug_report = BugReportForm(
             username="test_user",
             email="email@pm.me",
@@ -118,7 +122,7 @@ def test_submit_report(client_type_metadata):
             description="This is a description example",
             client_version="1.0.0",
             client="Example",
-            attachments=[attachment]
+            attachments=attachments
         )
 
         s.submit_bug_report(bug_report)
@@ -130,7 +134,7 @@ def test_submit_report(client_type_metadata):
 
         submitted_data = api_request_kwargs["data"]
 
-        assert len(submitted_data.fields) == 10
+        assert len(submitted_data.fields) == 11
 
         form_field = submitted_data.fields[0]
         assert form_field.name == "OS"
@@ -169,6 +173,12 @@ def test_submit_report(client_type_metadata):
         assert form_field.value == bug_report.email
 
         form_field = submitted_data.fields[9]
-        assert form_field.name == "Attachment"
+        assert form_field.name == "Attachment-0"
         assert form_field.value == bug_report.attachments[0]
         assert form_field.filename == basename(form_field.value.name)
+
+        form_field = submitted_data.fields[10]
+        assert form_field.name == "Attachment-1"
+        assert form_field.value == bug_report.attachments[1]
+        assert form_field.filename == basename(form_field.value.name)
+
