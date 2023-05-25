@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.10.2
+%define version 0.10.3
 %define release 1
 
 Prefix: %{_prefix}
@@ -54,6 +54,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Fri May 26 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.10.3
+- Specify exit IP of physical server
+
 * Mon Apr 24 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.10.2
 - Fix issue where multiple attachments were overwritten when submitting a bug report
 

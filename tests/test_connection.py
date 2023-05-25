@@ -33,6 +33,7 @@ LOGICAL_SERVER_DATA = {
       "Status": 1,
     }
   ],
+  "Label": "3",
 }
 
 
@@ -52,3 +53,4 @@ def test_get_vpn_server_returns_vpn_server_built_from_logical_server_and_client_
     assert vpn_server.tcp_ports == client_config.openvpn_ports.tcp
     assert vpn_server.server_id == logical_server.id
     assert vpn_server.server_name == logical_server.name
+    assert vpn_server.label == physical_server.label

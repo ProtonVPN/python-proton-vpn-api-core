@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.10.3) unstable; urgency=medium
+
+  * Specify exit IP of physical server
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Fri, 26 May 2023 17:00:00 +0100
+
 proton-vpn-api-core (0.10.2) unstable; urgency=medium
 
   * Fix issue where multiple attachments were overwritten when submitting a bug report

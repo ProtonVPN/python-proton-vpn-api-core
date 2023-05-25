@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class VPNServer:
+class VPNServer:  # pylint: disable=too-many-instance-attributes
     """
     Implement :class:`proton.vpn.connection.interfaces.VPNServer` to
     provide an interface readily usable to instantiate a
@@ -52,6 +52,7 @@ class VPNServer:
     x25519pk: str
     server_id: str
     server_name: str
+    label: str = None
 
 
 @runtime_checkable
@@ -125,7 +126,8 @@ class VPNConnectorWrapper:
             udp_ports=client_config.openvpn_ports.udp,
             tcp_ports=client_config.openvpn_ports.tcp,
             server_id=logical_server.id,
-            server_name=logical_server.name
+            server_name=logical_server.name,
+            label=physical_server.label
         )
 
     def connect(self, server: VPNServer, protocol: str = None, backend: str = None):
