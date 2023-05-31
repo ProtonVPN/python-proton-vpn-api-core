@@ -19,9 +19,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-
+from __future__ import annotations
 import random
 import time
+import re
 
 from proton.vpn.core_api.session import SessionHolder
 from proton.vpn.servers import ServerList
@@ -112,6 +113,14 @@ class VPNServers:
 
         return self._server_list
 
+    def _build_netzone_header(self):
+        headers = {}
+        truncated_ip_address = truncate_ip_address(
+            self._session_holder.session.vpn_account.location.IP
+        )
+        headers["X-PM-netzone"] = truncated_ip_address
+        return headers
+
     def _update_servers_if_needed(self, force_refresh) -> bool:
         current_time = time.time()
         api_response = None
@@ -121,7 +130,8 @@ class VPNServers:
                 category="API", event="REQUEST"
             )
             api_response = self._session_holder.session.api_request(
-                VPNServers.LOGICALS_ROUTE
+                VPNServers.LOGICALS_ROUTE,
+                additional_headers=self._build_netzone_header()
             )
             logger.info(
                 f"'{VPNServers.LOGICALS_ROUTE}'",
@@ -136,7 +146,8 @@ class VPNServers:
                 category="API", event="REQUEST"
             )
             api_response = self._session_holder.session.api_request(
-                VPNServers.LOADS_ROUTE
+                VPNServers.LOADS_ROUTE,
+                additional_headers=self._build_netzone_header()
             )
             logger.info(
                 f"'{VPNServers.LOADS_ROUTE}'",
@@ -277,3 +288,17 @@ class VPNServers:
             return self.get_server_with_secure_core()
 
         return None
+
+
+def truncate_ip_address(ip_address: str) -> str:
+    """
+    Truncates the last octet of the specified IP address and returns it.
+    """
+    match = re.match("(\\d+\\.\\d+\\.\\d+)\\.\\d+", ip_address)
+    if not match:
+        raise ValueError(f"Invalid IPv4 address: {ip_address}")
+
+    # Replace the last byte with a zero to truncate the IP.
+    truncated_ip = f"{match[1]}.0"
+
+    return truncated_ip

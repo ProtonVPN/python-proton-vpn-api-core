@@ -23,7 +23,7 @@ from unittest.mock import Mock
 import pytest
 from freezegun import freeze_time
 
-from proton.vpn.core_api.servers import VPNServers
+from proton.vpn.core_api.servers import VPNServers, truncate_ip_address
 
 
 @pytest.fixture
@@ -71,6 +71,9 @@ def test_get_server_list_calls_api_when_cache_does_not_exist_and_updates_cache(
     # Mock non-existing cache.
     cache_handler_mock.load.return_value = None
 
+    # Mock logged-in user's IP
+    session_holder_mock.session.vpn_account.location.IP = "1.2.3.4"
+
     # Mock /vpn/logicals API response.
     api_response = {"LogicalServers": []}
     session_holder_mock.session.api_request.return_value = api_response
@@ -78,7 +81,12 @@ def test_get_server_list_calls_api_when_cache_does_not_exist_and_updates_cache(
     server_list = vpn_servers.get_fresh_server_list(force_refresh=False)
 
     cache_handler_mock.load.assert_called_once()
-    session_holder_mock.session.api_request.assert_called_once_with("/vpn/logicals")
+    # Assert that the server list was retrieved from /vpn/logicals
+    # passing the truncated user IP.
+    session_holder_mock.session.api_request.assert_called_once_with(
+        "/vpn/logicals",
+        additional_headers={"X-PM-netzone": "1.2.3.0"}
+    )
     assert server_list.data is api_response
     cache_handler_mock.save.assert_called_once_with(server_list.data)
 
@@ -87,6 +95,9 @@ def test_get_server_list_calls_api_when_cache_is_expired_and_updates_cache(
         session_holder_mock, cache_handler_mock, vpn_servers, dummy_cache_content
 ):
     cache_handler_mock.load.return_value = dummy_cache_content
+
+    # Mock logged-in user's IP
+    session_holder_mock.session.vpn_account.location.IP = "1.2.3.4"
 
     # Mock /vpn/logicals API response.
     api_response = {"LogicalServers": []}
@@ -98,8 +109,10 @@ def test_get_server_list_calls_api_when_cache_is_expired_and_updates_cache(
         server_list = vpn_servers.get_fresh_server_list(force_refresh=False)
 
     cache_handler_mock.load.assert_called_once()
-    # Assert that the server list was retrieved from /vpn/logicals
-    session_holder_mock.session.api_request.assert_called_once_with("/vpn/logicals")
+    session_holder_mock.session.api_request.assert_called_once_with(
+        "/vpn/logicals",
+        additional_headers={"X-PM-netzone": "1.2.3.0"}
+    )
     assert server_list.data is api_response
     # Assert that cache is updated.
     cache_handler_mock.save.assert_called_once_with(server_list.data)
@@ -109,6 +122,10 @@ def test_get_server_list_calls_api_after_cache_has_been_invalidated(
         session_holder_mock, cache_handler_mock, vpn_servers, dummy_cache_content
 ):
     cache_handler_mock.load.return_value = dummy_cache_content
+
+    # Mock logged-in user's IP
+    session_holder_mock.session.vpn_account.location.IP = "1.2.3.4"
+
     # Mock /vpn/logicals API response.
     api_response = {"LogicalServers": []}
     session_holder_mock.session.api_request.return_value = api_response
@@ -123,13 +140,19 @@ def test_get_server_list_calls_api_after_cache_has_been_invalidated(
     cache_handler_mock.load.assert_called_once()
     # Assert that the server list was retrieved from /vpn/logicals, meaning
     # that the cache was invalidated.
-    session_holder_mock.session.api_request.assert_called_once_with("/vpn/logicals")
+    session_holder_mock.session.api_request.assert_called_once_with(
+        "/vpn/logicals",
+        additional_headers={"X-PM-netzone": "1.2.3.0"}
+    )
 
 
 def test_get_server_list_updates_server_loads_when_expired(
         session_holder_mock, cache_handler_mock, vpn_servers, dummy_cache_content
 ):
     cache_handler_mock.load.return_value = dummy_cache_content
+
+    # Mock logged-in user's IP
+    session_holder_mock.session.vpn_account.location.IP = "1.2.3.4"
 
     # Mock /vpn/loads API response.
     new_load = dummy_cache_content["LogicalServers"][0]["Load"] + 100
@@ -146,7 +169,10 @@ def test_get_server_list_updates_server_loads_when_expired(
         server_list = vpn_servers.get_fresh_server_list(force_refresh=False)
 
     cache_handler_mock.load.assert_called_once()
-    session_holder_mock.session.api_request.assert_called_once_with("/vpn/loads")
+    session_holder_mock.session.api_request.assert_called_once_with(
+        "/vpn/loads",
+        additional_headers={"X-PM-netzone": "1.2.3.0"}
+    )
     # Assert that the server list was initially loaded from cache.
     assert server_list.data is dummy_cache_content
     # Assert that servers were updated with reponse from /vpn/loads.
@@ -161,6 +187,9 @@ def test_get_server_list_calls_api_and_updated_cache_when_force_refresh_paramete
 ):
     cache_handler_mock.load.return_value = dummy_cache_content
 
+    # Mock logged-in user's IP
+    session_holder_mock.session.vpn_account.location.IP = "1.2.3.4"
+
     # Mock /vpn/logicals API response.
     api_response = {"LogicalServers": []}
     session_holder_mock.session.api_request.return_value = api_response
@@ -169,7 +198,19 @@ def test_get_server_list_calls_api_and_updated_cache_when_force_refresh_paramete
 
     cache_handler_mock.load.assert_called_once()
     # Assert that the server list was retrieved from /vpn/logicals
-    session_holder_mock.session.api_request.assert_called_once_with("/vpn/logicals")
+    session_holder_mock.session.api_request.assert_called_once_with(
+        "/vpn/logicals",
+        additional_headers={"X-PM-netzone": "1.2.3.0"}
+    )
     assert server_list.data is api_response
     # Assert that cache is updated.
     cache_handler_mock.save.assert_called_once_with(server_list.data)
+
+
+def test_truncate_ip_replaces_last_ip_address_byte_with_a_zero():
+    assert truncate_ip_address("1.2.3.4") == "1.2.3.0"
+
+
+def test_truncate_ip_raises_exception_when_ip_address_is_invalid():
+    with pytest.raises(ValueError):
+        truncate_ip_address("foobar")

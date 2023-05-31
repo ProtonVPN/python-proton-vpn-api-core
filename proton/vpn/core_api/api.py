@@ -19,6 +19,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+from proton.vpn.session import VPNAccount
+
 from proton.vpn.core_api.client_config import ClientConfig
 from proton.vpn.core_api.connection import VPNConnectorWrapper
 from proton.vpn.core_api.servers import VPNServers
@@ -99,6 +101,17 @@ class ProtonVPNAPI:
         and returns it, ignoring whether the cache is expired or not.
         """
         return self._session_holder.get_cached_client_config()
+
+    @property
+    def vpn_account(self) -> VPNAccount:
+        """Returns the VPN account of the logged-in user, if it was already loaded."""
+        return self._session_holder.session.vpn_account
+
+    def refresh_vpn_account(self) -> VPNAccount:
+        """
+        Refreshes the VPN account of the logged-in user and returns it.
+        """
+        return self._session_holder.session.refresh_vpn_account()
 
     def submit_bug_report(self, bug_report: BugReportForm):
         """
