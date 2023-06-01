@@ -31,7 +31,7 @@ from proton.vpn.connection.enum import ConnectionStateEnum
 from proton.vpn.connection.vpnconnector import VPNConnector
 from proton.vpn.core_api.client_config import ClientConfig
 from proton.vpn.core_api.session import SessionHolder
-from proton.vpn.core_api.settings import BasicSettings
+from proton.vpn.core_api.settings import SettingsPersistence
 from proton.vpn.servers.server_types import LogicalServer
 
 
@@ -70,11 +70,12 @@ class VPNConnectorWrapper:
     """Holds a reference to the active VPN connection."""
 
     def __init__(
-            self, session_holder: SessionHolder, settings: BasicSettings,
+            self, session_holder: SessionHolder,
+            settings_persistence: SettingsPersistence,
             vpn_connector: VPNConnector = None
     ):
-        self.session_holder = session_holder
-        self.settings = settings
+        self._session_holder = session_holder
+        self._settings_persistence = settings_persistence
         self._lazy_loaded_connector = vpn_connector
 
     @property
@@ -146,8 +147,10 @@ class VPNConnectorWrapper:
 
         self._connector.connect(
             server,
-            self.session_holder.session.vpn_account.vpn_credentials,
-            self.settings.get_vpn_settings(),
+            self._session_holder.session.vpn_account.vpn_credentials,
+            self._settings_persistence.get(
+                self._session_holder.session.vpn_account.max_tier
+            ),
             protocol,
             backend
         )

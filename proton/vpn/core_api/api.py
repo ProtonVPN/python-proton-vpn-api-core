@@ -19,14 +19,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-import os
-
-from proton.utils.environment import VPNExecutionEnvironment
-
 from proton.vpn.core_api.client_config import ClientConfig
 from proton.vpn.core_api.connection import VPNConnectorWrapper
 from proton.vpn.core_api.servers import VPNServers
-from proton.vpn.core_api.settings import BasicSettings
+from proton.vpn.core_api.settings import Settings, SettingsPersistence
 from proton.vpn.core_api.session import SessionHolder, ClientTypeMetadata
 from proton.vpn.session.dataclasses import LoginResult
 from proton.vpn.core_api.reports import BugReportForm
@@ -38,11 +34,18 @@ class ProtonVPNAPI:
         self._session_holder = SessionHolder(
             client_type_metadata=client_type_metadata
         )
-        self.settings = BasicSettings(
-            os.path.join(VPNExecutionEnvironment().path_config, "settings.json")
+        self._settings_persistence = SettingsPersistence()
+        self.connection = VPNConnectorWrapper(
+            self._session_holder, self._settings_persistence
         )
-        self.connection = VPNConnectorWrapper(self._session_holder, self.settings)
         self.servers = VPNServers(self._session_holder)
+
+    @property
+    def settings(self) -> Settings:
+        """Get general settings."""
+        return self._settings_persistence.get(
+            self._session_holder.session.vpn_account.max_tier
+        )
 
     def login(self, username: str, password: str) -> LoginResult:
         """
@@ -110,3 +113,4 @@ class ProtonVPNAPI:
         """
         self._session_holder.session.logout()
         self.servers.invalidate_cache()
+        self._settings_persistence.delete()

@@ -16,69 +16,100 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-import os
-
-from proton.vpn.core_api.settings import BasicSettings
-from proton.vpn.core_api.settings import (
-    AlternativeRoutingEnum, DNSEnum, KillswitchEnum, NetshieldEnum,
-    NotificationEnum, ProtocolEnum, SecureCoreEnum, SplitTunnelingEnum,
-    VPNAcceleratorEnum)
+from unittest.mock import Mock
+import pytest
+from proton.vpn.core_api.settings import Settings, Features, SettingsPersistence
 
 
-class TestBasicSettings:
+FREE_TIER = 0
+PLUS_TIER = 2
 
-    SETTING_PATH = '/tmp/settings.json'
 
-    def test_serialize(self):
-        try:
-            os.unlink(TestBasicSettings.SETTING_PATH)
-        except FileNotFoundError:
-            pass
+@pytest.fixture
+def settings():
+    return {
+        "dns_custom_ips": [],
+        "split_tunneling_ips": [],
+        "ipv6": False,
+        "features": None,
+    }
 
-        s = BasicSettings(fp=TestBasicSettings.SETTING_PATH)
-        settings = [
-            {
-                BasicSettings.netshield: (0, NetshieldEnum.DISABLE),
-                BasicSettings.killswitch: (0, KillswitchEnum.DISABLE),
-                BasicSettings.secure_core: (0, SecureCoreEnum.DISABLE),
-                BasicSettings.split_tunneling: (1, SplitTunnelingEnum.ENABLE),
-                BasicSettings.vpn_accelerator: (1, VPNAcceleratorEnum.ENABLE),
-                BasicSettings.alternative_routing: (0, AlternativeRoutingEnum.DISABLE),
-                BasicSettings.dns: (0, DNSEnum.CUSTOM),
-                BasicSettings.protocol: ("openvpn-udp", ProtocolEnum.OPENVPN_UDP),
-                BasicSettings.ui_display_language: ("fr", "fr"),
-                BasicSettings.event_notification: (0, NotificationEnum.OPENED)
-            },
-            {
-                BasicSettings.netshield: (1, NetshieldEnum.MALWARE),
-                BasicSettings.killswitch: (1, KillswitchEnum.PERMANENT),
-                BasicSettings.secure_core: (1, SecureCoreEnum.ENABLE),
-                BasicSettings.split_tunneling: (0, SplitTunnelingEnum.DISABLE),
-                BasicSettings.vpn_accelerator: (0, VPNAcceleratorEnum.DISABLE),
-                BasicSettings.alternative_routing: (1, AlternativeRoutingEnum.ENABLE),
-                BasicSettings.dns: (1, DNSEnum.AUTOMATIC),
-                BasicSettings.protocol: ("openvpn-tcp", ProtocolEnum.OPENVPN_TCP),
-                BasicSettings.ui_display_language: ("gb", "gb"),
-                BasicSettings.event_notification: (1, NotificationEnum.NOT_OPENED)
-            },
-            {
-                BasicSettings.netshield: (2, NetshieldEnum.ADS_MALWARE),
-                BasicSettings.killswitch: (2, KillswitchEnum.ENABLE),
-                BasicSettings.secure_core: (0, SecureCoreEnum.DISABLE),
-                BasicSettings.split_tunneling: (1, SplitTunnelingEnum.ENABLE),
-                BasicSettings.vpn_accelerator: (1, VPNAcceleratorEnum.ENABLE),
-                BasicSettings.alternative_routing: (0, AlternativeRoutingEnum.DISABLE),
-                BasicSettings.dns: (0, DNSEnum.CUSTOM),
-                BasicSettings.protocol: ("wireguard", ProtocolEnum.WIREGUARD),
-                BasicSettings.ui_display_language: ("pt", "pt"),
-                BasicSettings.event_notification: (2, NotificationEnum.UNKNOWN)
-            },
-        ]
 
-        for settings_values in settings:
-            for property, value in settings_values.items():
-                property.__set__(s, value[0])
-            for property, value in settings_values.items():
-                assert(property.__get__(s) == value[1])
+@pytest.fixture
+def free_settings_dict(settings):
+    settings["features"] = {
+        "netshield": 0,
+        "random_nat": False,
+        "vpn_accelerator": True,
+        "port_forwarding": False,
+        "safe_mode": True,
+    }
+    return settings
 
-        os.unlink(TestBasicSettings.SETTING_PATH)
+
+@pytest.fixture
+def paid_settings_dict(settings):
+    settings["features"] = {
+        "netshield": 1,
+        "random_nat": True,
+        "vpn_accelerator": True,
+        "port_forwarding": True,
+        "safe_mode": False,
+    }
+    return settings
+
+
+def test_settings_get_default_when_user_has_free_tier(free_settings_dict):
+    free_settings = Settings.default(FREE_TIER)
+
+    assert free_settings.to_dict() == free_settings_dict
+
+
+def test_settings_get_default_when_user_has_paid_tier(paid_settings_dict):
+    paid_settings = Settings.default(PLUS_TIER)
+
+    assert paid_settings.to_dict() == paid_settings_dict
+    
+
+def test_settings_load_from_dict_when_user_has_free_tier(free_settings_dict):
+    free_settings = Settings.from_dict(free_settings_dict, FREE_TIER)
+
+    assert free_settings.to_dict() == free_settings_dict
+
+
+def test_settings_load_from_dict_when_user_has_paid_tier(paid_settings_dict):
+    paid_settings = Settings.from_dict(paid_settings_dict, PLUS_TIER)
+
+    assert paid_settings.to_dict() == paid_settings_dict
+
+
+def test_settings_persistence_get_when_settings_are_not_stored_and_default_are_set_and_stored_to_disk(free_settings_dict):
+    cache_hanlder_mock = Mock()
+    cache_hanlder_mock.load.return_value = None
+    sp = SettingsPersistence(cache_hanlder_mock)
+
+    sp.get(FREE_TIER)
+
+    cache_hanlder_mock.save.assert_called_once_with(free_settings_dict)
+
+
+def test_settings_persistence_get_from_disk(free_settings_dict):
+    cache_hanlder_mock = Mock()
+    cache_hanlder_mock.load.return_value = free_settings_dict
+    sp = SettingsPersistence(cache_hanlder_mock)
+
+    sp.get(FREE_TIER)
+
+    assert not cache_hanlder_mock.save.called
+    
+
+def test_settings_persistence_delete_settings_from_disk(free_settings_dict):
+    cache_hanlder_mock = Mock()
+    cache_hanlder_mock.load.return_value = free_settings_dict
+    sp = SettingsPersistence(cache_hanlder_mock)
+
+    sp.get(FREE_TIER)
+
+    sp.delete()
+
+    cache_hanlder_mock.remove.assert_called_once()

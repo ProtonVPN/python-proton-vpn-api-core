@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.10.3
+%define version 0.11.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -54,6 +54,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Fri Jun 02 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.11.0
+- Ensure general settings are taken into account when establishing a vpn connection
+
 * Fri May 26 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.10.3
 - Specify exit IP of physical server
 

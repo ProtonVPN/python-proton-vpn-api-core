@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.11.0) unstable; urgency=medium
+
+  * Ensure general settings are taken into account when establishing a vpn connection
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Fri, 02 Jun 2023 13:00:00 +0100
+
 proton-vpn-api-core (0.10.3) unstable; urgency=medium
 
   * Specify exit IP of physical server
