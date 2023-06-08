@@ -18,94 +18,66 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from unittest.mock import Mock
 import pytest
-from proton.vpn.core_api.settings import Settings, Features, SettingsPersistence
-
+from proton.vpn.core_api.settings import Settings, Features, SettingsPersistence, NetShield
 
 FREE_TIER = 0
-PLUS_TIER = 2
-
 
 @pytest.fixture
-def settings():
+def settings_dict():
     return {
         "dns_custom_ips": [],
         "split_tunneling_ips": [],
         "ipv6": False,
-        "features": None,
+        "features": {
+            "netshield": NetShield.NO_BLOCK.value,
+            "random_nat": True,
+            "vpn_accelerator": True,
+            "port_forwarding": False
+        },
     }
 
 
-@pytest.fixture
-def free_settings_dict(settings):
-    settings["features"] = {
-        "netshield": 0,
-        "random_nat": False,
-        "vpn_accelerator": True,
-        "port_forwarding": False,
-        "safe_mode": True,
-    }
-    return settings
-
-
-@pytest.fixture
-def paid_settings_dict(settings):
-    settings["features"] = {
-        "netshield": 1,
-        "random_nat": True,
-        "vpn_accelerator": True,
-        "port_forwarding": True,
-        "safe_mode": False,
-    }
-    return settings
-
-
-def test_settings_get_default_when_user_has_free_tier(free_settings_dict):
+def test_settings_get_default(settings_dict):
     free_settings = Settings.default(FREE_TIER)
 
-    assert free_settings.to_dict() == free_settings_dict
+    assert free_settings.to_dict() == settings_dict
 
 
-def test_settings_get_default_when_user_has_paid_tier(paid_settings_dict):
-    paid_settings = Settings.default(PLUS_TIER)
-
-    assert paid_settings.to_dict() == paid_settings_dict
-    
-
-def test_settings_load_from_dict_when_user_has_free_tier(free_settings_dict):
-    free_settings = Settings.from_dict(free_settings_dict, FREE_TIER)
-
-    assert free_settings.to_dict() == free_settings_dict
-
-
-def test_settings_load_from_dict_when_user_has_paid_tier(paid_settings_dict):
-    paid_settings = Settings.from_dict(paid_settings_dict, PLUS_TIER)
-
-    assert paid_settings.to_dict() == paid_settings_dict
-
-
-def test_settings_persistence_get_when_settings_are_not_stored_and_default_are_set_and_stored_to_disk(free_settings_dict):
+def test_settings_persistence_get_returns_default_settings_and_persists_them_when_no_persistence_was_found(settings_dict):
     cache_hanlder_mock = Mock()
     cache_hanlder_mock.load.return_value = None
     sp = SettingsPersistence(cache_hanlder_mock)
 
     sp.get(FREE_TIER)
 
-    cache_hanlder_mock.save.assert_called_once_with(free_settings_dict)
+    cache_hanlder_mock.save.assert_called_once_with(settings_dict)
 
 
-def test_settings_persistence_get_from_disk(free_settings_dict):
+def test_settings_persistence_get_returns_persisted_settings(settings_dict):
     cache_hanlder_mock = Mock()
-    cache_hanlder_mock.load.return_value = free_settings_dict
+    cache_hanlder_mock.load.return_value = settings_dict
     sp = SettingsPersistence(cache_hanlder_mock)
 
     sp.get(FREE_TIER)
 
     assert not cache_hanlder_mock.save.called
+
+
+def test_settings_persistence_get_returns_in_memory_settings_if_they_were_already_loaded(settings_dict):
+    cache_hanlder_mock = Mock()
+    cache_hanlder_mock.load.return_value = settings_dict
+    sp = SettingsPersistence(cache_hanlder_mock)
+
+    sp.get(FREE_TIER)
+    sp.get(FREE_TIER)
+
+    # The persistend settings should be loaded once, not twice.
+    cache_hanlder_mock.load.assert_called_once()
     
 
-def test_settings_persistence_delete_settings_from_disk(free_settings_dict):
+def test_settings_persistence_delete_removes_persisted_settings(settings_dict):
     cache_hanlder_mock = Mock()
-    cache_hanlder_mock.load.return_value = free_settings_dict
+    cache_hanlder_mock.load.return_value = settings_dict
     sp = SettingsPersistence(cache_hanlder_mock)
 
     sp.get(FREE_TIER)

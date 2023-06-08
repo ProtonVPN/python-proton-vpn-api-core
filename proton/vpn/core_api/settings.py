@@ -49,7 +49,6 @@ class Features:
     random_nat: bool
     vpn_accelerator: bool
     port_forwarding: bool
-    safe_mode: bool
 
     @staticmethod
     def from_dict(data: dict, user_tier: int) -> Features:
@@ -61,28 +60,18 @@ class Features:
             random_nat=data.get("random_nat", default.random_nat),
             vpn_accelerator=data.get("vpn_accelerator", default.vpn_accelerator),
             port_forwarding=data.get("port_forwarding", default.port_forwarding),
-            safe_mode=data.get("safe_mode", default.safe_mode),
         )
-
-    def to_dict(self) -> dict:
-        """Converts the class to dict."""
-        return asdict(self)
 
     @staticmethod
-    def default(user_tier: int) -> Features:
+    def default(user_tier: int) -> Features:  # pylint: disable=unused-argument
         """Creates and returns `Features` from default configurations."""
-        netshield = (
-            NetShield.BLOCK_MALICIOUS_URL.value
-            if user_tier
-            else NetShield.NO_BLOCK.value
-        )
-
         return Features(
-            netshield=netshield,
-            random_nat=bool(user_tier),
+            # FIXME: The netshield level should default to 1 for paid users.  # pylint: disable=fixme
+            # It currently defaults to 0 because the app doesn't have a settings screen yet.
+            netshield=NetShield.NO_BLOCK.value,
+            random_nat=True,
             vpn_accelerator=True,
-            port_forwarding=bool(user_tier),
-            safe_mode=not bool(user_tier),
+            port_forwarding=False
         )
 
 
@@ -123,7 +112,7 @@ class Settings:
         )
 
 
-class SettingsPersistence:  # pylint: disable=too-few-public-methods
+class SettingsPersistence:
     """Persists user settings"""
     def __init__(self, cache_handler: CacheHandler = None):
         self._cache_handler = cache_handler or CacheHandler(SETTINGS)

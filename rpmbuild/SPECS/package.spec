@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.12.0
+%define version 0.12.1
 %define release 1
 
 Prefix: %{_prefix}
@@ -18,7 +18,7 @@ BuildArch: noarch
 BuildRoot: %{_tmppath}/%{unmangled_name}-%{version}-%{release}-buildroot
 
 BuildRequires: python3-proton-core
-BuildRequires: python3-proton-vpn-connection
+BuildRequires: python3-proton-vpn-connection >= 0.7.0
 BuildRequires: python3-proton-vpn-session >= 0.2.0
 BuildRequires: python3-proton-vpn-servers
 BuildRequires: python3-proton-vpn-logger
@@ -26,7 +26,7 @@ BuildRequires: python3-setuptools
 BuildRequires: python3-distro
 
 Requires: python3-proton-core
-Requires: python3-proton-vpn-connection
+Requires: python3-proton-vpn-connection >= 0.7.0
 Requires: python3-proton-vpn-session >= 0.2.0
 Requires: python3-proton-vpn-servers
 Requires: python3-proton-vpn-logger
@@ -54,6 +54,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Thu Jun 08 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.12.1
+- Fix settings defaults
+
 * Tue Jun 06 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.12.0
 - Pass X-PM-netzone header when retrieving /vpn/logicals and /vpn/loads
 

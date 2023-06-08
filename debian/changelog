@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.12.1) unstable; urgency=medium
+
+  * Fix settings defaults
+
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Thu, 08 Jun 2023 11:57:48 +0200
+
 proton-vpn-api-core (0.12.0) unstable; urgency=medium
 
   * Pass X-PM-netzone header when retrieving /vpn/logicals and /vpn/loads
