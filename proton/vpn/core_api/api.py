@@ -126,4 +126,5 @@ class ProtonVPNAPI:
         """
         self._session_holder.session.logout()
         self.servers.invalidate_cache()
+        self._session_holder.delete_cached_client_config()
         self._settings_persistence.delete()

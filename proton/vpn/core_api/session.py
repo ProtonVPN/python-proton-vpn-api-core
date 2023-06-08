@@ -66,7 +66,7 @@ class SessionHolder:
             user_agent=f"ProtonVPN/{client_type_metadata.version} (Linux; {DISTRIBUTION}/{VERSION})"
         )
         self._session = session
-        self._cache_handler = cache_handler or CacheHandler(CLIENT_CONFIG)
+        self._client_config_cache_handler = cache_handler or CacheHandler(CLIENT_CONFIG)
         self.client_config = None
 
     def get_session_for(self, username: str) -> VPNSession:
@@ -96,7 +96,7 @@ class SessionHolder:
         Loads the client configuration from the cache stored in disk
         and returns it, ignoring whether the cache is expired or not.
         """
-        data = self._cache_handler.load()
+        data = self._client_config_cache_handler.load()
         if not data:
             # If no cache is found then load the default config
             data = DEFAULT_CLIENT_CONFIG
@@ -123,6 +123,10 @@ class SessionHolder:
             self.client_config = ClientConfig.from_dict(data)
 
         return self.client_config
+
+    def delete_cached_client_config(self):
+        """Deletes the persisted client configuration."""
+        self._client_config_cache_handler.remove()
 
     def submit_bug_report(self, bug_report: BugReportForm):
         """Submits a bug report to customer support."""
@@ -158,7 +162,7 @@ class SessionHolder:
             category="API", event="RESPONSE"
         )
         data["CacheExpiration"] = self._get_client_config_expiration_time()
-        self._cache_handler.save(data)
+        self._client_config_cache_handler.save(data)
 
         return data
 
