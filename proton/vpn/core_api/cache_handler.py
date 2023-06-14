@@ -23,17 +23,6 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 
-from proton.utils.environment import VPNExecutionEnvironment
-
-SERVER_LIST = os.path.join(
-    VPNExecutionEnvironment().path_cache,
-    "serverlist.json"
-)
-CLIENT_CONFIG = os.path.join(
-    VPNExecutionEnvironment().path_cache,
-    "clientconfig.json"
-)
-
 
 class CacheHandler:
     """Used to save, load, and remove cache files."""

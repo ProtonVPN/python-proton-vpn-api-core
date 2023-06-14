@@ -3,14 +3,14 @@ Section: python
 Priority: optional
 Maintainer: Proton Technologies AG <opensource@proton.me>
 Build-Depends: debhelper (>= 9), dh-python, python3-all, python3-setuptools,
-    python3-proton-vpn-servers, python3-proton-vpn-session (>= 0.2.0),
-    python3-proton-vpn-connection (>= 0.7.0), python3-distro, python3-proton-vpn-logger
+    python3-proton-vpn-session (>= 0.3.0), python3-proton-vpn-connection (>= 0.7.0),
+    python3-distro, python3-proton-vpn-logger
 Standards-Version: 4.1.1
 X-Python3-Version: >= 3.2
 
 Package: python3-proton-vpn-api-core
 Architecture: all
 Depends: ${python3:Depends}, ${misc:Depends},
-    python3-proton-vpn-servers, python3-proton-vpn-session (>= 0.2.0),
-    python3-proton-vpn-connection (>= 0.7.0), python3-distro, python3-proton-vpn-logger
+    python3-proton-vpn-session (>= 0.3.0), python3-proton-vpn-connection (>= 0.7.0),
+    python3-distro, python3-proton-vpn-logger
 Description: Python3 ProtonVPN Network Manager OpenVPN Core API

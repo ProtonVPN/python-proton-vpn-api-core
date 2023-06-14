@@ -16,9 +16,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from proton.vpn.servers.server_types import LogicalServer
+from proton.vpn.session.servers import LogicalServer
+from proton.vpn.session.client_config import ClientConfig
 
-from proton.vpn.core_api.client_config import ClientConfig
 from proton.vpn.core_api.connection import VPNConnectorWrapper
 
 LOGICAL_SERVER_DATA = {

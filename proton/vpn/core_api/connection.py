@@ -24,15 +24,15 @@ from dataclasses import dataclass
 from typing import Optional, Sequence, runtime_checkable, Protocol
 
 from proton.vpn.connection.states import State
+from proton.vpn.session.servers import LogicalServer
+from proton.vpn.session.client_config import ClientConfig
 
 from proton.vpn import logging
 from proton.vpn.connection import VPNConnection
 from proton.vpn.connection.enum import ConnectionStateEnum
 from proton.vpn.connection.vpnconnector import VPNConnector
-from proton.vpn.core_api.client_config import ClientConfig
 from proton.vpn.core_api.session import SessionHolder
 from proton.vpn.core_api.settings import SettingsPersistence
-from proton.vpn.servers.server_types import LogicalServer
 
 
 logger = logging.getLogger(__name__)

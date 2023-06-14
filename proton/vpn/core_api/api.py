@@ -19,15 +19,13 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from proton.vpn.session import VPNAccount
-
-from proton.vpn.core_api.client_config import ClientConfig
 from proton.vpn.core_api.connection import VPNConnectorWrapper
-from proton.vpn.core_api.servers import VPNServers
 from proton.vpn.core_api.settings import Settings, SettingsPersistence
 from proton.vpn.core_api.session import SessionHolder, ClientTypeMetadata
-from proton.vpn.session.dataclasses import LoginResult
 from proton.vpn.core_api.reports import BugReportForm
+from proton.vpn.session.servers import ServerList
+from proton.vpn.session.client_config import ClientConfig
+from proton.vpn.session.dataclasses import LoginResult
 
 
 class ProtonVPNAPI:
@@ -40,7 +38,6 @@ class ProtonVPNAPI:
         self.connection = VPNConnectorWrapper(
             self._session_holder, self._settings_persistence
         )
-        self.servers = VPNServers(self._session_holder)
 
     @property
     def settings(self) -> Settings:
@@ -83,35 +80,49 @@ class ProtonVPNAPI:
         """
         return self._session_holder.session.vpn_account.max_tier
 
-    def get_fresh_client_config(self, force_refresh: bool = False) -> ClientConfig:
-        """
-        Returns a fresh Proton VPN client configuration.
+    @property
+    def vpn_session_loaded(self) -> bool:
+        """Returns whether the VPN session data was already loaded or not."""
+        return self._session_holder.session.loaded
 
-        By "fresh" we mean an up-to-date (not expired) version.
-
-        :param force_refresh: when True, the cache is never used
-        even when it is not expired.
-        :returns: the fresh client configuration.
+    def fetch_session_data(self):
         """
-        return self._session_holder.get_fresh_client_config(force_refresh)
-
-    def get_cached_client_config(self) -> ClientConfig:
+        Fetches the required session data from Proton's REST APIs.
         """
-        Loads the client configuration from the cache stored in disk
-        and returns it, ignoring whether the cache is expired or not.
-        """
-        return self._session_holder.get_cached_client_config()
+        return self._session_holder.session.fetch_session_data()
 
     @property
-    def vpn_account(self) -> VPNAccount:
-        """Returns the VPN account of the logged-in user, if it was already loaded."""
-        return self._session_holder.session.vpn_account
+    def server_list(self):
+        """The last server list fetched from the REST API."""
+        return self._session_holder.session.server_list
 
-    def refresh_vpn_account(self) -> VPNAccount:
+    def fetch_server_list(self) -> ServerList:
         """
-        Refreshes the VPN account of the logged-in user and returns it.
+        Fetches a new server list from the REST API.
+        :returns: the new server list.
         """
-        return self._session_holder.session.refresh_vpn_account()
+        return self._session_holder.session.fetch_server_list()
+
+    def update_server_loads(self) -> ServerList:
+        """
+        Fetches new server loads from the REST API and updates the current
+        server list with them.
+
+        :returns: The current server list with freshly updated server loads.
+        """
+        return self._session_holder.session.update_server_loads()
+
+    @property
+    def client_config(self):
+        """The last client configuration fetched from the REST API."""
+        return self._session_holder.session.client_config
+
+    def fetch_client_config(self) -> ClientConfig:
+        """
+        Fetches the client configuration from the REST API.
+        :returns: the new client configuration.
+        """
+        return self._session_holder.session.fetch_client_config()
 
     def submit_bug_report(self, bug_report: BugReportForm):
         """
@@ -125,6 +136,4 @@ class ProtonVPNAPI:
         :raises: VPNConnectionFoundAtLogout if the users is still connected to the VPN.
         """
         self._session_holder.session.logout()
-        self.servers.invalidate_cache()
-        self._session_holder.delete_cached_client_config()
         self._settings_persistence.delete()
