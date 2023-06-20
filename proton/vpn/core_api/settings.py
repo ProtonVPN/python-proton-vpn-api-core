@@ -79,8 +79,6 @@ class Features:
 class Settings:
     """Contains general settings."""
     dns_custom_ips: Optional[str]
-    split_tunneling_ips: Optional[str]
-    ipv6: bool
     features: Features
 
     @staticmethod
@@ -92,8 +90,6 @@ class Settings:
 
         return Settings(
             dns_custom_ips=data.get("dns_custom_ips", default.dns_custom_ips),
-            split_tunneling_ips=data.get("split_tunneling_ips", default.split_tunneling_ips),
-            ipv6=data.get("ipv6", default.ipv6),
             features=features
         )
 
@@ -106,8 +102,6 @@ class Settings:
         """Creates and returns `Settings` from default configurations."""
         return Settings(
             dns_custom_ips=[],
-            split_tunneling_ips=[],
-            ipv6=False,
             features=Features.default(user_tier),
         )
 

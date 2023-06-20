@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.13.0
+%define version 0.14.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -57,6 +57,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Tue Jun 20 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.14.0
+- Remove split tunneling and ipv6 options from settings
+
 * Wed Jun 14 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.13.0
 - Expose server loads update
 

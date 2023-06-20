@@ -26,8 +26,6 @@ FREE_TIER = 0
 def settings_dict():
     return {
         "dns_custom_ips": [],
-        "split_tunneling_ips": [],
-        "ipv6": False,
         "features": {
             "netshield": NetShield.NO_BLOCK.value,
             "random_nat": True,

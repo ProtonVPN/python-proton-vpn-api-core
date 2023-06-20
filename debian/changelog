@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.14.0) unstable; urgency=medium
+
+  * Remove split tunneling and ipv6 options from settings
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Tue, 20 Jun 2023 17:00:00 +0100
+
 proton-vpn-api-core (0.13.0) unstable; urgency=medium
 
   * Expose server loads update
