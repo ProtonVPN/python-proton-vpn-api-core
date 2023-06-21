@@ -18,19 +18,22 @@ BuildArch: noarch
 BuildRoot: %{_tmppath}/%{unmangled_name}-%{version}-%{release}-buildroot
 
 BuildRequires: python3-proton-core
-BuildRequires: python3-proton-vpn-connection >= 0.7.0
-BuildRequires: python3-proton-vpn-session >= 0.3.0
+BuildRequires: python3-proton-vpn-connection
+BuildRequires: python3-proton-vpn-session
 BuildRequires: python3-proton-vpn-servers
 BuildRequires: python3-proton-vpn-logger
 BuildRequires: python3-setuptools
 BuildRequires: python3-distro
 
 Requires: python3-proton-core
-Requires: python3-proton-vpn-connection >= 0.7.0
-Requires: python3-proton-vpn-session >= 0.3.0
+Requires: python3-proton-vpn-connection
+Requires: python3-proton-vpn-session
 Requires: python3-proton-vpn-servers
 Requires: python3-proton-vpn-logger
 Requires: python3-distro
+
+Conflicts: proton-vpn-gtk-app < 4.0.0-0.7.a7
+
 
 %{?python_disable_dependency_generator}
 
