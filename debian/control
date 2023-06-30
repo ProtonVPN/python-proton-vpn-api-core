@@ -13,5 +13,5 @@ Architecture: all
 Depends: ${python3:Depends}, ${misc:Depends},
     python3-proton-vpn-session, python3-proton-vpn-connection,
     python3-distro, python3-proton-vpn-logger
-Breaks: proton-vpn-gtk-app (<< 4.0.0~a7)
+Breaks: proton-vpn-gtk-app (<< 4.0.0~a8)
 Description: Python3 ProtonVPN Network Manager OpenVPN Core API

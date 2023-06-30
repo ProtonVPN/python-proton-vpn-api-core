@@ -122,13 +122,16 @@ class SettingsPersistence:
 
         if raw_settings is None:
             self._settings = Settings.default(user_tier)
-            self._cache_handler.save(
-                self._settings.to_dict()
-            )
+            self.save(self._settings)
         else:
             self._settings = Settings.from_dict(raw_settings, user_tier)
 
         return self._settings
+
+    def save(self, settings: Settings):
+        """Store settings to disk."""
+        self._cache_handler.save(settings.to_dict())
+        self._settings = settings
 
     def delete(self):
         """Deletes the file stored on disk containing the settings

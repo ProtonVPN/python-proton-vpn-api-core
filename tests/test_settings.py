@@ -41,45 +41,55 @@ def test_settings_get_default(settings_dict):
     assert free_settings.to_dict() == settings_dict
 
 
+def test_settings_save_to_disk(settings_dict):
+    free_settings = Settings.default(FREE_TIER)
+    cache_handler_mock = Mock()
+
+    sp = SettingsPersistence(cache_handler_mock)
+    sp.save(free_settings)
+    
+    cache_handler_mock.save.assert_called_once_with(free_settings.to_dict())
+
+
 def test_settings_persistence_get_returns_default_settings_and_persists_them_when_no_persistence_was_found(settings_dict):
-    cache_hanlder_mock = Mock()
-    cache_hanlder_mock.load.return_value = None
-    sp = SettingsPersistence(cache_hanlder_mock)
+    cache_handler_mock = Mock()
+    cache_handler_mock.load.return_value = None
+    sp = SettingsPersistence(cache_handler_mock)
 
     sp.get(FREE_TIER)
 
-    cache_hanlder_mock.save.assert_called_once_with(settings_dict)
+    cache_handler_mock.save.assert_called_once_with(settings_dict)
 
 
 def test_settings_persistence_get_returns_persisted_settings(settings_dict):
-    cache_hanlder_mock = Mock()
-    cache_hanlder_mock.load.return_value = settings_dict
-    sp = SettingsPersistence(cache_hanlder_mock)
+    cache_handler_mock = Mock()
+    cache_handler_mock.load.return_value = settings_dict
+    sp = SettingsPersistence(cache_handler_mock)
 
     sp.get(FREE_TIER)
 
-    assert not cache_hanlder_mock.save.called
+    assert not cache_handler_mock.save.called
 
 
 def test_settings_persistence_get_returns_in_memory_settings_if_they_were_already_loaded(settings_dict):
-    cache_hanlder_mock = Mock()
-    cache_hanlder_mock.load.return_value = settings_dict
-    sp = SettingsPersistence(cache_hanlder_mock)
+    cache_handler_mock = Mock()
+    cache_handler_mock.load.return_value = settings_dict
+    sp = SettingsPersistence(cache_handler_mock)
 
     sp.get(FREE_TIER)
     sp.get(FREE_TIER)
 
     # The persistend settings should be loaded once, not twice.
-    cache_hanlder_mock.load.assert_called_once()
+    cache_handler_mock.load.assert_called_once()
     
 
 def test_settings_persistence_delete_removes_persisted_settings(settings_dict):
-    cache_hanlder_mock = Mock()
-    cache_hanlder_mock.load.return_value = settings_dict
-    sp = SettingsPersistence(cache_hanlder_mock)
+    cache_handler_mock = Mock()
+    cache_handler_mock.load.return_value = settings_dict
+    sp = SettingsPersistence(cache_handler_mock)
 
     sp.get(FREE_TIER)
 
     sp.delete()
 
-    cache_hanlder_mock.remove.assert_called_once()
+    cache_handler_mock.remove.assert_called_once()

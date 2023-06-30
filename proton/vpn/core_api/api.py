@@ -46,6 +46,10 @@ class ProtonVPNAPI:
             self._session_holder.session.vpn_account.max_tier
         )
 
+    @settings.setter
+    def settings(self, newvalue: Settings):
+        self._settings_persistence.save(newvalue)
+
     def login(self, username: str, password: str) -> LoginResult:
         """
         Logs the user in provided the right credentials.
