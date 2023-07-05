@@ -42,6 +42,9 @@ SETTINGS = os.path.join(
 )
 
 
+DEFAULT_PROTOCOL = "openvpn-udp"
+
+
 @dataclass
 class Features:
     """Contains features that affect a vpn connection"""
@@ -78,6 +81,7 @@ class Features:
 @dataclass
 class Settings:
     """Contains general settings."""
+    protocol: str
     dns_custom_ips: Optional[str]
     features: Features
 
@@ -89,6 +93,7 @@ class Settings:
         features = Features.from_dict(features, user_tier) if features else default.features
 
         return Settings(
+            protocol=data.get("protocol", default.protocol),
             dns_custom_ips=data.get("dns_custom_ips", default.dns_custom_ips),
             features=features
         )
@@ -101,6 +106,7 @@ class Settings:
     def default(user_tier: int) -> Settings:
         """Creates and returns `Settings` from default configurations."""
         return Settings(
+            protocol=DEFAULT_PROTOCOL,
             dns_custom_ips=[],
             features=Features.default(user_tier),
         )

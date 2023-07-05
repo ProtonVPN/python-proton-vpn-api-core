@@ -25,6 +25,7 @@ FREE_TIER = 0
 @pytest.fixture
 def settings_dict():
     return {
+        "protocol": "openvpn-udp",
         "dns_custom_ips": [],
         "features": {
             "netshield": NetShield.NO_BLOCK.value,

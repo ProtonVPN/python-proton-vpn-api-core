@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.15.0
+%define version 0.16.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -57,6 +57,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Wed Jul 05 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.16.0
+- Add protocol entry to settings
+
 * Mon Jul 03 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.15.0
 - Implement save method for settings
 

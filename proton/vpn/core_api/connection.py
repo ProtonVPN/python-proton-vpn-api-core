@@ -23,6 +23,7 @@ import threading
 from dataclasses import dataclass
 from typing import Optional, Sequence, runtime_checkable, Protocol
 
+from proton.loader import Loader
 from proton.vpn.connection.states import State
 from proton.vpn.session.servers import LogicalServer
 from proton.vpn.session.client_config import ClientConfig
@@ -130,6 +131,19 @@ class VPNConnectorWrapper:
             server_name=logical_server.name,
             label=physical_server.label
         )
+
+    def get_available_protocols_for_backend(self, backend_name: str) -> Optional[str]:
+        """Returns available protocols for the `backend_name`
+
+        raises RuntimeError:  if no backends could be found."""
+        available_protocols = []
+
+        backend_class = Loader.get("backend", class_name=backend_name)
+        supported_protocols = Loader.get_all(backend_class.backend)
+        if supported_protocols:
+            available_protocols = [protocol.class_name for protocol in supported_protocols]
+
+        return available_protocols
 
     def connect(self, server: VPNServer, protocol: str = None, backend: str = None):
         """
