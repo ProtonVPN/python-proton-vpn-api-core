@@ -69,9 +69,11 @@ class Features:
     def default(user_tier: int) -> Features:  # pylint: disable=unused-argument
         """Creates and returns `Features` from default configurations."""
         return Features(
-            # FIXME: The netshield level should default to 1 for paid users.  # pylint: disable=fixme
-            # It currently defaults to 0 because the app doesn't have a settings screen yet.
-            netshield=NetShield.NO_BLOCK.value,
+            netshield=(
+                NetShield.NO_BLOCK.value
+                if user_tier < 1
+                else NetShield.BLOCK_MALICIOUS_URL.value
+            ),
             random_nat=True,
             vpn_accelerator=True,
             port_forwarding=False

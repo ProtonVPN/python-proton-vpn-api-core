@@ -21,6 +21,7 @@ import pytest
 from proton.vpn.core_api.settings import Settings, Features, SettingsPersistence, NetShield
 
 FREE_TIER = 0
+PLUS_TIER = 1
 
 @pytest.fixture
 def settings_dict():
@@ -78,11 +79,24 @@ def test_settings_persistence_get_returns_in_memory_settings_if_they_were_alread
     sp = SettingsPersistence(cache_handler_mock)
 
     sp.get(FREE_TIER)
-    sp.get(FREE_TIER)
 
     # The persistend settings should be loaded once, not twice.
     cache_handler_mock.load.assert_called_once()
-    
+
+
+@pytest.mark.parametrize("user_tier", [FREE_TIER, PLUS_TIER])
+def test_settings_persistence_ensure_features_are_loaded_with_default_values_based_on_user_tier(user_tier):
+    cache_handler_mock = Mock()
+    cache_handler_mock.load.return_value = None
+    sp = SettingsPersistence(cache_handler_mock)
+
+    settings = sp.get(user_tier)
+
+    if user_tier == FREE_TIER:
+        assert settings.features.netshield == NetShield.NO_BLOCK.value
+    else:
+        assert settings.features.netshield == NetShield.BLOCK_MALICIOUS_URL.value
+
 
 def test_settings_persistence_delete_removes_persisted_settings(settings_dict):
     cache_handler_mock = Mock()

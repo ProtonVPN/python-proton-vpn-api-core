@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.16.0
+%define version 0.17.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -32,7 +32,7 @@ Requires: python3-proton-vpn-servers
 Requires: python3-proton-vpn-logger
 Requires: python3-distro
 
-Conflicts: proton-vpn-gtk-app < 4.0.0-0.8.a8
+Conflicts: proton-vpn-gtk-app < 4.0.0-0.8.a10
 
 
 %{?python_disable_dependency_generator}
@@ -57,6 +57,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Fri Jul 07 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.17.0
+- Enable NetShield by default on paid plans
+
 * Wed Jul 05 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.16.0
 - Add protocol entry to settings
 
