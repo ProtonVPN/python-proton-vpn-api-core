@@ -49,7 +49,7 @@ DEFAULT_PROTOCOL = "openvpn-udp"
 class Features:
     """Contains features that affect a vpn connection"""
     netshield: NetShield
-    random_nat: bool
+    moderate_nat: bool
     vpn_accelerator: bool
     port_forwarding: bool
 
@@ -60,7 +60,7 @@ class Features:
 
         return Features(
             netshield=data.get("netshield", default.netshield),
-            random_nat=data.get("random_nat", default.random_nat),
+            moderate_nat=data.get("moderate_nat", default.moderate_nat),
             vpn_accelerator=data.get("vpn_accelerator", default.vpn_accelerator),
             port_forwarding=data.get("port_forwarding", default.port_forwarding),
         )
@@ -74,7 +74,7 @@ class Features:
                 if user_tier < 1
                 else NetShield.BLOCK_MALICIOUS_URL.value
             ),
-            random_nat=True,
+            moderate_nat=False,
             vpn_accelerator=True,
             port_forwarding=False
         )

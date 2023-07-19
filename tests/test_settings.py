@@ -30,7 +30,7 @@ def settings_dict():
         "dns_custom_ips": [],
         "features": {
             "netshield": NetShield.NO_BLOCK.value,
-            "random_nat": True,
+            "moderate_nat": False,
             "vpn_accelerator": True,
             "port_forwarding": False
         },
