@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.18.0
+%define version 0.19.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -22,6 +22,7 @@ BuildRequires: python3-proton-vpn-connection
 BuildRequires: python3-proton-vpn-session
 BuildRequires: python3-proton-vpn-servers
 BuildRequires: python3-proton-vpn-logger
+BuildRequires: python3-proton-vpn-killswitch
 BuildRequires: python3-setuptools
 BuildRequires: python3-distro
 
@@ -30,6 +31,7 @@ Requires: python3-proton-vpn-connection
 Requires: python3-proton-vpn-session
 Requires: python3-proton-vpn-servers
 Requires: python3-proton-vpn-logger
+Requires: python3-proton-vpn-killswitch
 Requires: python3-distro
 
 Conflicts: proton-vpn-gtk-app < 4.0.0-0.14.a14
@@ -57,6 +59,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Mon Sep 04 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.19.0
+- Add kill switch to settings and add dependency for base kill switch package
+
 * Wed Jul 19 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.18.0
 - Rename setting random_nat to moderate_nat to conform to API specs
 

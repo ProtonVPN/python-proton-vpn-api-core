@@ -28,12 +28,12 @@ from proton.vpn.connection.states import State
 from proton.vpn.session.servers import LogicalServer
 from proton.vpn.session.client_config import ClientConfig
 
-from proton.vpn import logging
+from proton.vpn.core_api.settings import SettingsPersistence
 from proton.vpn.connection import VPNConnection
 from proton.vpn.connection.enum import ConnectionStateEnum
 from proton.vpn.connection.vpnconnector import VPNConnector
 from proton.vpn.core_api.session import SessionHolder
-from proton.vpn.core_api.settings import SettingsPersistence
+from proton.vpn import logging
 
 
 logger = logging.getLogger(__name__)
@@ -160,13 +160,13 @@ class VPNConnectorWrapper:
         )
 
         self._connector.connect(
-            server,
-            self._session_holder.session.vpn_account.vpn_credentials,
-            self._settings_persistence.get(
+            server=server,
+            credentials=self._session_holder.session.vpn_account.vpn_credentials,
+            settings=self._settings_persistence.get(
                 self._session_holder.session.vpn_account.max_tier
             ),
-            protocol,
-            backend
+            protocol=protocol,
+            backend=backend
         )
 
     def disconnect(self):
@@ -190,7 +190,7 @@ class VPNConnectorWrapper:
 
     def unregister(self, subscriber: VPNStateSubscriber):
         """
-        Unregisters a subscriber from connection status updates.
+        Unregister a subscriber from connection status updates.
         :param subscriber: Subscriber to unregister.
         """
         if not isinstance(subscriber, VPNStateSubscriber):

@@ -28,6 +28,7 @@ import os
 
 from proton.utils.environment import VPNExecutionEnvironment
 from proton.vpn.core_api.cache_handler import CacheHandler
+from proton.vpn.killswitch.interface import KillSwitchState
 
 
 class NetShield(IntEnum):  # pylint: disable=missing-class-docstring
@@ -43,12 +44,13 @@ SETTINGS = os.path.join(
 
 
 DEFAULT_PROTOCOL = "openvpn-udp"
+DEFAULT_KILLSWITCH = KillSwitchState.OFF.value
 
 
 @dataclass
 class Features:
     """Contains features that affect a vpn connection"""
-    netshield: NetShield
+    netshield: int
     moderate_nat: bool
     vpn_accelerator: bool
     port_forwarding: bool
@@ -84,6 +86,7 @@ class Features:
 class Settings:
     """Contains general settings."""
     protocol: str
+    killswitch: int
     dns_custom_ips: Optional[str]
     features: Features
 
@@ -96,6 +99,7 @@ class Settings:
 
         return Settings(
             protocol=data.get("protocol", default.protocol),
+            killswitch=data.get("killswitch", default.killswitch),
             dns_custom_ips=data.get("dns_custom_ips", default.dns_custom_ips),
             features=features
         )
@@ -109,6 +113,7 @@ class Settings:
         """Creates and returns `Settings` from default configurations."""
         return Settings(
             protocol=DEFAULT_PROTOCOL,
+            killswitch=DEFAULT_KILLSWITCH,
             dns_custom_ips=[],
             features=Features.default(user_tier),
         )

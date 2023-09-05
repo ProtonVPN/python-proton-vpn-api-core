@@ -19,6 +19,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 from unittest.mock import Mock
 import pytest
 from proton.vpn.core_api.settings import Settings, Features, SettingsPersistence, NetShield
+from proton.vpn.killswitch.interface import KillSwitchState
 
 FREE_TIER = 0
 PLUS_TIER = 1
@@ -27,6 +28,7 @@ PLUS_TIER = 1
 def settings_dict():
     return {
         "protocol": "openvpn-udp",
+        "killswitch": KillSwitchState.OFF.value,
         "dns_custom_ips": [],
         "features": {
             "netshield": NetShield.NO_BLOCK.value,
@@ -49,7 +51,7 @@ def test_settings_save_to_disk(settings_dict):
 
     sp = SettingsPersistence(cache_handler_mock)
     sp.save(free_settings)
-    
+
     cache_handler_mock.save.assert_called_once_with(free_settings.to_dict())
 
 
