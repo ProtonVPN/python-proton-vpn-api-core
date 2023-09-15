@@ -1,7 +1,7 @@
 Application
 ------------
 
-.. autoclass:: proton.vpn.core_api.Application
+.. autoclass:: proton.vpn.core.Application
    :members:
    :special-members: __init__
    :undoc-members:
@@ -43,32 +43,32 @@ components (VPNConnection component, VPNAccount component, VPNServers components
 
 See :
 
--  :class:`proton.vpn.core_api.controllers.vpnsession.VPNSessionController`
--  :class:`proton.vpn.core_api.controllers.vpnconnection.VPNConnectionController`
--  :class:`proton.vpn.core_api.controllers.vpncredentials.VPNCredentialController`
--  :class:`proton.vpn.core_api.controllers.vpnservers.VPNServersController`
+-  :class:`proton.vpn.core.controllers.vpnsession.VPNSessionController`
+-  :class:`proton.vpn.core.controllers.vpnconnection.VPNConnectionController`
+-  :class:`proton.vpn.core.controllers.vpncredentials.VPNCredentialController`
+-  :class:`proton.vpn.core.controllers.vpnservers.VPNServersController`
 
 For controllers documentation.
 
 Orchestrators
 --------------
 
-.. autoclass:: proton.vpn.core_api.orchestrators.usersettings.UserSettingsOrchestrator
+.. autoclass:: proton.vpn.core.orchestrators.usersettings.UserSettingsOrchestrator
    :members:
    :special-members: __init__
    :undoc-members:
 
-.. autoclass:: proton.vpn.core_api.orchestrators.vpnconnection.VPNConnectionOrchestrator
+.. autoclass:: proton.vpn.core.orchestrators.vpnconnection.VPNConnectionOrchestrator
    :members:
    :special-members: __init__
    :undoc-members:
 
-.. autoclass:: proton.vpn.core_api.orchestrators.vpnserver.VPNServerOrchestrator
+.. autoclass:: proton.vpn.core.orchestrators.vpnserver.VPNServerOrchestrator
    :members:
    :special-members: __init__
    :undoc-members:
 
-.. autoclass:: proton.vpn.core_api.orchestrators.vpnsession.VPNSessionOrchestrator
+.. autoclass:: proton.vpn.core.orchestrators.vpnsession.VPNSessionOrchestrator
    :members:
    :special-members: __init__
    :undoc-members:
@@ -81,22 +81,22 @@ Controllers
 Controllers implement the high level business logic of the application, ensuring that the VPN
 service is in a consistent state.
 
-.. autoclass:: proton.vpn.core_api.controllers.vpnconnection.VPNConnectionController
+.. autoclass:: proton.vpn.core.controllers.vpnconnection.VPNConnectionController
    :members:
    :special-members: __init__
    :undoc-members:
 
-.. autoclass:: proton.vpn.core_api.controllers.vpncredentials.VPNCredentialController
+.. autoclass:: proton.vpn.core.controllers.vpncredentials.VPNCredentialController
    :members:
    :special-members: __init__
    :undoc-members:
 
-.. autoclass:: proton.vpn.core_api.controllers.vpnservers.VPNServersController
+.. autoclass:: proton.vpn.core.controllers.vpnservers.VPNServersController
    :members:
    :special-members: __init__
    :undoc-members:
 
-.. autoclass:: proton.vpn.core_api.controllers.vpnsession.VPNSessionController
+.. autoclass:: proton.vpn.core.controllers.vpnsession.VPNSessionController
    :members:
    :special-members: __init__
    :undoc-members:
@@ -105,7 +105,7 @@ service is in a consistent state.
 User Settings
 -------------
 
-.. autoclass:: proton.vpn.core_api.controllers.usersettings.BasicSettings
+.. autoclass:: proton.vpn.core.controllers.usersettings.BasicSettings
    :members:
    :special-members: __init__
    :undoc-members:
@@ -114,7 +114,7 @@ User Settings
 Persistence
 ------------
 
-.. autoclass:: proton.vpn.core_api.controllers.usersettings.FilePersistence
+.. autoclass:: proton.vpn.core.controllers.usersettings.FilePersistence
    :members:
    :special-members: __init__
    :undoc-members:
@@ -125,7 +125,7 @@ Views
 
 An abstract view of the user interface.
 
-.. autoclass:: proton.vpn.core_api.views.BaseView
+.. autoclass:: proton.vpn.core.views.BaseView
    :members:
    :special-members: __init__
    :undoc-members:

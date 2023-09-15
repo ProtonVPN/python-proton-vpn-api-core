@@ -16,7 +16,7 @@ setup(
     extras_require={
         "development": ["pytest", "pytest-coverage", "pylint", "flake8"]
     },
-    packages=find_namespace_packages(include=['proton.vpn.core_api*']),
+    packages=find_namespace_packages(include=['proton.vpn.core*']),
     include_package_data=True,
     python_requires=">=3.8",
     license="GPLv3",

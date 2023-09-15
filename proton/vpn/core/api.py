@@ -19,10 +19,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from proton.vpn.core_api.connection import VPNConnectorWrapper
-from proton.vpn.core_api.settings import Settings, SettingsPersistence
-from proton.vpn.core_api.session import SessionHolder, ClientTypeMetadata
-from proton.vpn.core_api.reports import BugReportForm
+from proton.vpn.core.connection import VPNConnectorWrapper
+from proton.vpn.core.settings import Settings, SettingsPersistence
+from proton.vpn.core.session import SessionHolder, ClientTypeMetadata
+from proton.vpn.core.reports import BugReportForm
 from proton.vpn.session.servers import ServerList
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.session.dataclasses import LoginResult

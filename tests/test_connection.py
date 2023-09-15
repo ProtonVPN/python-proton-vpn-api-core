@@ -20,7 +20,7 @@ from unittest.mock import Mock, PropertyMock
 from proton.vpn.session.servers import LogicalServer
 from proton.vpn.session.client_config import ClientConfig
 
-from proton.vpn.core_api.connection import VPNConnectorWrapper
+from proton.vpn.core.connection import VPNConnectorWrapper
 
 LOGICAL_SERVER_DATA = {
   "Name": "IS#1",

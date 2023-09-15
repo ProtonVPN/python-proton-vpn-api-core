@@ -27,7 +27,7 @@ from enum import IntEnum
 import os
 
 from proton.utils.environment import VPNExecutionEnvironment
-from proton.vpn.core_api.cache_handler import CacheHandler
+from proton.vpn.core.cache_handler import CacheHandler
 from proton.vpn.killswitch.interface import KillSwitchState
 
 

@@ -22,8 +22,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from proton.vpn.core_api.reports import BugReportForm
-from proton.vpn.core_api.session import SessionHolder, ClientTypeMetadata
+from proton.vpn.core.reports import BugReportForm
+from proton.vpn.core.session import SessionHolder, ClientTypeMetadata
 
 
 @pytest.fixture

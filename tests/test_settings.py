@@ -18,7 +18,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from unittest.mock import Mock
 import pytest
-from proton.vpn.core_api.settings import Settings, Features, SettingsPersistence, NetShield
+from proton.vpn.core.settings import Settings, Features, SettingsPersistence, NetShield
 from proton.vpn.killswitch.interface import KillSwitchState
 
 FREE_TIER = 0

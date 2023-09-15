@@ -21,7 +21,7 @@ import os
 import tempfile
 
 import pytest
-from proton.vpn.core_api.cache_handler import CacheHandler
+from proton.vpn.core.cache_handler import CacheHandler
 
 
 class TestCacheHandler:

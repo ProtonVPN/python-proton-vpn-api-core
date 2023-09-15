@@ -29,7 +29,7 @@ from proton.session import FormData, FormField
 from proton.sso import ProtonSSO
 from proton.vpn import logging
 from proton.vpn.session import VPNSession
-from proton.vpn.core_api.reports import BugReportForm
+from proton.vpn.core.reports import BugReportForm
 
 logger = logging.getLogger(__name__)
 DISTRIBUTION = distro.id()
