@@ -26,6 +26,7 @@ from proton.vpn.core.reports import BugReportForm
 from proton.vpn.session.servers import ServerList
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.session.dataclasses import LoginResult
+from proton.vpn.session.account import VPNAccount
 
 
 class ProtonVPNAPI:
@@ -71,7 +72,26 @@ class ProtonVPNAPI:
         """Returns True if a user is logged in and False otherwise."""
         return self._session_holder.session.logged_in
 
-    def get_user_tier(self) -> int:
+    @property
+    def account_name(self) -> str:
+        """Returns account name."""
+        return self._session_holder.session.AccountName
+
+    @property
+    def account_data(self) -> VPNAccount:
+        """
+        Returns account data, which contains information such
+        as (but not limited to):
+         - Plan name/title
+         - Max tier
+         - Max connections
+         - VPN Credentials
+         - Location
+        """
+        return self._session_holder.session.vpn_account
+
+    @property
+    def user_tier(self) -> int:
         """
         Returns the Proton VPN tier.
 
@@ -82,7 +102,7 @@ class ProtonVPNAPI:
 
         Note: tier 1 is no longer in use.
         """
-        return self._session_holder.session.vpn_account.max_tier
+        return self.account_data.max_tier
 
     @property
     def vpn_session_loaded(self) -> bool:

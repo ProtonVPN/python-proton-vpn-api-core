@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.19.0
+%define version 0.20.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -34,7 +34,7 @@ Requires: python3-proton-vpn-logger
 Requires: python3-proton-vpn-killswitch
 Requires: python3-distro
 
-Conflicts: proton-vpn-gtk-app < 4.0.0-0.14.a14
+Conflicts: proton-vpn-gtk-app < 4.0.0-0.18.b2
 
 
 %{?python_disable_dependency_generator}
@@ -59,6 +59,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Fri Sep 15 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.20.0
+- Expose properties which allow to access account related data
+
 * Mon Sep 04 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.19.0
 - Add kill switch to settings and add dependency for base kill switch package
 
