@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.20.0
+%define version 0.20.1
 %define release 1
 
 Prefix: %{_prefix}
@@ -20,7 +20,6 @@ BuildRoot: %{_tmppath}/%{unmangled_name}-%{version}-%{release}-buildroot
 BuildRequires: python3-proton-core
 BuildRequires: python3-proton-vpn-connection
 BuildRequires: python3-proton-vpn-session
-BuildRequires: python3-proton-vpn-servers
 BuildRequires: python3-proton-vpn-logger
 BuildRequires: python3-proton-vpn-killswitch
 BuildRequires: python3-setuptools
@@ -29,7 +28,6 @@ BuildRequires: python3-distro
 Requires: python3-proton-core
 Requires: python3-proton-vpn-connection
 Requires: python3-proton-vpn-session
-Requires: python3-proton-vpn-servers
 Requires: python3-proton-vpn-logger
 Requires: python3-proton-vpn-killswitch
 Requires: python3-distro
@@ -59,6 +57,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Tue Oct 10 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.20.1
+- Update dependencies
+
 * Fri Sep 15 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.20.0
 - Expose properties which allow to access account related data
 
