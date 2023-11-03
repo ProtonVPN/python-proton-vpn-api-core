@@ -26,6 +26,7 @@ from os.path import basename
 import distro
 
 from proton.session import FormData, FormField
+from proton.session.api import sync_wrapper
 from proton.sso import ProtonSSO
 from proton.vpn import logging
 from proton.vpn.session import VPNSession
@@ -79,7 +80,7 @@ class SessionHolder:
 
         return self._session
 
-    def submit_bug_report(self, bug_report: BugReportForm):
+    async def submit_bug_report(self, bug_report: BugReportForm):
         """Submits a bug report to customer support."""
         data = FormData()
         data.add(FormField(name="OS", value=bug_report.os))
@@ -97,6 +98,6 @@ class SessionHolder:
                 filename=basename(attachment.name)
             ))
 
-        return self._session.api_request(
+        return await self._session.async_api_request(
             endpoint=SessionHolder.BUG_REPORT_ENDPOINT, data=data
         )

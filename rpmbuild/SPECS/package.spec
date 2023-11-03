@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.20.1
+%define version 0.20.2
 %define release 1
 
 Prefix: %{_prefix}
@@ -32,7 +32,7 @@ Requires: python3-proton-vpn-logger
 Requires: python3-proton-vpn-killswitch
 Requires: python3-distro
 
-Conflicts: proton-vpn-gtk-app < 4.0.0-0.18.b2
+Conflicts: proton-vpn-gtk-app < 4.1.2
 
 
 %{?python_disable_dependency_generator}
@@ -57,6 +57,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Wed Nov 08 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.20.2
+- Make API async and avoid thread-safety issues in asyncio code
+
 * Tue Oct 10 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.20.1
 - Update dependencies
 

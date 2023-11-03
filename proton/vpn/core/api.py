@@ -19,6 +19,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+import asyncio
+
 from proton.vpn.core.connection import VPNConnectorWrapper
 from proton.vpn.core.settings import Settings, SettingsPersistence
 from proton.vpn.core.session import SessionHolder, ClientTypeMetadata
@@ -29,7 +31,7 @@ from proton.vpn.session.dataclasses import LoginResult
 from proton.vpn.session.account import VPNAccount
 
 
-class ProtonVPNAPI:
+class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
     """Class exposing the Proton VPN facade."""
     def __init__(self, client_type_metadata: ClientTypeMetadata):
         self._session_holder = SessionHolder(
@@ -51,22 +53,22 @@ class ProtonVPNAPI:
     def settings(self, newvalue: Settings):
         self._settings_persistence.save(newvalue)
 
-    def login(self, username: str, password: str) -> LoginResult:
+    async def login(self, username: str, password: str) -> LoginResult:
         """
         Logs the user in provided the right credentials.
         :param username: Proton account username.
         :param password: Proton account password.
         :return: The login result.
         """
-        return self._session_holder.get_session_for(username).login(username, password)
+        return await self._session_holder.get_session_for(username).login(username, password)
 
-    def submit_2fa_code(self, code: str) -> LoginResult:
+    async def submit_2fa_code(self, code: str) -> LoginResult:
         """
         Submits the 2-factor authentication code.
         :param code: 2FA code.
         :return: The login result.
         """
-        return self._session_holder.session.provide_2fa(code)
+        return await self._session_holder.session.provide_2fa(code)
 
     def is_user_logged_in(self) -> bool:
         """Returns True if a user is logged in and False otherwise."""
@@ -109,55 +111,54 @@ class ProtonVPNAPI:
         """Returns whether the VPN session data was already loaded or not."""
         return self._session_holder.session.loaded
 
-    def fetch_session_data(self):
+    async def fetch_session_data(self):
         """
         Fetches the required session data from Proton's REST APIs.
         """
-        return self._session_holder.session.fetch_session_data()
+        return await self._session_holder.session.fetch_session_data()
 
     @property
     def server_list(self):
         """The last server list fetched from the REST API."""
         return self._session_holder.session.server_list
 
-    def fetch_server_list(self) -> ServerList:
+    async def fetch_server_list(self) -> ServerList:
         """
         Fetches a new server list from the REST API.
         :returns: the new server list.
         """
-        return self._session_holder.session.fetch_server_list()
+        return await self._session_holder.session.fetch_server_list()
 
-    def update_server_loads(self) -> ServerList:
+    async def update_server_loads(self):
         """
-        Fetches new server loads from the REST API and updates the current
-        server list with them.
-
-        :returns: The current server list with freshly updated server loads.
+        Fetches new server loads from the REST API and updates
+        the current server list with them.
         """
-        return self._session_holder.session.update_server_loads()
+        return await self._session_holder.session.update_server_loads()
 
     @property
     def client_config(self):
         """The last client configuration fetched from the REST API."""
         return self._session_holder.session.client_config
 
-    def fetch_client_config(self) -> ClientConfig:
+    async def fetch_client_config(self) -> ClientConfig:
         """
-        Fetches the client configuration from the REST API.
+        Fetches the client configuration asynchronously from the REST API.
         :returns: the new client configuration.
         """
-        return self._session_holder.session.fetch_client_config()
+        return await self._session_holder.session.fetch_client_config()
 
-    def submit_bug_report(self, bug_report: BugReportForm):
+    async def submit_bug_report(self, bug_report: BugReportForm):
         """
         Submits the specified bug report to customer support.
         """
-        return self._session_holder.submit_bug_report(bug_report)
+        return await self._session_holder.submit_bug_report(bug_report)
 
-    def logout(self):
+    async def logout(self):
         """
         Logs the current user out.
         :raises: VPNConnectionFoundAtLogout if the users is still connected to the VPN.
         """
-        self._session_holder.session.logout()
-        self._settings_persistence.delete()
+        await self._session_holder.session.logout()
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(executor=None, func=self._settings_persistence.delete)

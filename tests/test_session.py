@@ -18,7 +18,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import tempfile
 from os.path import basename
-from unittest.mock import Mock
+from unittest.mock import Mock, AsyncMock
 
 import pytest
 
@@ -34,8 +34,9 @@ def client_type_metadata():
     )
 
 
-def test_submit_report(client_type_metadata):
-    session_mock = Mock()
+@pytest.mark.asyncio
+async def test_submit_report(client_type_metadata):
+    session_mock = AsyncMock()
     s = SessionHolder(client_type_metadata, session_mock)
     attachments = []
 
@@ -53,10 +54,10 @@ def test_submit_report(client_type_metadata):
             attachments=attachments
         )
 
-        s.submit_bug_report(bug_report)
+        await s.async_submit_bug_report(bug_report)
 
-        session_mock.api_request.assert_called_once()
-        api_request_kwargs = session_mock.api_request.call_args.kwargs
+        session_mock.async_api_request.assert_called_once()
+        api_request_kwargs = session_mock.async_api_request.call_args.kwargs
 
         assert api_request_kwargs["endpoint"] == SessionHolder.BUG_REPORT_ENDPOINT
 

@@ -4,7 +4,7 @@ from setuptools import setup, find_namespace_packages
 
 setup(
     name="proton-vpn-api-core",
-    version="0.20.1",
+    version="0.20.2",
     description="Proton Technologies VPN Core API",
     author="Proton Technologies",
     author_email="contact@protonmail.com",
@@ -14,7 +14,7 @@ setup(
         "proton-vpn-logger", "proton-vpn-killswitch", "distro"
     ],
     extras_require={
-        "development": ["pytest", "pytest-coverage", "pylint", "flake8"]
+        "development": ["pytest", "pytest-coverage", "pylint", "flake8", "pytest-asyncio"]
     },
     packages=find_namespace_packages(include=['proton.vpn.core*']),
     include_package_data=True,
