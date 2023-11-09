@@ -24,10 +24,8 @@ import asyncio
 from proton.vpn.core.connection import VPNConnectorWrapper
 from proton.vpn.core.settings import Settings, SettingsPersistence
 from proton.vpn.core.session import SessionHolder, ClientTypeMetadata
-from proton.vpn.core.reports import BugReportForm
 from proton.vpn.session.servers import ServerList
-from proton.vpn.session.client_config import ClientConfig
-from proton.vpn.session.dataclasses import LoginResult
+from proton.vpn.session import ClientConfig, LoginResult, BugReportForm
 from proton.vpn.session.account import VPNAccount
 
 
@@ -152,7 +150,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         """
         Submits the specified bug report to customer support.
         """
-        return await self._session_holder.submit_bug_report(bug_report)
+        return await self._session_holder.session.submit_bug_report(bug_report)
 
     async def logout(self):
         """

@@ -59,6 +59,7 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %changelog
 * Wed Nov 08 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.20.2
 - Make API async and avoid thread-safety issues in asyncio code
+- Move bug report submission to proton-vpn-session
 
 * Tue Oct 10 2023 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.20.1
 - Update dependencies

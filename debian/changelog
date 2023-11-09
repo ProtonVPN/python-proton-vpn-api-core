@@ -1,6 +1,7 @@
 proton-vpn-api-core (0.20.2) unstable; urgency=medium
 
   * Make API async and avoid thread-safety issues in asyncio code
+  * Move bug report submission to proton-vpn-session
 
  -- Josep Llaneras <josep.llaneras@proton.ch>  Wed, 08 Nov 2023 09:51:49 +0100
 
