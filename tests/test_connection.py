@@ -39,7 +39,7 @@ LOGICAL_SERVER_DATA = {
 
 
 def test_get_vpn_server_returns_vpn_server_built_from_logical_server_and_client_config():
-    vpn_connection_holder = VPNConnectorWrapper(session_holder=None, settings_persistence=None)
+    vpn_connection_holder = VPNConnectorWrapper(session_holder=None, settings_persistence=None, vpn_connector=None)
 
     logical_server = LogicalServer(data=LOGICAL_SERVER_DATA)
     client_config = ClientConfig.default()

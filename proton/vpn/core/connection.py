@@ -73,17 +73,11 @@ class VPNConnectorWrapper:
     def __init__(
             self, session_holder: SessionHolder,
             settings_persistence: SettingsPersistence,
-            vpn_connector: VPNConnector = None
+            vpn_connector: VPNConnector
     ):
         self._session_holder = session_holder
         self._settings_persistence = settings_persistence
-        self._lazy_loaded_connector = vpn_connector
-
-    @property
-    def _connector(self) -> VPNConnector:
-        if not self._lazy_loaded_connector:
-            self._lazy_loaded_connector = VPNConnector.get_instance()
-        return self._lazy_loaded_connector
+        self._connector = vpn_connector
 
     @property
     def current_state(self) -> State:
@@ -94,7 +88,6 @@ class VPNConnectorWrapper:
     def current_connection(self) -> Optional[VPNConnection]:
         """Returns the current VPN connection if there is one. Otherwise,
         it returns None."""
-        logger.warning(f"{VPNConnectorWrapper.__name__}.current_connection is deprecated.")
         return self._connector.current_connection
 
     @property
@@ -145,7 +138,7 @@ class VPNConnectorWrapper:
 
         return available_protocols
 
-    def connect(self, server: VPNServer, protocol: str = None, backend: str = None):
+    async def connect(self, server: VPNServer, protocol: str = None, backend: str = None):
         """
         Connects asynchronously to the specified VPN server.
         :param server: VPN server to connect to.
@@ -159,7 +152,7 @@ class VPNConnectorWrapper:
             category="CONN", subcategory="CONNECT", event="START"
         )
 
-        self._connector.connect(
+        await self._connector.connect(
             server=server,
             credentials=self._session_holder.session.vpn_account.vpn_credentials,
             settings=self._settings_persistence.get(
@@ -169,9 +162,9 @@ class VPNConnectorWrapper:
             backend=backend
         )
 
-    def disconnect(self):
+    async def disconnect(self):
         """Disconnects asynchronously from the current server."""
-        self._connector.disconnect()
+        await self._connector.disconnect()
 
     def register(self, subscriber: VPNStateSubscriber):
         """

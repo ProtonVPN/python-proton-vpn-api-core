@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.20.2
+%define version 0.20.3
 %define release 1
 
 Prefix: %{_prefix}
@@ -57,6 +57,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Wed Dec 13 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.20.3
+- Make VPN connection API async
+
 * Wed Nov 08 2023 Josep Llaneras <josep.llaneras@proton.ch> 0.20.2
 - Make API async and avoid thread-safety issues in asyncio code
 - Move bug report submission to proton-vpn-session

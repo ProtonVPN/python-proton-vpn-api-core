@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.20.3) unstable; urgency=medium
+
+  * Make VPN connection API async
+
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Wed, 13 Dec 2023 12:33:54 +0100
+
 proton-vpn-api-core (0.20.2) unstable; urgency=medium
 
   * Make API async and avoid thread-safety issues in asyncio code

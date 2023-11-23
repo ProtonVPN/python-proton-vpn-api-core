@@ -21,6 +21,8 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import asyncio
 
+from proton.vpn.connection.vpnconnector import VPNConnector
+
 from proton.vpn.core.connection import VPNConnectorWrapper
 from proton.vpn.core.settings import Settings, SettingsPersistence
 from proton.vpn.core.session import SessionHolder, ClientTypeMetadata
@@ -36,9 +38,22 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
             client_type_metadata=client_type_metadata
         )
         self._settings_persistence = SettingsPersistence()
-        self.connection = VPNConnectorWrapper(
-            self._session_holder, self._settings_persistence
+        self._vpn_connector = None
+
+    async def get_vpn_connector(self):
+        """Returns an object that wraps around the raw VPN connection object.
+
+        This will provide some additional helper methods
+        related to VPN connections and VPN servers.
+        """
+        if self._vpn_connector:
+            return self._vpn_connector
+
+        vpn_connector = await VPNConnector.get_instance()
+        self._vpn_connector = VPNConnectorWrapper(
+            self._session_holder, self._settings_persistence, vpn_connector
         )
+        return self._vpn_connector
 
     @property
     def settings(self) -> Settings:
@@ -49,6 +64,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
 
     @settings.setter
     def settings(self, newvalue: Settings):
+        """Set general settings."""
         self._settings_persistence.save(newvalue)
 
     async def login(self, username: str, password: str) -> LoginResult:
@@ -160,3 +176,5 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         await self._session_holder.session.logout()
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(executor=None, func=self._settings_persistence.delete)
+        vpn_connector = await self.get_vpn_connector()
+        await vpn_connector.disconnect()
