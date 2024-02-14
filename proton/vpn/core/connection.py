@@ -145,6 +145,9 @@ class VPNConnectorWrapper:
         :param protocol: One of the supported protocols (e.g. openvpn-tcp or openvpn-udp).
         :param backend: Backend to user (e.g. networkmanager).
         """
+        if not self._session_holder.session.logged_in:
+            raise RuntimeError("Log in required before starting VPN connections.")
+
         ports = server.tcp_ports if "tcp" in protocol else server.udp_ports
         logger.info(
             f"Server: {server.server_ip} / Protocol: {protocol} "

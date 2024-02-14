@@ -49,7 +49,8 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         if self._vpn_connector:
             return self._vpn_connector
 
-        vpn_connector = await VPNConnector.get_instance()
+        # pylint: disable=too-many-function-args
+        vpn_connector = await VPNConnector.get_instance(self.settings)
         self._vpn_connector = VPNConnectorWrapper(
             self._session_holder, self._settings_persistence, vpn_connector
         )
@@ -58,9 +59,11 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
     @property
     def settings(self) -> Settings:
         """Get general settings."""
-        return self._settings_persistence.get(
-            self._session_holder.session.vpn_account.max_tier
-        )
+        user_tier = 0  # Default to free user tier.
+        if self._session_holder.session.logged_in:
+            user_tier = self._session_holder.session.vpn_account.max_tier
+
+        return self._settings_persistence.get(user_tier)
 
     @settings.setter
     def settings(self, newvalue: Settings):

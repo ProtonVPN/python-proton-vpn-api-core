@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.20.4) unstable; urgency=medium
+
+  * Initialize VPNConnector with settings
+
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Wed, 14 Feb 2024 15:57:21 +0100
+
 proton-vpn-api-core (0.20.3) unstable; urgency=medium
 
   * Make VPN connection API async
