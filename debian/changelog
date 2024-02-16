@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.21.0) unstable; urgency=medium
+
+  * Apply kill switch setting immediately
+
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Fri, 16 Feb 2024 10:07:58 +0100
+
 proton-vpn-api-core (0.20.4) unstable; urgency=medium
 
   * Initialize VPNConnector with settings

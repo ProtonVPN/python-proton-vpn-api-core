@@ -28,7 +28,7 @@ from proton.vpn.connection.states import State
 from proton.vpn.session.servers import LogicalServer
 from proton.vpn.session.client_config import ClientConfig
 
-from proton.vpn.core.settings import SettingsPersistence
+from proton.vpn.core.settings import SettingsPersistence, Settings
 from proton.vpn.connection import VPNConnection
 from proton.vpn.connection.enum import ConnectionStateEnum
 from proton.vpn.connection.vpnconnector import VPNConnector
@@ -124,6 +124,10 @@ class VPNConnectorWrapper:
             server_name=logical_server.name,
             label=physical_server.label
         )
+
+    async def apply_settings(self, settings: Settings):
+        """See VPNConnector.save_settings."""
+        await self._connector.apply_settings(settings)
 
     def get_available_protocols_for_backend(self, backend_name: str) -> Optional[str]:
         """Returns available protocols for the `backend_name`

@@ -50,25 +50,34 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
             return self._vpn_connector
 
         # pylint: disable=too-many-function-args
-        vpn_connector = await VPNConnector.get_instance(self.settings)
+        settings = await self.load_settings()
+        vpn_connector = await VPNConnector.get_instance(settings)
         self._vpn_connector = VPNConnectorWrapper(
             self._session_holder, self._settings_persistence, vpn_connector
         )
         return self._vpn_connector
 
-    @property
-    def settings(self) -> Settings:
-        """Get general settings."""
+    async def load_settings(self) -> Settings:
+        """Returns the settings saved to disk, or the defaults if they are not found."""
         user_tier = 0  # Default to free user tier.
         if self._session_holder.session.logged_in:
             user_tier = self._session_holder.session.vpn_account.max_tier
 
-        return self._settings_persistence.get(user_tier)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None, self._settings_persistence.get, user_tier
+        )
 
-    @settings.setter
-    def settings(self, newvalue: Settings):
-        """Set general settings."""
-        self._settings_persistence.save(newvalue)
+    async def save_settings(self, settings: Settings):
+        """
+        Saves the settings to disk.
+
+        Certain actions might be triggered by the VPN connector. For example, the
+        kill switch might also be enabled/disabled depending on the setting value.
+        """
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._settings_persistence.save, settings)
+        await self._vpn_connector.apply_settings(settings)
 
     async def login(self, username: str, password: str) -> LoginResult:
         """
