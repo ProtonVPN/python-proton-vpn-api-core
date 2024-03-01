@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.21.1) unstable; urgency=medium
+
+  * Add WireGuard ports
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Fri, 1 Mar 2024 10:07:58 +0100
+
 proton-vpn-api-core (0.21.0) unstable; urgency=medium
 
   * Apply kill switch setting immediately

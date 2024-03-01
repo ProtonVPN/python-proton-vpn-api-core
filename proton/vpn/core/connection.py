@@ -21,12 +21,13 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import threading
 from dataclasses import dataclass
-from typing import Optional, Sequence, runtime_checkable, Protocol
+from typing import Optional, runtime_checkable, Protocol
 
 from proton.loader import Loader
 from proton.vpn.connection.states import State
 from proton.vpn.session.servers import LogicalServer
 from proton.vpn.session.client_config import ClientConfig
+from proton.vpn.session.client_config import ProtocolPorts
 
 from proton.vpn.core.settings import SettingsPersistence, Settings
 from proton.vpn.connection import VPNConnection
@@ -47,13 +48,18 @@ class VPNServer:  # pylint: disable=too-many-instance-attributes
     :class:`proton.vpn.connection.VPNConnection`.
     """
     server_ip: str
-    udp_ports: Sequence[int]
-    tcp_ports: Sequence[int]
+    openvpn_ports: ProtocolPorts
+    wireguard_ports: ProtocolPorts
     domain: str
     x25519pk: str
     server_id: str
     server_name: str
     label: str = None
+
+    def __str__(self):
+        return f"Server: {self.server_name} / Domain: {self.domain} / "\
+            f"IP: {self.server_ip} / OpenVPN Ports: {self.openvpn_ports} / "\
+            f"WireGuard Ports: {self.wireguard_ports}"
 
 
 @runtime_checkable
@@ -118,8 +124,8 @@ class VPNConnectorWrapper:
             server_ip=physical_server.entry_ip,
             domain=physical_server.domain,
             x25519pk=physical_server.x25519_pk,
-            udp_ports=client_config.openvpn_ports.udp,
-            tcp_ports=client_config.openvpn_ports.tcp,
+            openvpn_ports=client_config.openvpn_ports,
+            wireguard_ports=client_config.wireguard_ports,
             server_id=logical_server.id,
             server_name=logical_server.name,
             label=physical_server.label
@@ -142,7 +148,7 @@ class VPNConnectorWrapper:
 
         return available_protocols
 
-    async def connect(self, server: VPNServer, protocol: str = None, backend: str = None):
+    async def connect(self, server: VPNServer, protocol: str, backend: str = None):
         """
         Connects asynchronously to the specified VPN server.
         :param server: VPN server to connect to.
@@ -152,10 +158,8 @@ class VPNConnectorWrapper:
         if not self._session_holder.session.logged_in:
             raise RuntimeError("Log in required before starting VPN connections.")
 
-        ports = server.tcp_ports if "tcp" in protocol else server.udp_ports
         logger.info(
-            f"Server: {server.server_ip} / Protocol: {protocol} "
-            f"/ Ports: {ports} / Backend: {backend}",
+            f"{server} / Protocol: {protocol} / Backend: {backend}",
             category="CONN", subcategory="CONNECT", event="START"
         )
 
