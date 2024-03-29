@@ -29,8 +29,9 @@ from proton.vpn import logging
 from proton.vpn.session import VPNSession
 
 logger = logging.getLogger(__name__)
-DISTRIBUTION = distro.id()
-VERSION = distro.version()
+
+DISTRIBUTION_ID = distro.id()
+DISTRIBUTION_VERSION = distro.version()
 
 
 @dataclass
@@ -48,7 +49,8 @@ class SessionHolder:
     ):
         self._proton_sso = ProtonSSO(
             appversion=f"linux-vpn-{client_type_metadata.type}@{client_type_metadata.version}",
-            user_agent=f"ProtonVPN/{client_type_metadata.version} (Linux; {DISTRIBUTION}/{VERSION})"
+            user_agent=f"ProtonVPN/{client_type_metadata.version} "
+                       f"(Linux; {DISTRIBUTION_ID}/{DISTRIBUTION_VERSION})"
         )
         self._session = session
 

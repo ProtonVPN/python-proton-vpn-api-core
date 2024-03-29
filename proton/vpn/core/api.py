@@ -30,6 +30,8 @@ from proton.vpn.session.servers import ServerList
 from proton.vpn.session import ClientConfig, LoginResult, BugReportForm
 from proton.vpn.session.account import VPNAccount
 
+from proton.vpn.core.usage import UsageReporting, usage_reporting
+
 
 class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
     """Class exposing the Proton VPN facade."""
@@ -78,6 +80,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._settings_persistence.save, settings)
         await self._vpn_connector.apply_settings(settings)
+        self.usage_reporting.enabled = settings.anonymous_crash_reports
 
     async def login(self, username: str, password: str) -> LoginResult:
         """
@@ -190,3 +193,8 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         await loop.run_in_executor(executor=None, func=self._settings_persistence.delete)
         vpn_connector = await self.get_vpn_connector()
         await vpn_connector.disconnect()
+
+    @property
+    def usage_reporting(self) -> UsageReporting:
+        """Returns the usage reporting instance to send anonymous crash reports."""
+        return usage_reporting

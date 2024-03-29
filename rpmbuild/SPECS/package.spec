@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.21.2
+%define version 0.22.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -24,6 +24,7 @@ BuildRequires: python3-proton-vpn-logger
 BuildRequires: python3-proton-vpn-killswitch
 BuildRequires: python3-setuptools
 BuildRequires: python3-distro
+BuildRequires: python3-sentry-sdk
 
 Requires: python3-proton-core
 Requires: python3-proton-vpn-connection
@@ -31,9 +32,9 @@ Requires: python3-proton-vpn-session
 Requires: python3-proton-vpn-logger
 Requires: python3-proton-vpn-killswitch
 Requires: python3-distro
+Requires: python3-sentry-sdk
 
-Conflicts: proton-vpn-gtk-app < 4.2.1~rc3
-
+Conflicts: proton-vpn-gtk-app < 4.2.1~rc4
 
 %{?python_disable_dependency_generator}
 
@@ -57,6 +58,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Fri Apr 5 2024 Luke Titley <luke.titley@proton.ch> 0.22.0
+- Add mechanism to send errors anonymously to sentry.
+
 * Thu Apr 4 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.21.2
 - Return list of protocol plugins for a specific backend instead of returning a list of protocols names
 

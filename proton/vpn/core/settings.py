@@ -45,6 +45,7 @@ SETTINGS = os.path.join(
 
 DEFAULT_PROTOCOL = "openvpn-udp"
 DEFAULT_KILLSWITCH = KillSwitchState.OFF.value
+DEFAULT_ANONYMOUS_CRASH_REPORTS = True
 
 
 @dataclass
@@ -89,6 +90,7 @@ class Settings:
     killswitch: int
     dns_custom_ips: Optional[str]
     features: Features
+    anonymous_crash_reports: bool
 
     @staticmethod
     def from_dict(data: dict, user_tier: int) -> Settings:
@@ -101,7 +103,11 @@ class Settings:
             protocol=data.get("protocol", default.protocol),
             killswitch=data.get("killswitch", default.killswitch),
             dns_custom_ips=data.get("dns_custom_ips", default.dns_custom_ips),
-            features=features
+            features=features,
+            anonymous_crash_reports=data.get(
+                "anonymous_crash_reports",
+                default.anonymous_crash_reports
+            )
         )
 
     def to_dict(self) -> dict:
@@ -116,6 +122,7 @@ class Settings:
             killswitch=DEFAULT_KILLSWITCH,
             dns_custom_ips=[],
             features=Features.default(user_tier),
+            anonymous_crash_reports=DEFAULT_ANONYMOUS_CRASH_REPORTS
         )
 
 

@@ -24,6 +24,7 @@ from proton.vpn.killswitch.interface import KillSwitchState
 FREE_TIER = 0
 PLUS_TIER = 1
 
+
 @pytest.fixture
 def settings_dict():
     return {
@@ -36,6 +37,7 @@ def settings_dict():
             "vpn_accelerator": True,
             "port_forwarding": False
         },
+        "anonymous_crash_reports": True
     }
 
 

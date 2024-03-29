@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Proton Technologies AG <opensource@proton.me>
 Build-Depends: debhelper (>= 9), dh-python, python3-all, python3-setuptools,
     python3-proton-vpn-session, python3-proton-vpn-connection,
-    python3-distro, python3-proton-vpn-logger
+    python3-distro, python3-proton-vpn-logger, python3-sentry-sdk
 Standards-Version: 4.1.1
 X-Python3-Version: >= 3.2
 
@@ -12,6 +12,7 @@ Package: python3-proton-vpn-api-core
 Architecture: all
 Depends: ${python3:Depends}, ${misc:Depends},
     python3-proton-vpn-session, python3-proton-vpn-connection,
-    python3-distro, python3-proton-vpn-logger, python3-proton-vpn-killswitch
-Breaks: proton-vpn-gtk-app (<< 4.2.1~rc3)
+    python3-distro, python3-proton-vpn-logger, python3-proton-vpn-killswitch,
+    python3-sentry-sdk
+Breaks: proton-vpn-gtk-app (<< 4.2.1~rc4)
 Description: Python3 ProtonVPN Network Manager OpenVPN Core API
