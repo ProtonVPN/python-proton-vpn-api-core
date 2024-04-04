@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.21.1
+%define version 0.21.2
 %define release 1
 
 Prefix: %{_prefix}
@@ -32,7 +32,7 @@ Requires: python3-proton-vpn-logger
 Requires: python3-proton-vpn-killswitch
 Requires: python3-distro
 
-Conflicts: proton-vpn-gtk-app < 4.1.11-0.3.rc3
+Conflicts: proton-vpn-gtk-app < 4.2.1~rc3
 
 
 %{?python_disable_dependency_generator}
@@ -57,6 +57,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Thu Apr 4 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.21.2
+- Return list of protocol plugins for a specific backend instead of returning a list of protocols names
+
 * Fri Mar 1 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.21.1
 - Add WireGuard ports
 

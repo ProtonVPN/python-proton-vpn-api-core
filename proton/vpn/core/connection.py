@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from typing import Optional, runtime_checkable, Protocol
 
 from proton.loader import Loader
+from proton.loader.loader import PluggableComponent
 from proton.vpn.connection.states import State
 from proton.vpn.session.servers import LogicalServer
 from proton.vpn.session.client_config import ClientConfig
@@ -135,18 +136,16 @@ class VPNConnectorWrapper:
         """See VPNConnector.save_settings."""
         await self._connector.apply_settings(settings)
 
-    def get_available_protocols_for_backend(self, backend_name: str) -> Optional[str]:
+    def get_available_protocols_for_backend(
+        self, backend_name: str
+    ) -> Optional[PluggableComponent]:
         """Returns available protocols for the `backend_name`
 
         raises RuntimeError:  if no backends could be found."""
-        available_protocols = []
-
         backend_class = Loader.get("backend", class_name=backend_name)
         supported_protocols = Loader.get_all(backend_class.backend)
-        if supported_protocols:
-            available_protocols = [protocol.class_name for protocol in supported_protocols]
 
-        return available_protocols
+        return supported_protocols
 
     async def connect(self, server: VPNServer, protocol: str, backend: str = None):
         """
