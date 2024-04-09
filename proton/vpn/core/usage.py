@@ -21,6 +21,8 @@ import sentry_sdk
 from proton.vpn.core.session import ClientTypeMetadata, DISTRIBUTION_VERSION, DISTRIBUTION_ID
 from proton.vpn.session.dataclasses import get_desktop_environment
 
+DSN = "https://9a5ea555a4dc48dbbb4cfa72bdbd0899@vpn-api.proton.me/core/v4/reports/sentry/25"
+
 
 class UsageReporting:
     """Sends anonymous usage reports to Proton."""
@@ -33,12 +35,17 @@ class UsageReporting:
         """This method should be called before reporting, otherwise reports will be ignored."""
 
         sentry_sdk.init(
-            dsn="https://9a5ea555a4dc48dbbb4cfa72bdbd0899@sentry-new.protontech.ch/25",
-            release=f"{client_type_metadata.type}-{client_type_metadata.version}"
+            dsn=DSN,
+            release=f"{client_type_metadata.type}-{client_type_metadata.version}",
+            server_name=False
         )
-        sentry_sdk.set_tag("distro_name", DISTRIBUTION_ID)
-        sentry_sdk.set_tag("distro_version", DISTRIBUTION_VERSION)
-        sentry_sdk.set_tag("desktop_environment", get_desktop_environment())
+
+        # Using configure_scope to set a tag works with older versions of
+        # sentry (0.12.2) and so works on ubuntu 20.
+        with sentry_sdk.configure_scope() as scope:
+            scope.set_tag("distro_name", DISTRIBUTION_ID)
+            scope.set_tag("distro_version", DISTRIBUTION_VERSION)
+            scope.set_tag("desktop_environment", get_desktop_environment())
 
         self.enabled = enabled
 

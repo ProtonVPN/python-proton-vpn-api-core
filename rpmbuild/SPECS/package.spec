@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.22.0
+%define version 0.22.1
 %define release 1
 
 Prefix: %{_prefix}
@@ -58,6 +58,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Fri Apr 10 2024 Luke Titley <luke.titley@proton.ch> 0.22.1
+- Change url for sentry, dont send server_name, use older sentry api
+
 * Fri Apr 5 2024 Luke Titley <luke.titley@proton.ch> 0.22.0
 - Add mechanism to send errors anonymously to sentry.
 

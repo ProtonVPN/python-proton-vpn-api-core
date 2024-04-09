@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.22.1) unstable; urgency=medium
+
+  * Change url for sentry, dont send server_name, use older sentry api
+
+ -- Luke Titley <luke.titley@proton.ch>  Thu, 10 Apr 2024 10:07:58 +0100
+
 proton-vpn-api-core (0.22.0) unstable; urgency=medium
 
   * Add mechanism to send errors anonymously to sentry.
