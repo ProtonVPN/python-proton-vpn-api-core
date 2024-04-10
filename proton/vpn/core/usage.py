@@ -17,6 +17,9 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import sentry_sdk
+from sentry_sdk.integrations.dedupe import DedupeIntegration
+from sentry_sdk.integrations.stdlib import StdlibIntegration
+from sentry_sdk.integrations.modules import ModulesIntegration
 
 from proton.vpn.core.session import ClientTypeMetadata, DISTRIBUTION_VERSION, DISTRIBUTION_ID
 from proton.vpn.session.dataclasses import get_desktop_environment
@@ -37,7 +40,13 @@ class UsageReporting:
         sentry_sdk.init(
             dsn=DSN,
             release=f"{client_type_metadata.type}-{client_type_metadata.version}",
-            server_name=False
+            server_name=False,           # Don't send the computer name
+            default_integrations=False,  # We want to be explicit about the integrations we use
+            integrations=[
+                DedupeIntegration(),     # Yes we want to avoid event duplication
+                StdlibIntegration(),     # Yes we want info from the standard lib objects
+                ModulesIntegration()     # Yes we want to know what python modules are installed
+            ]
         )
 
         # Using configure_scope to set a tag works with older versions of
