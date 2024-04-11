@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.22.2
+%define version 0.22.3
 %define release 1
 
 Prefix: %{_prefix}
@@ -58,6 +58,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Thu Apr 11 2024 Luke Titley <luke.titley@proton.ch> 0.22.3
+- Ensure that crash reporting state is preserved between restarts
+
 * Wed Apr 10 2024 Luke Titley <luke.titley@proton.ch> 0.22.2
 - Explicitly state the sentry integrations we want. Dont include the ExceptHookIntegration
 

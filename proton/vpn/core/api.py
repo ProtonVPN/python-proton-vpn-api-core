@@ -66,9 +66,11 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
             user_tier = self._session_holder.session.vpn_account.max_tier
 
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(
+        settings = await loop.run_in_executor(
             None, self._settings_persistence.get, user_tier
         )
+        self.usage_reporting.enabled = settings.anonymous_crash_reports
+        return settings
 
     async def save_settings(self, settings: Settings):
         """

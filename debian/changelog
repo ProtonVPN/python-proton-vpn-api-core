@@ -1,3 +1,7 @@
+proton-vpn-api-core (0.22.3) unstable; urgency=medium
+
+  * Ensure that crash reporting state is preserved between restarts.
+
 proton-vpn-api-core (0.22.2) unstable; urgency=medium
 
   * Explicitly state the sentry integrations we want. Dont include the ExceptHookIntegration
