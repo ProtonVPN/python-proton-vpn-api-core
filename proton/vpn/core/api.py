@@ -91,7 +91,9 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         :param password: Proton account password.
         :return: The login result.
         """
-        return await self._session_holder.get_session_for(username).login(username, password)
+        session = self._session_holder.get_session_for(username)
+        return await session.login(
+            username, password, features=self._get_features())
 
     async def submit_2fa_code(self, code: str) -> LoginResult:
         """
@@ -99,7 +101,8 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         :param code: 2FA code.
         :return: The login result.
         """
-        return await self._session_holder.session.provide_2fa(code)
+        return await self._session_holder.session.provide_2fa(
+            code, features=self._get_features())
 
     def is_user_logged_in(self) -> bool:
         """Returns True if a user is logged in and False otherwise."""
@@ -150,7 +153,10 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
 
     async def fetch_certificate(self):
         """Fetches new certificate from Proton's REST APIs."""
-        return await self._session_holder.session.fetch_certificate()
+
+        return await self._session_holder.session.fetch_certificate(
+            features=self._get_features()
+        )
 
     @property
     def server_list(self):
@@ -204,3 +210,11 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
     def usage_reporting(self) -> UsageReporting:
         """Returns the usage reporting instance to send anonymous crash reports."""
         return usage_reporting
+
+    def _get_features(self):
+        settings = self._settings_persistence.get(user_tier=0,
+                                                  create_if_necessary=False)
+        if settings:
+            return settings.features.to_dict()
+
+        return None

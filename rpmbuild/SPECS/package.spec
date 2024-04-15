@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.22.4
+%define version 0.22.5
 %define release 1
 
 Prefix: %{_prefix}
@@ -58,6 +58,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Thu Apr 18 2024 Luke Titley <luke.titley@proton.ch> 0.22.5
+- Pass requested features through to session login and two factor submit.
+
 * Tue Apr 16 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.22.4
 - Provide method to update certificate.
 

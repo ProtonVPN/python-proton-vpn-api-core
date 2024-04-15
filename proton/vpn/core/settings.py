@@ -68,6 +68,10 @@ class Features:
             port_forwarding=data.get("port_forwarding", default.port_forwarding),
         )
 
+    def to_dict(self) -> dict:
+        """Converts the class to dict."""
+        return asdict(self)
+
     @staticmethod
     def default(user_tier: int) -> Features:  # pylint: disable=unused-argument
         """Creates and returns `Features` from default configurations."""
@@ -132,19 +136,18 @@ class SettingsPersistence:
         self._cache_handler = cache_handler or CacheHandler(SETTINGS)
         self._settings = None
 
-    def get(self, user_tier: int) -> Settings:
+    def get(self, user_tier: int, create_if_necessary: bool = True) -> Settings:
         """Get user settings, either the ones stored on disk or getting
         default based on tier and storing it to disk."""
-        if self._settings is not None:
-            return self._settings
 
-        raw_settings = self._cache_handler.load()
-
-        if raw_settings is None:
-            self._settings = Settings.default(user_tier)
-            self.save(self._settings)
-        else:
-            self._settings = Settings.from_dict(raw_settings, user_tier)
+        if self._settings is None:
+            raw_settings = self._cache_handler.load()
+            if raw_settings is None:
+                if create_if_necessary:
+                    self._settings = Settings.default(user_tier)
+                    self.save(self._settings)
+            else:
+                self._settings = Settings.from_dict(raw_settings, user_tier)
 
         return self._settings
 
