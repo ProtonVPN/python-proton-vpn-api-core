@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.22.3
+%define version 0.22.4
 %define release 1
 
 Prefix: %{_prefix}
@@ -34,7 +34,7 @@ Requires: python3-proton-vpn-killswitch
 Requires: python3-distro
 Requires: python3-sentry-sdk
 
-Conflicts: proton-vpn-gtk-app < 4.2.1~rc4
+Conflicts: proton-vpn-gtk-app < 4.3.1~rc1
 
 %{?python_disable_dependency_generator}
 
@@ -58,6 +58,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Tue Apr 16 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.22.4
+- Provide method to update certificate.
+
 * Thu Apr 11 2024 Luke Titley <luke.titley@proton.ch> 0.22.3
 - Ensure that crash reporting state is preserved between restarts
 

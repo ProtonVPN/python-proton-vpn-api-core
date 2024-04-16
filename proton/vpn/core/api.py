@@ -148,6 +148,10 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         """
         return await self._session_holder.session.fetch_session_data()
 
+    async def fetch_certificate(self):
+        """Fetches new certificate from Proton's REST APIs."""
+        return await self._session_holder.session.fetch_certificate()
+
     @property
     def server_list(self):
         """The last server list fetched from the REST API."""
