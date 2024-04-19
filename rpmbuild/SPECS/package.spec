@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.22.5
+%define version 0.23.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -19,22 +19,23 @@ BuildRoot: %{_tmppath}/%{unmangled_name}-%{version}-%{release}-buildroot
 
 BuildRequires: python3-proton-core
 BuildRequires: python3-proton-vpn-connection
-BuildRequires: python3-proton-vpn-session
 BuildRequires: python3-proton-vpn-logger
 BuildRequires: python3-proton-vpn-killswitch
 BuildRequires: python3-setuptools
 BuildRequires: python3-distro
 BuildRequires: python3-sentry-sdk
+BuildRequires: python3-pynacl
 
 Requires: python3-proton-core
 Requires: python3-proton-vpn-connection
-Requires: python3-proton-vpn-session
 Requires: python3-proton-vpn-logger
 Requires: python3-proton-vpn-killswitch
 Requires: python3-distro
 Requires: python3-sentry-sdk
+Requires: python3-pynacl
 
 Conflicts: proton-vpn-gtk-app < 4.3.1~rc1
+Obsoletes: python3-proton-vpn-session
 
 %{?python_disable_dependency_generator}
 
@@ -58,6 +59,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Mon Apr 22 2024 Luke Titley <luke.titley@proton.ch> 0.23.0
+- Merged proton-vpn-api-session package into this one.
+
 * Thu Apr 18 2024 Luke Titley <luke.titley@proton.ch> 0.22.5
 - Pass requested features through to session login and two factor submit.
 

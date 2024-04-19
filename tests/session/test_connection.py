@@ -17,8 +17,8 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from unittest.mock import Mock, PropertyMock
-from proton.vpn.session.servers import LogicalServer
-from proton.vpn.session.client_config import ClientConfig
+from proton.vpn.core.session.servers import LogicalServer
+from proton.vpn.core.session.client_config import ClientConfig
 
 from proton.vpn.core.connection import VPNConnectorWrapper
 

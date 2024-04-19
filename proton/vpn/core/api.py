@@ -25,10 +25,10 @@ from proton.vpn.connection.vpnconnector import VPNConnector
 
 from proton.vpn.core.connection import VPNConnectorWrapper
 from proton.vpn.core.settings import Settings, SettingsPersistence
-from proton.vpn.core.session import SessionHolder, ClientTypeMetadata
-from proton.vpn.session.servers import ServerList
-from proton.vpn.session import ClientConfig, LoginResult, BugReportForm
-from proton.vpn.session.account import VPNAccount
+from proton.vpn.core.session_holder import SessionHolder, ClientTypeMetadata
+from proton.vpn.core.session.servers import ServerList
+from proton.vpn.core.session import ClientConfig, LoginResult, BugReportForm
+from proton.vpn.core.session.account import VPNAccount
 
 from proton.vpn.core.usage import UsageReporting, usage_reporting
 

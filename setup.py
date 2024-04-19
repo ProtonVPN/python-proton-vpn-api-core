@@ -4,13 +4,13 @@ from setuptools import setup, find_namespace_packages
 
 setup(
     name="proton-vpn-api-core",
-    version="0.22.5",
+    version="0.23.0",
     description="Proton AG VPN Core API",
     author="Proton AG",
     author_email="contact@protonmail.com",
     url="https://github.com/ProtonMail/python-protonvpn-api-core",
     install_requires=[
-        "proton-core", "proton-vpn-connection", "proton-vpn-session",
+        "proton-core", "proton-vpn-connection",
         "proton-vpn-logger", "proton-vpn-killswitch", "distro", "sentry-sdk"
     ],
     extras_require={

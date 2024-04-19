@@ -26,7 +26,7 @@ import distro
 
 from proton.sso import ProtonSSO
 from proton.vpn import logging
-from proton.vpn.session import VPNSession
+from proton.vpn.core.session import VPNSession
 
 logger = logging.getLogger(__name__)
 

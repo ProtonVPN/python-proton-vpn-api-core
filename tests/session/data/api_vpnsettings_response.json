@@ -1,0 +1,25 @@
+{
+    "Code": 1000,
+    "VPN": {
+        "ExpirationTime": 1,
+        "Name": "test",
+        "Password": "passwordtest",
+        "GroupID": "testgroup",
+        "Status": 1,
+        "PlanName": "free",
+        "PlanTitle": "mock_title",
+        "MaxTier": 0,
+        "MaxConnect": 2,
+        "Groups": [
+            "vpnfree"
+        ],
+        "NeedConnectionAllocation": false
+    },
+    "Services": 5,
+    "Subscribed": 0,
+    "Delinquent": 0,
+    "HasPaymentMethod": 1,
+    "Credit": 17091,
+    "Currency": "EUR",
+    "Warnings": []
+}

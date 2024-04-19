@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.23.0) unstable; urgency=medium
+
+  * Merged proton-vpn-api-session package into this one.
+
+ -- Luke Titley <luke.titley@proton.ch>  Mon, 22 Apr 2024 15:00:00 +0100
+
 proton-vpn-api-core (0.22.5) unstable; urgency=medium
 
   * Pass requested features through to session login and two factor submit.

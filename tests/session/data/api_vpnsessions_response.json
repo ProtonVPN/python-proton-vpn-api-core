@@ -1,0 +1,15 @@
+{
+    "Code": 1000,
+    "Sessions": [
+        {
+            "SessionID": "9A35C20A09AC0833157B320C408CD679",
+            "ExitIP": "1.2.3.4",
+            "Protocol": "openvpn"
+        },
+        {
+            "SessionID": "9A35C20A09AC0833157B320C408CD67A",
+            "ExitIP": "5.6.7.8",
+            "Protocol": "openvpn"
+        }
+    ]
+}
