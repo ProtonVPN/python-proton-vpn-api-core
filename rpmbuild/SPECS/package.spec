@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.23.0
+%define version 0.23.1
 %define release 1
 
 Prefix: %{_prefix}
@@ -59,6 +59,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Mon Apr 23 2024 Luke Titley <luke.titley@proton.ch> 0.23.1
+- Added missing pip dependencies.
+
 * Mon Apr 22 2024 Luke Titley <luke.titley@proton.ch> 0.23.0
 - Merged proton-vpn-api-session package into this one.
 
