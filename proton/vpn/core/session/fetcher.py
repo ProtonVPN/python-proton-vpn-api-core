@@ -29,6 +29,8 @@ from proton.vpn.core.session.servers.fetcher import ServerListFetcher
 from proton.vpn.core.session.servers.logicals import ServerList
 from proton.vpn.core.session.utils import rest_api_request
 
+from proton.vpn.core.settings import Features
+
 if TYPE_CHECKING:
     from proton.vpn.core.session import VPNSession
 
@@ -39,12 +41,6 @@ API_NETSHIELD = "NetShieldLevel"
 API_VPN_ACCELERATOR = "SplitTCP"
 API_MODERATE_NAT = "RandomNAT"
 API_PORT_FORWARDING = "PortForwarding"
-
-# These are the same keys as above, but used for the vpn settings.
-SETTINGS_NETSHIELD = "netshield"
-SETTINGS_VPN_ACCELERATOR = "vpn_accelerator"
-SETTINGS_MODERATE_NAT = "moderate_nat"
-SETTINGS_PORT_FORWARDING = "port_forwarding"
 
 
 class VPNSessionFetcher:
@@ -67,7 +63,8 @@ class VPNSessionFetcher:
         )
 
     async def fetch_certificate(
-        self, client_public_key, cert_duration_in_minutes: int = 1440, features=None
+        self, client_public_key, cert_duration_in_minutes: int = 1440,
+        features: Optional[Features] = None
     ) -> VPNCertificate:
         """
         Fetches a certificated signed by the API server to authenticate against VPN servers.
@@ -133,24 +130,23 @@ class VPNSessionFetcher:
         self._client_config_fetcher.clear_cache()
 
     @staticmethod
-    def _convert_features(features: dict):
+    def _convert_features(features: Features):
         """
-        This converts the dictionary of features in the settings format to the
-        certificate request api format.
+        This converts the settings features into a certificate request features
+        dictionary.
         """
         result = {}
 
-        if not features.get(SETTINGS_MODERATE_NAT, True):
+        if not features.moderate_nat:
             result[API_MODERATE_NAT] = False
 
-        if not features.get(SETTINGS_VPN_ACCELERATOR, True):
+        if not features.vpn_accelerator:
             result[API_VPN_ACCELERATOR] = False
 
-        if features.get(SETTINGS_PORT_FORWARDING, False):
+        if features.port_forwarding:
             result[API_PORT_FORWARDING] = True
 
-        netshield = features.get(SETTINGS_NETSHIELD, 0)
-        if netshield != 0:
-            result[API_NETSHIELD] = netshield
+        if features.netshield != 0:
+            result[API_NETSHIELD] = features.netshield
 
         return result

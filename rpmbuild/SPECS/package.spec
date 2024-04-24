@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.24.5
+%define version 0.25.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -34,7 +34,7 @@ Requires: python3-distro
 Requires: python3-sentry-sdk
 Requires: python3-pynacl
 
-Conflicts: proton-vpn-gtk-app < 4.3.2~rc2
+Conflicts: proton-vpn-gtk-app < 4.3.3~rc2
 Obsoletes: python3-proton-vpn-session
 
 %{?python_disable_dependency_generator}
@@ -59,6 +59,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Thu May 23 2024 Luke Titley <luke.titley@proton.ch> 0.25.0
+- Refactor of Settings to ensure settings are only saved when they are changed.
+
 * Wed May 08 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.24.5
 - Stop raising exceptions when getting wireguard certificate and it is expired.
 

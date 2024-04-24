@@ -57,24 +57,23 @@ def test_settings_save_to_disk(settings_dict):
     cache_handler_mock.save.assert_called_once_with(free_settings.to_dict())
 
 
-def test_settings_persistence_get_returns_default_settings_and_persists_them_when_no_persistence_was_found(settings_dict):
+def test_settings_persistence_get_returns_default_settings_and_does_not_persist_them(settings_dict):
     cache_handler_mock = Mock()
     cache_handler_mock.load.return_value = None
     sp = SettingsPersistence(cache_handler_mock)
 
     sp.get(FREE_TIER)
 
-    cache_handler_mock.save.assert_called_once_with(settings_dict)
+    cache_handler_mock.save.assert_not_called()
 
 
-def test_settings_persistence_get_returns_persisted_settings(settings_dict):
+def test_settings_persistence_save_persisted_settings(settings_dict):
     cache_handler_mock = Mock()
-    cache_handler_mock.load.return_value = settings_dict
     sp = SettingsPersistence(cache_handler_mock)
 
-    sp.get(FREE_TIER)
+    sp.save(Settings.from_dict(settings_dict, FREE_TIER))
 
-    assert not cache_handler_mock.save.called
+    cache_handler_mock.save.assert_called()
 
 
 def test_settings_persistence_get_returns_in_memory_settings_if_they_were_already_loaded(settings_dict):

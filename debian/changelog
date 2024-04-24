@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.25.0) unstable; urgency=medium
+
+  * Refactor of Settings to ensure settings are only saved when they are changed.
+
+ -- Luke Titley <luke.titley@proton.ch>  Thu, 23 May 2024 11:00:00 +0100
+
 proton-vpn-api-core (0.24.5) unstable; urgency=medium
 
   * Stop raising exceptions when getting wireguard certificate and it is expired.

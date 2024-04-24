@@ -19,16 +19,18 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 
 import proton.vpn.core.session.fetcher as fetcher
 from proton.vpn.core.session.fetcher import VPNSessionFetcher
+from proton.vpn.core.settings import Features
 
 
 def test_extract_features():
+
     actual = VPNSessionFetcher._convert_features(
-        {
-            fetcher.SETTINGS_NETSHIELD: 2,
-            fetcher.SETTINGS_MODERATE_NAT: False,
-            fetcher.SETTINGS_VPN_ACCELERATOR: False,
-            fetcher.SETTINGS_PORT_FORWARDING: True
-        }
+        Features(
+            netshield=2,
+            moderate_nat=False,
+            vpn_accelerator=False,
+            port_forwarding=True
+        )
     )
 
     expected = {

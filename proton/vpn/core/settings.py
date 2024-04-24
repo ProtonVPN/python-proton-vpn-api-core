@@ -86,6 +86,10 @@ class Features:
             port_forwarding=False
         )
 
+    def is_default(self, user_tier: int) -> bool:
+        """Returns true if the features are the default ones."""
+        return self == Features.default(user_tier)
+
 
 @dataclass
 class Settings:
@@ -136,16 +140,14 @@ class SettingsPersistence:
         self._cache_handler = cache_handler or CacheHandler(SETTINGS)
         self._settings = None
 
-    def get(self, user_tier: int, create_if_necessary: bool = True) -> Settings:
-        """Get user settings, either the ones stored on disk or getting
-        default based on tier and storing it to disk."""
+    def get(self, user_tier: int) -> Settings:
+        """Load the user settings, either the ones stored on disk or getting
+        default based on tier"""
 
         if self._settings is None:
             raw_settings = self._cache_handler.load()
             if raw_settings is None:
-                if create_if_necessary:
-                    self._settings = Settings.default(user_tier)
-                    self.save(self._settings)
+                self._settings = Settings.default(user_tier)
             else:
                 self._settings = Settings.from_dict(raw_settings, user_tier)
 

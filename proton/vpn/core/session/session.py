@@ -104,8 +104,7 @@ class VPNSession(Session):
 
         return state
 
-    async def login(self, username: str, password: str,
-                    features: Optional[dict] = None) -> LoginResult:
+    async def login(self, username: str, password: str) -> LoginResult:
         """
         Logs the user in.
         :returns: the login result, indicating whether it was successful
@@ -120,12 +119,9 @@ class VPNSession(Session):
         if self.needs_twofa:
             return LoginResult(success=False, authenticated=True, twofa_required=True)
 
-        await self.fetch_session_data(features)
         return LoginResult(success=True, authenticated=True, twofa_required=False)
 
-    async def provide_2fa(self,
-                          code: str,
-                          features: Optional[dict] = None) -> LoginResult:  # pylint: disable=arguments-differ # noqa: E501
+    async def provide_2fa(self, code: str) -> LoginResult:  # pylint: disable=arguments-differ # noqa: E501
         """
         Submits the 2FA code.
         :returns: whether the 2FA was successful or not.
@@ -134,7 +130,6 @@ class VPNSession(Session):
         if not valid_code:
             return LoginResult(success=False, authenticated=True, twofa_required=True)
 
-        await self.fetch_session_data(features)
         return LoginResult(success=True, authenticated=True, twofa_required=False)
 
     async def logout(self, no_condition_check=False, additional_headers=None) -> bool:

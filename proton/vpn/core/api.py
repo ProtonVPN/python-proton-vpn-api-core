@@ -20,6 +20,7 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import asyncio
+import copy
 
 from proton.vpn.connection.vpnconnector import VPNConnector
 
@@ -62,7 +63,10 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         return self._vpn_connector
 
     async def load_settings(self) -> Settings:
-        """Returns the settings saved to disk, or the defaults if they are not found."""
+        """
+        Returns a copy of the settings saved to disk, or the defaults if they
+        are not found. Be sure to call save_settings if you want to apply changes.
+        """
         user_tier = 0  # Default to free user tier.
         if self._session_holder.session.logged_in:
             user_tier = self._session_holder.session.vpn_account.max_tier
@@ -72,7 +76,10 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
             None, self._settings_persistence.get, user_tier
         )
         self._usage_reporting.enabled = settings.anonymous_crash_reports
-        return settings
+
+        # We have to return a copy of the settings to force the caller to
+        # use the `save_settings` method to apply the changes.
+        return copy.deepcopy(settings)
 
     async def save_settings(self, settings: Settings):
         """
@@ -94,8 +101,12 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         :return: The login result.
         """
         session = self._session_holder.get_session_for(username)
-        return await session.login(
-            username, password, features=self._get_features())
+
+        result = await session.login(username, password)
+        if result.success and not session.loaded:
+            await session.fetch_session_data(features=self._get_features())
+
+        return result
 
     async def submit_2fa_code(self, code: str) -> LoginResult:
         """
@@ -103,8 +114,13 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         :param code: 2FA code.
         :return: The login result.
         """
-        return await self._session_holder.session.provide_2fa(
-            code, features=self._get_features())
+        session = self._session_holder.session
+        result = await session.provide_2fa(code)
+
+        if result.success and not session.loaded:
+            await session.fetch_session_data(features=self._get_features())
+
+        return result
 
     def is_user_logged_in(self) -> bool:
         """Returns True if a user is logged in and False otherwise."""
@@ -214,9 +230,9 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         return self._usage_reporting
 
     def _get_features(self):
-        settings = self._settings_persistence.get(user_tier=0,
-                                                  create_if_necessary=False)
-        if settings:
-            return settings.features.to_dict()
+        user_tier = 0
+        settings = self._settings_persistence.get(user_tier)
+        if not settings.features.is_default(user_tier):
+            return settings.features
 
         return None
