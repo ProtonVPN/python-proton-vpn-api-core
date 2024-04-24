@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.24.1
+%define version 0.24.2
 %define release 1
 
 Prefix: %{_prefix}
@@ -59,6 +59,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Thu May 02 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.24.2
+- Fix deprecation warning when calculatin WireGuard certificate validity period.
+
 * Tue Apr 30 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.24.1
 - Fix error saving cache file when parent directory does not exist
 
