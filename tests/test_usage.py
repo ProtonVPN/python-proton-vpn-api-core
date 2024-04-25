@@ -16,15 +16,22 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+import os
 import pytest
 from types import SimpleNamespace
 
-from proton.vpn.core.usage import usage_reporting
+from proton.vpn.core.session_holder import ClientTypeMetadata
+from proton.vpn.core.usage import usage_reporting, UsageReporting
+
+SECRET_FILE = "secret.txt"
+SECRET_PATH = os.path.join("/home/wozniak/5nkfiudfmk/.cache", SECRET_FILE)
 
 
 @pytest.mark.parametrize("enabled", [True, False])
 def test_usage_report_enabled(enabled):
     report_error = SimpleNamespace(invoked=False)
+
+    usage_reporting.init(ClientTypeMetadata("test_usage.py", "none"))
 
     def capture_exception(error):
         report_error.invoked = True
@@ -36,3 +43,23 @@ def test_usage_report_enabled(enabled):
     usage_reporting.report_error(EMPTY_ERROR)
 
     assert report_error.invoked == enabled, "UsageReporting enable state does not match the error reporting"
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_sanitize_simple_error(enabled):
+
+    error = FileNotFoundError("File not found")
+    error.filename = SECRET_PATH
+
+    assert UsageReporting._sanitize_error(error).filename == SECRET_FILE, "Error sanitization failed"
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_sanitize_traceback_error(enabled):
+
+    try:
+        open(SECRET_PATH, "r")
+    except FileNotFoundError as exception:
+        error = (type(exception), exception, exception.__traceback__)
+
+    assert UsageReporting._sanitize_error(error)[1].filename == SECRET_FILE, "Error sanitization failed"
