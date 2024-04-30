@@ -89,7 +89,7 @@ class VPNSession(Session):
                 self._server_list = self._fetcher.load_server_list_from_cache()
                 self._client_config = self._fetcher.load_client_config_from_cache()
         except ValueError:
-            logger.exception("Error deserializing VPN session.")
+            logger.warning("VPN session could not be deserialized.", exc_info=True)
 
         super().__setstate__(data)
 

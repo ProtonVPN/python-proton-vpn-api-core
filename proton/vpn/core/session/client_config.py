@@ -25,7 +25,7 @@ import time
 
 from proton.utils.environment import VPNExecutionEnvironment
 
-from proton.vpn.core.session.cache import CacheFile
+from proton.vpn.core.cache_handler import CacheHandler
 from proton.vpn.core.session.exceptions import ClientConfigDecodeError
 from proton.vpn.core.session.utils import rest_api_request
 
@@ -237,7 +237,7 @@ class ClientConfigFetcher:
         """
         self._session = session
         self._client_config = None
-        self._cache_file = CacheFile(self.CACHE_PATH)
+        self._cache_file = CacheHandler(self.CACHE_PATH)
 
     def clear_cache(self):
         """Discards the cache, if existing."""
@@ -265,6 +265,6 @@ class ClientConfigFetcher:
             was found then the default client configuration is returned.
 
         """
-        cache = self._cache_file.load() if self._cache_file.exists else None
+        cache = self._cache_file.load()
         self._client_config = ClientConfig.from_dict(cache) if cache else ClientConfig.default()
         return self._client_config

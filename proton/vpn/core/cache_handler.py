@@ -22,21 +22,28 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 
 import json
 import os
+from pathlib import Path
 
 
 class CacheHandler:
     """Used to save, load, and remove cache files."""
     def __init__(self, filepath: str):
-        self._fp = filepath
+        self._fp = Path(filepath)
+
+    @property
+    def exists(self):
+        """True if the cache file exists and False otherwise."""
+        return self._fp.is_file()
 
     def save(self, newdata: dict):
         """Save data to cache file."""
+        self._fp.parent.mkdir(parents=True, exist_ok=True)
         with open(self._fp, "w") as f:  # pylint: disable=W1514, C0103
             json.dump(newdata, f, indent=4)  # pylint: disable=C0103
 
     def load(self):
         """Load data from cache file, if it exists."""
-        if not os.path.isfile(self._fp):
+        if not self.exists:
             return None
 
         with open(self._fp, "r") as f:  # pylint: disable=W1514, C0103
@@ -44,5 +51,5 @@ class CacheHandler:
 
     def remove(self):
         """ Remove cache from disk."""
-        if os.path.exists(self._fp):
+        if self.exists:
             os.remove(self._fp)

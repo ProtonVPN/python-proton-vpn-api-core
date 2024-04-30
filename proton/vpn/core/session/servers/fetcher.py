@@ -22,7 +22,7 @@ import re
 
 from proton.utils.environment import VPNExecutionEnvironment
 
-from proton.vpn.core.session.cache import CacheFile
+from proton.vpn.core.cache_handler import CacheHandler
 from proton.vpn.core.session.exceptions import ServerListDecodeError
 from proton.vpn.core.session.servers.types import ServerLoad
 from proton.vpn.core.session.servers.logicals import ServerList, PersistenceKeys
@@ -44,11 +44,11 @@ class ServerListFetcher:
             self,
             session: "VPNSession",
             server_list: Optional[ServerList] = None,
-            cache_file: Optional[CacheFile] = None
+            cache_file: Optional[CacheHandler] = None
     ):
         self._session = session
         self._server_list = server_list
-        self._cache_file = cache_file or CacheFile(self.CACHE_PATH)
+        self._cache_file = cache_file or CacheHandler(self.CACHE_PATH)
 
     def clear_cache(self):
         """Discards the cache, if existing."""
@@ -103,10 +103,10 @@ class ServerListFetcher:
         :raises ServerListDecodeError: if the cache is not found or if the
             data stored in the cache is not valid.
         """
-        try:
-            cache = self._cache_file.load()
-        except FileNotFoundError as error:
-            raise ServerListDecodeError("Cached server list was not found") from error
+        cache = self._cache_file.load()
+
+        if not cache:
+            raise ServerListDecodeError("Cached server list was not found")
 
         self._server_list = ServerList.from_dict(cache)
         return self._server_list
