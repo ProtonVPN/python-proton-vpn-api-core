@@ -35,17 +35,12 @@ log = logging.getLogger(__name__)
 class UsageReporting:
     """Sends anonymous usage reports to Proton."""
 
-    def __init__(self):
+    def __init__(self, client_type_metadata: ClientTypeMetadata):
         self._enabled = False
         self._capture_exception = None
-        self._client_type_metadata = None
+        self._client_type_metadata = client_type_metadata
         self._user_id = None
         self._desktop_environment = get_desktop_environment()
-
-    def init(self, client_type_metadata: ClientTypeMetadata):
-        """This method should be called before reporting, otherwise reports will be ignored."""
-
-        self._client_type_metadata = client_type_metadata
 
     @property
     def enabled(self):
@@ -151,7 +146,7 @@ class UsageReporting:
             scope.set_tag("distro_name", DISTRIBUTION_ID)
             scope.set_tag("distro_version", DISTRIBUTION_VERSION)
             scope.set_tag("desktop_environment", self._desktop_environment)
-            if self._user_id:
+            if self._user_id and hasattr(scope, "set_user"):
                 scope.set_user({"id": self._user_id})
 
     def _start_sentry(self):
@@ -194,6 +189,3 @@ class UsageReporting:
         self._capture_exception = sentry_sdk.capture_exception
 
         return True
-
-
-usage_reporting = UsageReporting()

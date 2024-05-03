@@ -30,7 +30,7 @@ from proton.vpn.core.session.servers import ServerList
 from proton.vpn.core.session import ClientConfig, LoginResult, BugReportForm
 from proton.vpn.core.session.account import VPNAccount
 
-from proton.vpn.core.usage import UsageReporting, usage_reporting
+from proton.vpn.core.usage import UsageReporting
 
 
 class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
@@ -41,6 +41,8 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         )
         self._settings_persistence = SettingsPersistence()
         self._vpn_connector = None
+        self._usage_reporting = UsageReporting(
+            client_type_metadata=client_type_metadata)
 
     async def get_vpn_connector(self):
         """Returns an object that wraps around the raw VPN connection object.
@@ -69,7 +71,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         settings = await loop.run_in_executor(
             None, self._settings_persistence.get, user_tier
         )
-        self.usage_reporting.enabled = settings.anonymous_crash_reports
+        self._usage_reporting.enabled = settings.anonymous_crash_reports
         return settings
 
     async def save_settings(self, settings: Settings):
@@ -82,7 +84,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._settings_persistence.save, settings)
         await self._vpn_connector.apply_settings(settings)
-        self.usage_reporting.enabled = settings.anonymous_crash_reports
+        self._usage_reporting.enabled = settings.anonymous_crash_reports
 
     async def login(self, username: str, password: str) -> LoginResult:
         """
@@ -209,7 +211,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
     @property
     def usage_reporting(self) -> UsageReporting:
         """Returns the usage reporting instance to send anonymous crash reports."""
-        return usage_reporting
+        return self._usage_reporting
 
     def _get_features(self):
         settings = self._settings_persistence.get(user_tier=0,

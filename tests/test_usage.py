@@ -20,10 +20,9 @@ import os
 import pytest
 from types import SimpleNamespace
 import tempfile
-import hashlib
 
 from proton.vpn.core.session_holder import ClientTypeMetadata
-from proton.vpn.core.usage import usage_reporting, UsageReporting
+from proton.vpn.core.usage import UsageReporting
 
 SECRET_FILE = "secret.txt"
 SECRET_PATH = os.path.join("/home/wozniak/5nkfiudfmk/.cache", SECRET_FILE)
@@ -35,7 +34,7 @@ USERNAME = "tester"
 def test_usage_report_enabled(enabled):
     report_error = SimpleNamespace(invoked=False)
 
-    usage_reporting.init(ClientTypeMetadata("test_usage.py", "none"))
+    usage_reporting = UsageReporting(ClientTypeMetadata("test_usage.py", "none"))
 
     def capture_exception(error):
         report_error.invoked = True

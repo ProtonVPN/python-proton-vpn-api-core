@@ -34,7 +34,7 @@ Requires: python3-distro
 Requires: python3-sentry-sdk
 Requires: python3-pynacl
 
-Conflicts: proton-vpn-gtk-app < 4.3.1~rc1
+Conflicts: proton-vpn-gtk-app < 4.3.2~rc2
 Obsoletes: python3-proton-vpn-session
 
 %{?python_disable_dependency_generator}
