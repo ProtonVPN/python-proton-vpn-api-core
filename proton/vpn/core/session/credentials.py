@@ -30,6 +30,10 @@ from proton.vpn.core.session.exceptions import (VPNCertificateExpiredError,
                                                 VPNCertificateFingerprintError,
                                                 VPNCertificateNeedRefreshError)
 from proton.vpn.core.session.key_mgr import KeyHandler
+from proton.vpn import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -170,30 +174,23 @@ class VPNPubkeyCredentials:
     def wg_private_key(self) -> str:
         """ Get Wireguard private key in base64 format,
             directly usable in a wireguard configuration file. This key
-            is tighed to the Proton :class:`VPNCertCredentials` by its
+            is tied to the Proton :class:`VPNCertCredentials` by its
             corresponding API certificate.
-            If the corresponding certificate is expired an:exc:`VPNCertificateNotAvailableError`
-            will be trigged to the user, meaning that the user will have to reload a new
-            certificate and secrets using :meth:`VPNSession.refresh`.
 
-            :raises VPNCertificateNotAvailableError: : certificate cannot be found
-                :class:`VPNSession` must be populated with :meth:`VPNSession.refresh`.
-            :raises VPNCertificateNeedRefreshError: : certificate linked to the key is
-                expiring soon,refresh asap with :meth:`VPNSession.refresh`
-            :raises VPNCertificateExpiredError: : certificate is expired
             :return: :class:`api_data.VPNSecrets.wireguard_privatekey`: Wireguard private key
                 in base64 format.
         """
-        if not self._certificate_obj.has_valid_date:
-            raise VPNCertificateExpiredError
-
         if (
             self._certificate_obj.validity_period
-            > VPNPubkeyCredentials.MINIMUM_VALIDITY_PERIOD_IN_SECS
+            <= VPNPubkeyCredentials.MINIMUM_VALIDITY_PERIOD_IN_SECS
         ):
-            return self._secrets.wireguard_privatekey
+            logger.warning(
+                msg="Current certificate is expired.",
+                category="CREDENTIALS",
+                subcategory="CERTIFICATE", event="EXPIRED"
+            )
 
-        raise VPNCertificateNeedRefreshError
+        return self._secrets.wireguard_privatekey
 
     @property
     def openvpn_private_key(self) -> str:
