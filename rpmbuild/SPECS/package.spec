@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.25.0
+%define version 0.25.1
 %define release 1
 
 Prefix: %{_prefix}
@@ -59,6 +59,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Fri May 24 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.25.1
+- Increase certificate duration.
+
 * Thu May 23 2024 Luke Titley <luke.titley@proton.ch> 0.25.0
 - Refactor of Settings to ensure settings are only saved when they are changed.
 

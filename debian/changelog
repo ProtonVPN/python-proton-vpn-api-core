@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.25.1) unstable; urgency=medium
+
+  * Increase certificate duration.
+
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Fri, 24 May 2024 16:55:29 +0200
+
 proton-vpn-api-core (0.25.0) unstable; urgency=medium
 
   * Refactor of Settings to ensure settings are only saved when they are changed.

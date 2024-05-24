@@ -62,8 +62,10 @@ class VPNSessionFetcher:
             await rest_api_request(self._session, "/vpn")
         )
 
+    # FIXME: We were asked to increase the certification duration  # pylint: disable=fixme
+    #  to 7 days due to certificate refresh issues, until a proper fix is put in place.
     async def fetch_certificate(
-        self, client_public_key, cert_duration_in_minutes: int = 1440,
+        self, client_public_key, cert_duration_in_minutes: int = 10080,
         features: Optional[Features] = None
     ) -> VPNCertificate:
         """

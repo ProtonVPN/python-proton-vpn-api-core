@@ -4,7 +4,7 @@ from setuptools import setup, find_namespace_packages
 
 setup(
     name="proton-vpn-api-core",
-    version="0.25.0",
+    version="0.25.1",
     description="Proton AG VPN Core API",
     author="Proton AG",
     author_email="contact@protonmail.com",
