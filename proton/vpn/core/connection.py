@@ -26,12 +26,14 @@ from typing import Optional, runtime_checkable, Protocol
 from proton.loader import Loader
 from proton.loader.loader import PluggableComponent
 from proton.vpn.connection.states import State
+
+from proton.vpn.core.local_agent import LocalAgent
 from proton.vpn.core.session.servers import LogicalServer
 from proton.vpn.core.session.client_config import ClientConfig
 from proton.vpn.core.session.client_config import ProtocolPorts
 
 from proton.vpn.core.settings import SettingsPersistence, Settings
-from proton.vpn.connection import VPNConnection
+from proton.vpn.connection import VPNConnection, states
 from proton.vpn.connection.enum import ConnectionStateEnum
 from proton.vpn.connection.vpnconnector import VPNConnector
 from proton.vpn.core.session_holder import SessionHolder
@@ -85,6 +87,7 @@ class VPNConnectorWrapper:
         self._session_holder = session_holder
         self._settings_persistence = settings_persistence
         self._connector = vpn_connector
+        self._local_agent = LocalAgent()
 
     @property
     def current_state(self) -> State:
@@ -111,6 +114,11 @@ class VPNConnectorWrapper:
     def is_connection_active(self) -> bool:
         """Returns whether there is a VPN connection ongoing or not."""
         return self._connector.is_connection_ongoing
+
+    @property
+    def is_connected(self) -> bool:
+        """Returns whether the user is connected to a VPN server or not."""
+        return isinstance(self._connector.current_state, states.Connected)
 
     def get_vpn_server(
             self, logical_server: LogicalServer, client_config: ClientConfig
@@ -201,6 +209,23 @@ class VPNConnectorWrapper:
                 "The specified subscriber does not implement the "
                 f"{VPNStateSubscriber.__name__} protocol.")
         self._connector.unregister(subscriber.status_update)
+
+    async def init_local_agent(self):
+        """
+        The local agent connection is established
+        with the current credentials stored in the session (certificate and key).
+        :raises LocalAgentConnectionError: if the local agent connection couldn't be established.
+        """
+        if not self.is_connected:
+            raise RuntimeError(
+                "The local agent connection can only be established once "
+                "the user is connected to the VPN."
+            )
+
+        await self._local_agent.connect(
+            self._session_holder.session,
+            self.current_connection.server_domain
+        )
 
 
 class Subscriber:

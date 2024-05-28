@@ -278,28 +278,30 @@ class Certificate:  # pylint: disable=missing-class-docstring
         """ remaining time the certificate is valid,
             in seconds. < 0 : certificate is not valid anymore.
         """
-        # cryptography >= v42.0.0 added `not_valid_after_utc` and deprecated `not_valid_after`.
-        if hasattr(self._cert, "not_valid_after_utc"):
-            not_valid_after_timestamp = self._cert.not_valid_after_utc.timestamp()
-        else:
-            # Because `not_valid_after` returns a naive utc
-            # datetime object (without time zone info), we add it manually
-            # to then be able to compare it to the current time.
-            not_valid_after_timestamp = self._cert.not_valid_after.replace(
-                tzinfo=datetime.timezone.utc
-            ).timestamp()
-
         now_timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
-
-        return not_valid_after_timestamp - now_timestamp
+        return self.validity_date.timestamp() - now_timestamp
 
     @property
     def validity_date(self) -> datetime.datetime:  # pylint: disable=missing-function-docstring
-        return self._cert.not_valid_after
+        # cryptography >= v42.0.0 added `not_valid_after_utc` and deprecated `not_valid_after`.
+        if hasattr(self._cert, "not_valid_after_utc"):
+            return self._cert.not_valid_after_utc
+
+        # Because `not_valid_after` returns a naive utc
+        # datetime object (without time zone info), we add it manually.
+        return self._cert.not_valid_after.replace(
+            tzinfo=datetime.timezone.utc
+        )
 
     @property
     def issued_date(self) -> datetime.datetime:  # pylint: disable=missing-function-docstring
-        return self._cert.not_valid_before
+        # cryptography >= v42.0.0 added `not_valid_before_utc` and deprecated `not_valid_before`.
+        if hasattr(self._cert, "not_valid_before_utc"):
+            return self._cert.not_valid_before_utc
+
+        # Because `not_valid_before` returns a naive utc
+        # datetime object (without time zone info), we add it manually.
+        return self._cert.not_valid_before.replace(tzinfo=datetime.timezone.utc)
 
     @property
     def duration(self) -> datetime.timedelta:

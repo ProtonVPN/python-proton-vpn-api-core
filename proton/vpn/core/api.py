@@ -22,9 +22,11 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 import asyncio
 import copy
 
+from proton.vpn import logging
 from proton.vpn.connection.vpnconnector import VPNConnector
 
 from proton.vpn.core.connection import VPNConnectorWrapper
+from proton.vpn.core.local_agent import LocalAgentConnectionError
 from proton.vpn.core.settings import Settings, SettingsPersistence
 from proton.vpn.core.session_holder import SessionHolder, ClientTypeMetadata
 from proton.vpn.core.session.servers import ServerList
@@ -32,6 +34,8 @@ from proton.vpn.core.session import ClientConfig, LoginResult, BugReportForm
 from proton.vpn.core.session.account import VPNAccount
 
 from proton.vpn.core.usage import UsageReporting
+
+logger = logging.getLogger(__name__)
 
 
 class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
@@ -171,10 +175,18 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
 
     async def fetch_certificate(self):
         """Fetches new certificate from Proton's REST APIs."""
-
-        return await self._session_holder.session.fetch_certificate(
+        await self._session_holder.session.fetch_certificate(
             features=self._get_features()
         )
+
+        vpn_connector = await self.get_vpn_connector()
+        if vpn_connector.is_connected:
+            try:
+                # The new certificate is sent to the VPN server by establishing a new
+                # local agent connection.
+                await vpn_connector.init_local_agent()
+            except LocalAgentConnectionError as exc:
+                logger.warning(f"{exc}", exc_info=exc)
 
     @property
     def server_list(self):

@@ -66,19 +66,19 @@ class VPNSecrets:
             else KeyHandler()
         )
 
+    def get_ed5519_sk_pem(self, password: Optional[bytes] = None):
+        """
+        Returns the ed5519 private key in pem format,
+        and encrypted if a password was passed.
+        """
+        return self._key_handler.get_ed25519_sk_pem(password)
+
     @property
     def wireguard_privatekey(self) -> str:
         """Wireguard private key encoded in base64.
             To be added locally by the user. The API route is not providing it.
         """
         return self._key_handler.x25519_sk_str
-
-    @property
-    def openvpn_privatekey(self) -> str:
-        """OpenVPN private key in PEM format.
-            To be added locally by the user. The API is not providing it
-        """
-        return self._key_handler.ed25519_sk_pem
 
     @property
     def ed25519_privatekey(self) -> str:
@@ -109,9 +109,11 @@ class VPNPubkeyCredentials:
     """ Class responsible to hold vpn public key API RAW certificates and
         its associated private key for authentication.
     """
-
     MINIMUM_VALIDITY_PERIOD_IN_SECS = 300
-    REFRESH_INTERVAL = 24 * 60 * 60  # 1 day
+    # FIXME: We were asked to increase the certification duration  # pylint: disable=fixme
+    #  to 7 days due to certificate refresh issues, until a proper fix is put in place.
+    #  It should be reverted to 1 day.
+    REFRESH_INTERVAL = 60 * 60 * 24 * 7
     REFRESH_RANDOMNESS = 0.22  # +/- 22%
 
     def __init__(self, api_certificate: VPNCertificate, secrets: VPNSecrets, strict: bool = True):
@@ -146,6 +148,13 @@ class VPNPubkeyCredentials:
                 raise VPNCertificateFingerprintError
 
         return Certificate(cert_pem=api_certificate.Certificate)
+
+    def get_ed25519_sk_pem(self, password: Optional[bytes] = None):
+        """
+        Returns the ed5519 private key in pem format,
+        and encrypted if a password was passed.
+        """
+        return self._secrets.get_ed5519_sk_pem(password)
 
     @property
     def certificate_pem(self) -> str:
@@ -191,28 +200,6 @@ class VPNPubkeyCredentials:
             )
 
         return self._secrets.wireguard_privatekey
-
-    @property
-    def openvpn_private_key(self) -> str:
-        """ Get OpenVPN private key in PEM format, directly usable in a openvpn configuration file.
-            If the corresponding certificate is expired an :exc:`VPNCertificateNotAvailableError`
-            will be triggered to the user.
-
-            :raises VPNCertificateNotAvailableError: : certificate cannot be found
-                :class:`VPNSession` must be populated with :meth:`VPNSession.refresh`
-            :raises VPNCertificateNeedRefreshError: : certificate linked to the key is
-                expiring soon,refresh asap with :meth:`VPNSession.refresh`
-            :raises VPNCertificateExpiredError: : certificate is expired
-            :return: :class:`api_data.VPNSecrets.openvpn_privatekey`: OpenVPN private key in
-                PEM format.
-        """
-        if not self._certificate_obj.has_valid_date:
-            raise VPNCertificateExpiredError
-
-        if self._certificate_obj.validity_period > 60:
-            return self._secrets.openvpn_privatekey
-
-        raise VPNCertificateNeedRefreshError
 
     @property
     def ed_255519_private_key(self) -> str:  # pylint: disable=missing-function-docstring

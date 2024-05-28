@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Optional
 
 from proton.vpn import logging
 from proton.vpn.core.session.client_config import ClientConfigFetcher, ClientConfig
+from proton.vpn.core.session.credentials import VPNPubkeyCredentials
 from proton.vpn.core.session.dataclasses import (
     VPNCertificate, VPNSessions, VPNSettings, VPNLocation
 )
@@ -47,6 +48,9 @@ class VPNSessionFetcher:
     """
     Fetches PROTON VPN user account information.
     """
+    # Note that the API does not allow intervals shorter than 1 day.
+    _CERT_DURATION_IN_MIN = VPNPubkeyCredentials.REFRESH_INTERVAL / 60
+
     def __init__(
             self, session: "VPNSession",
             server_list_fetcher: Optional[ServerListFetcher] = None,
@@ -62,10 +66,8 @@ class VPNSessionFetcher:
             await rest_api_request(self._session, "/vpn")
         )
 
-    # FIXME: We were asked to increase the certification duration  # pylint: disable=fixme
-    #  to 7 days due to certificate refresh issues, until a proper fix is put in place.
     async def fetch_certificate(
-        self, client_public_key, cert_duration_in_minutes: int = 10080,
+        self, client_public_key,
         features: Optional[Features] = None
     ) -> VPNCertificate:
         """
@@ -73,7 +75,7 @@ class VPNSessionFetcher:
         """
         json_req = {
             "ClientPublicKey": client_public_key,
-            "Duration": f"{cert_duration_in_minutes} min"
+            "Duration": f"{self._CERT_DURATION_IN_MIN} min"
         }
         if features:
             json_req["Features"] = VPNSessionFetcher._convert_features(features)

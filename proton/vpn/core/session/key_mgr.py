@@ -18,6 +18,8 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import base64
 import hashlib
+from typing import Optional
+
 import cryptography.hazmat.primitives.asymmetric
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat
 from cryptography.hazmat.primitives import serialization
@@ -109,10 +111,7 @@ class KeyHandler:  # pylint: disable=missing-class-docstring
 
     @property
     def ed25519_sk_pem(self) -> str:  # pylint: disable=missing-function-docstring
-        return self._private_key.private_bytes(
-            encoding=Encoding.PEM, format=PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()
-        ).decode('ascii')
+        return self.get_ed25519_sk_pem()
 
     @property
     def ed25519_pk_pem(self) -> str:  # pylint: disable=missing-function-docstring
@@ -147,6 +146,21 @@ class KeyHandler:  # pylint: disable=missing-class-docstring
                 .ed25519.Ed25519PrivateKey.generate()
         public_key = private_key.public_key()
         return private_key, public_key
+
+    def get_ed25519_sk_pem(self, password: Optional[bytes] = None) -> str:
+        """
+        Returns the ed5519 private key in pem format,
+        and encrypted if a password was passed.
+        """
+        if password:
+            encryption_algorithm = serialization.BestAvailableEncryption(password=password)
+        else:
+            encryption_algorithm = serialization.NoEncryption()
+
+        return self._private_key.private_bytes(
+            encoding=Encoding.PEM, format=PrivateFormat.PKCS8,
+            encryption_algorithm=encryption_algorithm
+        ).decode('ascii')
 
 
 def bytes_to_str_hexa(b: bytes):  # pylint: disable=missing-function-docstring invalid-name
