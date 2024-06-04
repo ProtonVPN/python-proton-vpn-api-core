@@ -1,5 +1,5 @@
 %define unmangled_name proton-vpn-api-core
-%define version 0.26.0
+%define version 0.26.1
 %define release 1
 
 Prefix: %{_prefix}
@@ -59,6 +59,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Tue Jun 04 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.26.1
+- Fix certificate duration regression
+
 * Thu May 30 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.26.0
 - Send wireguard certificate to server via local agent
 

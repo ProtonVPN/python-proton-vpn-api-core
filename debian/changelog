@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.26.1) unstable; urgency=medium
+
+  * Fix certificate duration regression
+
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Tue, 04 Jun 2024 15:03:31 +0200
+
 proton-vpn-api-core (0.26.0) unstable; urgency=medium
 
   * Send wireguard certificate to server via local agent

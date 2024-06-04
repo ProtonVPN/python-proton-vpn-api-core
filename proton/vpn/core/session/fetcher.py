@@ -49,7 +49,7 @@ class VPNSessionFetcher:
     Fetches PROTON VPN user account information.
     """
     # Note that the API does not allow intervals shorter than 1 day.
-    _CERT_DURATION_IN_MIN = VPNPubkeyCredentials.REFRESH_INTERVAL / 60
+    _CERT_DURATION_IN_MIN = VPNPubkeyCredentials.REFRESH_INTERVAL // 60
 
     def __init__(
             self, session: "VPNSession",
