@@ -119,7 +119,7 @@ class UsageReporting:
         """
 
         def _sanitize(error):
-            if isinstance(error, OSError):
+            if isinstance(error, OSError) and error.filename:
                 # We dont have a lot of files we need to read, so it's safer to
                 # not include the full file path in the report.
                 _, filename = os.path.split(error.filename)
