@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_namespace_packages
+import re
+
+VERSIONS = 'versions.yml'
+VERSION = re.search(r'version: (\S+)', open(VERSIONS).readline()).group(1)
 
 setup(
     name="proton-vpn-api-core",
-    version="0.26.2",
+    version=VERSION,
     description="Proton AG VPN Core API",
     author="Proton AG",
     author_email="contact@protonmail.com",
@@ -18,7 +22,6 @@ setup(
         "development": ["pytest", "pytest-coverage", "pylint", "flake8", "pytest-asyncio"]
     },
     packages=find_namespace_packages(include=['proton.vpn.core*']),
-    include_package_data=True,
     python_requires=">=3.8",
     license="GPLv3",
     platforms="Linux",

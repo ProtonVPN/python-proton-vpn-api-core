@@ -1,0 +1,590 @@
+version: 0.26.3
+time: 2024/06/17 17:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Switch over to automatically generated changelogs for debian and rpm.
+---
+version: 0.26.2
+time: 2024/06/10 11:43
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Fix sentry error sanitization crash.
+---
+version: 0.26.1
+time: 2024/06/04 13:03
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Fix certificate duration regression.
+---
+version: 0.26.0
+time: 2024/05/30 09:37
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Send wireguard certificate to server via local agent.
+---
+version: 0.25.1
+time: 2024/05/24 14:55
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Increase certificate duration.
+---
+version: 0.25.0
+time: 2024/05/23 10:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Refactor of Settings to ensure settings are only saved when they are changed.
+---
+version: 0.24.5
+time: 2024/05/08 10:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Stop raising exceptions when getting wireguard certificate and it is expired.
+---
+version: 0.24.4
+time: 2024/05/07 10:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Filter OSError not just FileNotFound error in sentry.
+---
+version: 0.24.3
+time: 2024/05/03 10:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Set the sentry user id based on a hash of /etc/machine-id.
+---
+version: 0.24.2
+time: 2024/05/02 15:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Fix deprecation warning when calculatin WireGuard certificate validity period.
+---
+version: 0.24.1
+time: 2024/04/30 15:58
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Fix error saving cache file when parent directory does not exist.
+---
+version: 0.24.0
+time: 2024/04/30 16:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Only initialize sentry on first enable.
+- Forward SSL_CERT_FILE environment variable to sentry.
+---
+version: 0.23.1
+time: 2024/04/23 16:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Added missing pip dependencies.
+---
+version: 0.23.0
+time: 2024/04/22 14:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Merged proton-vpn-api-session package into this one.
+---
+version: 0.22.5
+time: 2024/04/18 16:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Pass requested features through to session login and two factor submit.
+---
+version: 0.22.4
+time: 2024/04/16 15:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Provide method to update certificate.
+---
+version: 0.22.3
+time: 2024/04/10 09:07
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Ensure that crash reporting state is preserved between restarts.
+---
+version: 0.22.2
+time: 2024/04/10 09:07
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Explicitly state the sentry integrations we want. Dont include the ExceptHookIntegration.
+---
+version: 0.22.1
+time: 2024/04/10 09:07
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Change url for sentry, dont send server_name, use older sentry api.
+---
+version: 0.22.0
+time: 2024/04/05 09:07
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Add mechanism to send errors anonymously to sentry.
+---
+version: 0.21.2
+time: 2024/04/04 09:07
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Return list of protocol plugins for a specific backend instead of returning a list
+  of protocols names.
+---
+version: 0.21.1
+time: 2024/03/01 09:07
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Add WireGuard ports.
+---
+version: 0.21.0
+time: 2024/02/16 09:07
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Apply kill switch setting immediately.
+---
+version: 0.20.4
+time: 2024/02/14 14:57
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Initialize VPNConnector with settings.
+---
+version: 0.20.3
+time: 2023/12/13 11:33
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Make VPN connection API async.
+---
+version: 0.20.2
+time: 2023/11/08 08:51
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Make API async and avoid thread-safety issues in asyncio code.
+- Move bug report submission to proton-vpn-session.
+---
+version: 0.20.1
+time: 2023/10/10 10:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Update dependencies.
+---
+version: 0.20.0
+time: 2023/09/15 10:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Expose properties which allow to access account related data.
+---
+version: 0.19.0
+time: 2023/09/04 10:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Add kill switch to settings and add dependency for base kill switch package.
+---
+version: 0.18.0
+time: 2023/07/19 10:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Rename setting random_nat to moderate_nat to conform to API specs.
+---
+version: 0.17.0
+time: 2023/07/07 15:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Enable NetShield by default on paid plans.
+---
+version: 0.16.0
+time: 2023/07/05 13:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Add protocol entry to settings.
+---
+version: 0.15.0
+time: 2023/07/03 15:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Implement save method for settings.
+---
+version: 0.14.0
+time: 2023/06/20 16:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Remove split tunneling and ipv6 options from settings.
+---
+version: 0.13.0
+time: 2023/06/14 15:21
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Expose server loads update.
+---
+version: 0.12.1
+time: 2023/06/08 09:57
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Fix settings defaults.
+---
+version: 0.12.0
+time: 2023/06/06 15:27
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Pass X-PM-netzone header when retrieving /vpn/logicals and /vpn/loads.
+---
+version: 0.11.0
+time: 2023/06/02 12:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Ensure general settings are taken into account when establishing a vpn connection.
+---
+version: 0.10.3
+time: 2023/05/26 16:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Specify exit IP of physical server.
+---
+version: 0.10.2
+time: 2023/04/24 16:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Fix issue where multiple attachments were overwritten when submitting a bug report.
+---
+version: 0.10.1
+time: 2023/04/03 13:54
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Adapt to VPN connection refactoring.
+---
+version: 0.10.0
+time: 2023/02/28 09:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Implement new appversion format.
+---
+version: 0.9.0
+time: 2023/02/14 11:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Use standardized paths for cache and settings.
+---
+version: 0.8.2
+time: 2023/02/07 15:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Do not raise exception during logout if there is an active connection.
+---
+version: 0.8.1
+time: 2023/01/20 14:12
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Send bug report using proton-core.
+---
+version: 0.8.0
+time: 2023/01/17 11:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- 'Feature: Report a bug.'
+---
+version: 0.7.0
+time: 2023/01/13 17:38
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Move get_vpn_server to VPNConnectionHolder.
+---
+version: 0.6.0
+time: 2023/01/12 10:31
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Expose methods to load api data from the cache stored in disk.
+---
+version: 0.5.0
+time: 2022/12/05 17:39
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Persist VPN server to disk.
+---
+version: 0.4.0
+time: 2022/11/29 16:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Decoupled VPNServers and ClientConfig.
+- All methods that return a server will now return a LogicalServer instead of VPNServer.
+---
+version: 0.3.1
+time: 2022/11/25 16:44
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Check if there is an active connection before logging out.
+---
+version: 0.3.0
+time: 2022/11/17 16:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Fetch and cache clientconfig data from API.
+---
+version: 0.2.7
+time: 2022/11/15 17:47
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Allow cancelling a VPN connection before it is established.
+---
+version: 0.2.6
+time: 2022/11/15 15:07
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Check connection status before connecting/disconnecting.
+---
+version: 0.2.5
+time: 2022/11/11 16:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Add Proton VPN logging library.
+---
+version: 0.2.4
+time: 2022/11/09 16:20
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Lazy load the currently active Proton VPN connection, if existing.
+---
+version: 0.2.3
+time: 2022/11/08 10:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Ensure that appversion and user-agent are passed when making API calls.
+---
+version: 0.2.2
+time: 2022/11/04 10:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Ensure that before establishing a new connection, the previous connection is disconnected,
+  if there is one.
+---
+version: 0.2.1
+time: 2022/09/26 15:49
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Delete cache at logout.
+---
+version: 0.2.0
+time: 2022/09/22 09:05
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Add method to obtain the user's tier.
+---
+version: 0.1.0
+time: 2022/09/20 09:30
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: UNRELEASED
+description:
+- Add logging.
+---
+version: 0.0.4
+time: 2022/09/19 08:30
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: UNRELEASED
+description:
+- Cache VPN connection.
+---
+version: 0.0.3
+time: 2022/09/08 07:30
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: UNRELEASED
+description:
+- VPN servers retrieval.
+---
+version: 0.0.2
+time: 2022/05/25 15:38
+author: Proton Technologies AG
+email: opensource@proton.me
+urgency: medium
+stability: UNRELEASED
+description:
+- Fixing and simplifying 2FA logic.
+---
+version: 0.0.1
+time: 2022/03/14 15:38
+author: Proton Technologies AG
+email: opensource@proton.me
+urgency: medium
+stability: UNRELEASED
+description:
+- First release.
+

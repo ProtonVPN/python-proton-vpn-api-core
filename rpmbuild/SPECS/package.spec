@@ -1,5 +1,6 @@
+
 %define unmangled_name proton-vpn-api-core
-%define version 0.26.2
+%define version 0.26.3
 %define release 1
 
 Prefix: %{_prefix}
@@ -59,14 +60,17 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Mon Jun 17 2024 Luke Titley <luke.titley@proton.ch> 0.26.3
+- Switch over to automatically generated changelogs for debian and rpm.
+
 * Mon Jun 10 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.26.2
-- Fix sentry error sanitization crash
+- Fix sentry error sanitization crash.
 
 * Tue Jun 04 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.26.1
-- Fix certificate duration regression
+- Fix certificate duration regression.
 
 * Thu May 30 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.26.0
-- Send wireguard certificate to server via local agent
+- Send wireguard certificate to server via local agent.
 
 * Fri May 24 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.25.1
 - Increase certificate duration.
@@ -77,7 +81,7 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 * Wed May 08 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.24.5
 - Stop raising exceptions when getting wireguard certificate and it is expired.
 
-* Fri May 03 2024 Luke Titley <luke.titley@proton.ch> 0.24.4
+* Tue May 07 2024 Luke Titley <luke.titley@proton.ch> 0.24.4
 - Filter OSError not just FileNotFound error in sentry.
 
 * Fri May 03 2024 Luke Titley <luke.titley@proton.ch> 0.24.3
@@ -93,7 +97,7 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 - Only initialize sentry on first enable.
 - Forward SSL_CERT_FILE environment variable to sentry.
 
-* Mon Apr 23 2024 Luke Titley <luke.titley@proton.ch> 0.23.1
+* Tue Apr 23 2024 Luke Titley <luke.titley@proton.ch> 0.23.1
 - Added missing pip dependencies.
 
 * Mon Apr 22 2024 Luke Titley <luke.titley@proton.ch> 0.23.0
@@ -105,7 +109,7 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 * Tue Apr 16 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.22.4
 - Provide method to update certificate.
 
-* Thu Apr 11 2024 Luke Titley <luke.titley@proton.ch> 0.22.3
+* Wed Apr 10 2024 Luke Titley <luke.titley@proton.ch> 0.22.3
 - Ensure that crash reporting state is preserved between restarts.
 
 * Wed Apr 10 2024 Luke Titley <luke.titley@proton.ch> 0.22.2
@@ -114,13 +118,13 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 * Wed Apr 10 2024 Luke Titley <luke.titley@proton.ch> 0.22.1
 - Change url for sentry, dont send server_name, use older sentry api.
 
-* Fri Apr 5 2024 Luke Titley <luke.titley@proton.ch> 0.22.0
+* Fri Apr 05 2024 Luke Titley <luke.titley@proton.ch> 0.22.0
 - Add mechanism to send errors anonymously to sentry.
 
-* Thu Apr 4 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.21.2
+* Thu Apr 04 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.21.2
 - Return list of protocol plugins for a specific backend instead of returning a list of protocols names.
 
-* Fri Mar 1 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.21.1
+* Fri Mar 01 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.21.1
 - Add WireGuard ports.
 
 * Fri Feb 16 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.21.0
@@ -227,10 +231,10 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 * Wed Nov 09 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.2.4
 - Lazy load the currently active Proton VPN connection, if existing.
 
-* Fri Nov 8 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.2.3
+* Tue Nov 08 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.2.3
 - Ensure that appversion and user-agent are passed when making API calls.
 
-* Fri Nov 4 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.2.2
+* Fri Nov 04 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.2.2
 - Ensure that before establishing a new connection, the previous connection is disconnected, if there is one.
 
 * Mon Sep 26 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.2.1
@@ -239,14 +243,18 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 * Thu Sep 22 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.2.0
 - Add method to obtain the user's tier.
 
-* Fri Sep 20 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.1.0
+* Tue Sep 20 2022 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.1.0
 - Add logging.
 
-* Thu Sep 19 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.0.4
+* Mon Sep 19 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.0.4
 - Cache VPN connection.
 
-* Thu Sep 8 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.0.3
+* Thu Sep 08 2022 Josep Llaneras <josep.llaneras@proton.ch> 0.0.3
 - VPN servers retrieval.
 
-* Wed Jun 1 2022 Proton Technologies AG <opensource@proton.me> 0.0.2
-- First RPM release.
+* Wed May 25 2022 Proton Technologies AG <opensource@proton.me> 0.0.2
+- Fixing and simplifying 2FA logic.
+
+* Mon Mar 14 2022 Proton Technologies AG <opensource@proton.me> 0.0.1
+- First release.
+
