@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.26.3
+%define version 0.26.4
 %define release 1
 
 Prefix: %{_prefix}
@@ -60,6 +60,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Thu Jun 24 2024 Luke Titley <luke.titley@proton.ch> 0.26.4
+- Add the architecture in the appversion field for ProtonSSO
+
 * Mon Jun 17 2024 Luke Titley <luke.titley@proton.ch> 0.26.3
 - Switch over to automatically generated changelogs for debian and rpm.
 

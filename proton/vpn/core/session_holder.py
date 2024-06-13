@@ -22,6 +22,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 from dataclasses import dataclass
 
+import platform
 import distro
 
 from proton.sso import ProtonSSO
@@ -30,6 +31,7 @@ from proton.vpn.core.session import VPNSession
 
 logger = logging.getLogger(__name__)
 
+CPU_ARCHITECTURE = platform.machine()
 DISTRIBUTION_ID = distro.id()
 DISTRIBUTION_VERSION = distro.version()
 
@@ -38,6 +40,7 @@ DISTRIBUTION_VERSION = distro.version()
 class ClientTypeMetadata:  # pylint: disable=missing-class-docstring
     type: str
     version: str
+    architecture: str = CPU_ARCHITECTURE
 
 
 class SessionHolder:
@@ -48,7 +51,9 @@ class SessionHolder:
         session: VPNSession = None
     ):
         self._proton_sso = ProtonSSO(
-            appversion=f"linux-vpn-{client_type_metadata.type}@{client_type_metadata.version}",
+            appversion=f"linux-vpn-{client_type_metadata.type}"
+                       f"@{client_type_metadata.version}"
+                       f"+{client_type_metadata.architecture}",
             user_agent=f"ProtonVPN/{client_type_metadata.version} "
                        f"(Linux; {DISTRIBUTION_ID}/{DISTRIBUTION_VERSION})"
         )

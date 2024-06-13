@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.26.4) unstable; urgency=medium
+
+  * Add the architecture in the appversion field for ProtonSSO
+
+ -- Luke Titley <luke.titley@proton.ch>  Thu, 27 Jun 2024 16:00:00 +0100
+
 proton-vpn-api-core (0.26.3) unstable; urgency=medium
 
   * Switch over to automatically generated changelogs for debian and rpm.
