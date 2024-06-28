@@ -163,7 +163,7 @@ class ServerList:
             return self._logicals_by_id[server_id]
         except KeyError as error:
             raise ServerNotFoundError(
-                f"The server with {server_id = } was not found"
+                f"The server with {server_id=} was not found"
             ) from error
 
     def get_by_name(self, name: str) -> LogicalServer:
@@ -177,7 +177,7 @@ class ServerList:
             return self._logicals_by_name[name]
         except KeyError as error:
             raise ServerNotFoundError(
-                f"The server with {name = } was not found"
+                f"The server with {name=} was not found"
             ) from error
 
     def get_fastest_in_country(self, country_code: str) -> LogicalServer:

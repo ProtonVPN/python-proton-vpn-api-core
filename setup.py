@@ -19,7 +19,7 @@ setup(
         "cryptography", "PyNaCl", "distro"
     ],
     extras_require={
-        "development": ["pytest", "pytest-coverage", "pylint", "flake8", "pytest-asyncio"]
+        "development": ["pytest", "pytest-coverage", "pylint", "flake8", "pytest-asyncio", "PyYAML"]
     },
     packages=find_namespace_packages(include=['proton.vpn.core*']),
     python_requires=">=3.8",

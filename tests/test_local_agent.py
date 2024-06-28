@@ -1,4 +1,4 @@
-from proton.vpn.core.local_agent import PROTON_VPN_ROOT_CERT
+from proton.vpn.core.local_agent.fallback_local_agent import PROTON_VPN_ROOT_CERT
 from proton.vpn.core.session.certificates import Certificate
 
 

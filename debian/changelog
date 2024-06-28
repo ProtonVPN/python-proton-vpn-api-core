@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.27.0) unstable; urgency=medium
+
+  * Attempt to use external local agent package, otherwise fallback to existent one.
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Mon, 01 Jul 2024 10:00:00
+
 proton-vpn-api-core (0.26.4) unstable; urgency=medium
 
   * Add the architecture in the appversion field for ProtonSSO

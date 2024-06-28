@@ -1,5 +1,5 @@
 """
-Proton VPN API.
+Local Agent module.
 
 
 Copyright (c) 2024 Proton AG
@@ -29,17 +29,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from proton.vpn.core.session import VPNSession
+from proton.vpn.core.local_agent.exceptions import LocalAgentConnectionError
 
 from proton.vpn import logging
 
 logger = logging.getLogger(__name__)
-
-
-class LocalAgentConnectionError(Exception):
-    """
-    Raised when the local agent TLS connection did not succeed.
-    It has the original exception chained to it.
-    """
 
 
 class LocalAgent:  # pylint: disable=too-few-public-methods

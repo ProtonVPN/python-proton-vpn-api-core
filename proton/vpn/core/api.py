@@ -26,7 +26,7 @@ from proton.vpn import logging
 from proton.vpn.connection.vpnconnector import VPNConnector
 
 from proton.vpn.core.connection import VPNConnectorWrapper
-from proton.vpn.core.local_agent import LocalAgentConnectionError
+from proton.vpn.core.local_agent.exceptions import LocalAgentConnectionError
 from proton.vpn.core.settings import Settings, SettingsPersistence
 from proton.vpn.core.session_holder import SessionHolder, ClientTypeMetadata
 from proton.vpn.core.session.servers import ServerList
