@@ -1,3 +1,12 @@
+version: 0.27.1
+time: 2024/07/2 13:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Switched over to async local agent api.
+---
 version: 0.27.0
 time: 2024/07/1 10:00
 author: Alexandru Cheltuitor

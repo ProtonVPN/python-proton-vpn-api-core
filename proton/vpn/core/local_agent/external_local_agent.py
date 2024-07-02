@@ -20,13 +20,11 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import asyncio
-
 # NOTE: linter warnings have been disabled because project is not yet fully
 # deployable to the public, and if any hotfix are required these changes
 # might end up in public repos, thus breaking other packages.
 # TO-DO: Remove linter warnings once python3-local-agent has been moved to WG Package.
-from proton.vpn.local_agent import AgentConnection  # noqa pylint: disable=import-error, no-name-in-module
+from proton.vpn.local_agent import AgentConnector  # noqa pylint: disable=import-error, no-name-in-module
 
 from proton.vpn.core.session import VPNSession
 from proton.vpn.core.local_agent.exceptions import LocalAgentConnectionError
@@ -40,24 +38,14 @@ class LocalAgent:  # pylint: disable=too-few-public-methods
         Establishes a TLS to the local agent instance running on the VPN server
         the user is currently connected to.
         """
-        loop = asyncio.get_running_loop()
-        try:
-            await loop.run_in_executor(
-                None, self._connect_sync, session, vpn_server_domain
-            )
-        except Exception as exc:
-            if "PanicException" not in str(type(exc)):
-                raise
-
-            raise LocalAgentConnectionError(
-                f"Local agent connection to {vpn_server_domain} failed."
-            ) from exc
-
-    def _connect_sync(self, session: VPNSession, vpn_server_domain: str):
         cert = session.vpn_account.vpn_credentials.pubkey_credentials.certificate_pem
 
         credentials = session.vpn_account.vpn_credentials.pubkey_credentials
         key = credentials.get_ed25519_sk_pem()
 
-        agent_connection = AgentConnection()
-        agent_connection.connect(vpn_server_domain, key, cert)
+        try:
+            await AgentConnector().connect(vpn_server_domain, key, cert)
+        except ValueError as exc:
+            raise LocalAgentConnectionError(
+                f"Local agent connection to {vpn_server_domain} failed."
+            ) from exc

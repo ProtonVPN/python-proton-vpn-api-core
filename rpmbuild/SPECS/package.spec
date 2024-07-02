@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.27.0
+%define version 0.27.1
 %define release 1
 
 Prefix: %{_prefix}
@@ -60,11 +60,14 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Tue Jul 02 2024 Luke Titley <luke.titley@proton.ch> 0.27.1
+- Switched over to async local agent api.
+
 * Mon Jul 01 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.27.0
 - Attempt to use external local agent package, otherwise fallback to existent one.
 
-* Thu Jun 24 2024 Luke Titley <luke.titley@proton.ch> 0.26.4
-- Add the architecture in the appversion field for ProtonSSO
+* Mon Jun 24 2024 Luke Titley <luke.titley@proton.ch> 0.26.4
+- Add the architecture in the appversion field for ProtonSSO.
 
 * Mon Jun 17 2024 Luke Titley <luke.titley@proton.ch> 0.26.3
 - Switch over to automatically generated changelogs for debian and rpm.
