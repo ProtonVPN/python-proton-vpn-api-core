@@ -27,7 +27,6 @@ from proton.loader import Loader
 from proton.loader.loader import PluggableComponent
 from proton.vpn.connection.states import State
 
-from proton.vpn.core.local_agent import LocalAgent
 from proton.vpn.core.session.servers import LogicalServer
 from proton.vpn.core.session.client_config import ClientConfig
 from proton.vpn.core.session.client_config import ProtocolPorts
@@ -87,7 +86,6 @@ class VPNConnectorWrapper:
         self._session_holder = session_holder
         self._settings_persistence = settings_persistence
         self._connector = vpn_connector
-        self._local_agent = LocalAgent()
 
     @property
     def current_state(self) -> State:
@@ -155,6 +153,10 @@ class VPNConnectorWrapper:
 
         return supported_protocols
 
+    async def refresh_certificate(self):
+        """Refreshes the current connection certificate."""
+        await self._connector.refresh_certificate()
+
     async def connect(self, server: VPNServer, protocol: str, backend: str = None):
         """
         Connects asynchronously to the specified VPN server.
@@ -209,23 +211,6 @@ class VPNConnectorWrapper:
                 "The specified subscriber does not implement the "
                 f"{VPNStateSubscriber.__name__} protocol.")
         self._connector.unregister(subscriber.status_update)
-
-    async def init_local_agent(self):
-        """
-        The local agent connection is established
-        with the current credentials stored in the session (certificate and key).
-        :raises LocalAgentConnectionError: if the local agent connection couldn't be established.
-        """
-        if not self.is_connected:
-            raise RuntimeError(
-                "The local agent connection can only be established once "
-                "the user is connected to the VPN."
-            )
-
-        await self._local_agent.connect(
-            self._session_holder.session,
-            self.current_connection.server_domain
-        )
 
 
 class Subscriber:

@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.27.2
+%define version 0.27.3
 %define release 1
 
 Prefix: %{_prefix}
@@ -60,6 +60,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Tue Jul 09 2024 Luke Titley <luke.titley@proton.ch> 0.27.3
+- Move local agent management into wireguard backend.
+
 * Tue Jul 09 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.27.2
 - Send CPU architecture following semver's specs.
 

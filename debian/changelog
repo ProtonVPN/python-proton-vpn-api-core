@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.27.3) unstable; urgency=medium
+
+  * Move local agent management into wireguard backend.
+
+ -- Luke Titley <luke.titley@proton.ch>  Tue, 09 Jul 2024 15:34:00
+
 proton-vpn-api-core (0.27.2) unstable; urgency=medium
 
   * Send CPU architecture following semver's specs.

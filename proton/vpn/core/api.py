@@ -26,7 +26,6 @@ from proton.vpn import logging
 from proton.vpn.connection.vpnconnector import VPNConnector
 
 from proton.vpn.core.connection import VPNConnectorWrapper
-from proton.vpn.core.local_agent.exceptions import LocalAgentConnectionError
 from proton.vpn.core.settings import Settings, SettingsPersistence
 from proton.vpn.core.session_holder import SessionHolder, ClientTypeMetadata
 from proton.vpn.core.session.servers import ServerList
@@ -181,12 +180,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
 
         vpn_connector = await self.get_vpn_connector()
         if vpn_connector.is_connected:
-            try:
-                # The new certificate is sent to the VPN server by establishing a new
-                # local agent connection.
-                await vpn_connector.init_local_agent()
-            except LocalAgentConnectionError as exc:
-                logger.warning(f"{exc}", exc_info=exc)
+            await vpn_connector.refresh_certificate()
 
     @property
     def server_list(self):
