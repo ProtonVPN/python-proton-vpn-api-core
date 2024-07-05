@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.27.3
+%define version 0.28.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -35,7 +35,7 @@ Requires: python3-distro
 Requires: python3-sentry-sdk
 Requires: python3-pynacl
 
-Conflicts: proton-vpn-gtk-app < 4.3.3~rc2
+Conflicts: proton-vpn-gtk-app < 4.4.2~rc4
 Obsoletes: python3-proton-vpn-session
 
 %{?python_disable_dependency_generator}
@@ -60,6 +60,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Wed Jul 10 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.28.0
+- Implement and expose feature flags.
+
 * Tue Jul 09 2024 Luke Titley <luke.titley@proton.ch> 0.27.3
 - Move local agent management into wireguard backend.
 

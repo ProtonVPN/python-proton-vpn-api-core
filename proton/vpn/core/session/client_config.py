@@ -17,10 +17,9 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
-from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from pathlib import Path
 import random
-from typing import List, TYPE_CHECKING
 import time
 
 from proton.utils.environment import VPNExecutionEnvironment
@@ -28,6 +27,7 @@ from proton.utils.environment import VPNExecutionEnvironment
 from proton.vpn.core.cache_handler import CacheHandler
 from proton.vpn.core.session.exceptions import ClientConfigDecodeError
 from proton.vpn.core.session.utils import rest_api_request
+from proton.vpn.core.session.dataclasses.client_config import ProtocolPorts
 
 if TYPE_CHECKING:
     from proton.vpn.core.session import VPNSession
@@ -79,69 +79,6 @@ DEFAULT_CLIENT_CONFIG = {
 }
 
 
-@dataclass
-class ProtocolPorts:
-    """Dataclass for ports.
-    These ports are mainly used for establishing VPN connections.
-    """
-    udp: List
-    tcp: List
-
-    @staticmethod
-    def from_dict(ports: dict) -> ProtocolPorts:
-        """Creates ProtocolPorts object from data."""
-        # The lists are copied to avoid side effects if the dict is modified.
-        return ProtocolPorts(
-            ports["UDP"].copy(),
-            ports["TCP"].copy()
-        )
-
-
-@dataclass
-class FeatureFlags:  # pylint: disable=R0902
-    """Dataclass for feature flags ports.
-
-    Flags are important since they can let us know which feature are enabled
-    or disabled. Also certain feature flags dependent on user tier.
-    """
-    netshield: bool
-    guest_holes: bool
-    server_refresh: bool
-    streaming_services_logos: bool
-    port_forwarding: bool
-    moderate_nat: bool
-    safe_mode: bool
-    start_connect_on_boot: bool
-    poll_notification_api: bool
-    vpn_accelerator: bool
-    smart_reconnect: bool
-    promo_code: bool
-    wireguard_tls: bool
-    telemetry: bool
-    netshield_stats: bool
-
-    @staticmethod
-    def from_dict(feature_flags: dict) -> FeatureFlags:
-        """Creates FeatureFlags object from data."""
-        return FeatureFlags(
-            feature_flags["NetShield"],
-            feature_flags["GuestHoles"],
-            feature_flags["ServerRefresh"],
-            feature_flags["StreamingServicesLogos"],
-            feature_flags["PortForwarding"],
-            feature_flags["ModerateNAT"],
-            feature_flags["SafeMode"],
-            feature_flags["StartConnectOnBoot"],
-            feature_flags["PollNotificationAPI"],
-            feature_flags["VpnAccelerator"],
-            feature_flags["SmartReconnect"],
-            feature_flags["PromoCode"],
-            feature_flags["WireGuardTls"],
-            feature_flags["Telemetry"],
-            feature_flags["NetShieldStats"]
-        )
-
-
 class ClientConfig:
     """
     General configuration used to connect to VPN servers.
@@ -152,14 +89,13 @@ class ClientConfig:
 
     def __init__(
         self, openvpn_ports, wireguard_ports, holes_ips,
-        server_refresh_interval, feature_flags,
+        server_refresh_interval,
         expiration_time
     ):  # pylint: disable=R0913
         self.openvpn_ports = openvpn_ports
         self.wireguard_ports = wireguard_ports
         self.holes_ips = holes_ips
         self.server_refresh_interval = server_refresh_interval
-        self.feature_flags = feature_flags
         self.expiration_time = expiration_time
 
     @classmethod
@@ -170,7 +106,6 @@ class ClientConfig:
             wireguard_ports = apidata["DefaultPorts"]["WireGuard"]
             holes_ips = apidata["HolesIPs"]
             server_refresh_interval = apidata["ServerRefreshInterval"]
-            feature_flags = apidata["FeatureFlags"]
             expiration_time = float(apidata.get("ExpirationTime", cls.get_expiration_time()))
 
             return ClientConfig(
@@ -181,7 +116,6 @@ class ClientConfig:
                 # We copy the holes_ips list to avoid side effects if it's modified.
                 holes_ips.copy(),
                 server_refresh_interval,
-                FeatureFlags.from_dict(feature_flags),
                 expiration_time
             )
         except (KeyError, ValueError) as error:

@@ -21,13 +21,12 @@ from __future__ import annotations
 import itertools
 import random
 import time
-from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, List, Callable
 
 from proton.vpn import logging
+from proton.vpn.core.session.dataclasses.servers import Country
 from proton.vpn.core.session.exceptions import ServerNotFoundError, ServerListDecodeError
-from proton.vpn.core.session.servers.country_codes import get_country_name_by_code
 from proton.vpn.core.session.servers.types import LogicalServer, \
     TierEnum, ServerFeatureEnum, ServerLoad
 
@@ -328,21 +327,3 @@ def sort_servers_alphabetically_by_country_and_server_name(server: LogicalServer
                       f"{server_name.split('#')[1].zfill(10)}"
 
     return f"{country_name}__{server_name}"
-
-
-@dataclass
-class Country:
-    """Group of servers belonging to a country."""
-
-    code: str
-    servers: List[LogicalServer]
-
-    @property
-    def name(self):
-        """Returns the full country name."""
-        return get_country_name_by_code(self.code)
-
-    @property
-    def is_free(self) -> bool:
-        """Returns whether the country has servers available to the free tier or not."""
-        return any(server.tier == 0 for server in self.servers)

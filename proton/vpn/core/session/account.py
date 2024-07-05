@@ -20,9 +20,11 @@ from __future__ import annotations
 
 from typing import Sequence, TYPE_CHECKING
 
-from proton.vpn.core.session.credentials import VPNCredentials, VPNUserPassCredentials, \
-    VPNPubkeyCredentials, VPNSecrets
-from proton.vpn.core.session.dataclasses import VPNSettings, VPNLocation, VPNCertificate
+from proton.vpn.core.session.credentials import VPNPubkeyCredentials, VPNSecrets
+from proton.vpn.core.session.dataclasses import (
+    VPNSettings, VPNLocation, VPNCertificate,
+    VPNCredentials, VPNUserPassCredentials
+)
 from proton.vpn.core.session.exceptions import VPNAccountDecodeError
 
 if TYPE_CHECKING:

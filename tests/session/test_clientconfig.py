@@ -84,19 +84,6 @@ def test_from_dict(apidata):
     assert client_config.wireguard_ports.tcp == apidata["DefaultPorts"]["WireGuard"]["TCP"]
     assert client_config.holes_ips == apidata["HolesIPs"]
     assert client_config.server_refresh_interval == apidata["ServerRefreshInterval"]
-    assert client_config.feature_flags.netshield == apidata["FeatureFlags"]["NetShield"]
-    assert client_config.feature_flags.guest_holes == apidata["FeatureFlags"]["GuestHoles"]
-    assert client_config.feature_flags.server_refresh == apidata["FeatureFlags"]["ServerRefresh"]
-    assert client_config.feature_flags.streaming_services_logos == apidata["FeatureFlags"]["StreamingServicesLogos"]
-    assert client_config.feature_flags.port_forwarding == apidata["FeatureFlags"]["PortForwarding"]
-    assert client_config.feature_flags.moderate_nat == apidata["FeatureFlags"]["ModerateNAT"]
-    assert client_config.feature_flags.safe_mode == apidata["FeatureFlags"]["SafeMode"]
-    assert client_config.feature_flags.start_connect_on_boot == apidata["FeatureFlags"]["StartConnectOnBoot"]
-    assert client_config.feature_flags.poll_notification_api == apidata["FeatureFlags"]["PollNotificationAPI"]
-    assert client_config.feature_flags.vpn_accelerator == apidata["FeatureFlags"]["VpnAccelerator"]
-    assert client_config.feature_flags.smart_reconnect == apidata["FeatureFlags"]["SmartReconnect"]
-    assert client_config.feature_flags.promo_code == apidata["FeatureFlags"]["PromoCode"]
-    assert client_config.feature_flags.wireguard_tls == apidata["FeatureFlags"]["WireGuardTls"]
     assert client_config.expiration_time == EXPIRATION_TIME
 
 

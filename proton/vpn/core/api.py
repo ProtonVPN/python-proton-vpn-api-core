@@ -29,8 +29,10 @@ from proton.vpn.core.connection import VPNConnectorWrapper
 from proton.vpn.core.settings import Settings, SettingsPersistence
 from proton.vpn.core.session_holder import SessionHolder, ClientTypeMetadata
 from proton.vpn.core.session.servers import ServerList
-from proton.vpn.core.session import ClientConfig, LoginResult, BugReportForm
+from proton.vpn.core.session import ClientConfig
+from proton.vpn.core.session.dataclasses import LoginResult, BugReportForm
 from proton.vpn.core.session.account import VPNAccount
+from proton.vpn.core.session import FeatureFlags
 
 from proton.vpn.core.usage import UsageReporting
 
@@ -212,6 +214,18 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         :returns: the new client configuration.
         """
         return await self._session_holder.session.fetch_client_config()
+
+    @property
+    def feature_flags(self) -> FeatureFlags:
+        """The last feature flags fetched from the REST API."""
+        return self._session_holder.session.feature_flags
+
+    async def fetch_feature_flags(self) -> FeatureFlags:
+        """
+        Fetches the feature flags asynchronously from the REST API.
+        :returns: new feature flags.
+        """
+        return await self._session_holder.session.fetch_feature_flags()
 
     async def submit_bug_report(self, bug_report: BugReportForm):
         """

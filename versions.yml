@@ -1,3 +1,12 @@
+version: 0.28.0
+time: 2024/07/10 12:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Implement and expose feature flags.
+---
 version: 0.27.3
 time: 2024/07/09 15:34
 author: Luke Titley
@@ -5,7 +14,7 @@ email: luke.titley@proton.ch
 urgency: medium
 stability: unstable
 description:
-  - Move local agent management into wireguard backend.
+- Move local agent management into wireguard backend.
 ---
 version: 0.27.2
 time: 2024/07/09 09:00
@@ -14,7 +23,7 @@ email: josep.llaneras@proton.ch
 urgency: medium
 stability: unstable
 description:
-  - Send CPU architecture following semver's specs.
+- Send CPU architecture following semver's specs.
 ---
 version: 0.27.1
 time: 2024/07/2 13:00

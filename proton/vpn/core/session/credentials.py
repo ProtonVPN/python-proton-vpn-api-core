@@ -19,7 +19,6 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
 import base64
-from dataclasses import dataclass
 import time
 import random
 
@@ -34,23 +33,6 @@ from proton.vpn import logging
 
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class VPNUserPassCredentials:
-    """ Class responsible to hold vpn user/password credentials for authentication
-    """
-    username: str
-    password: str
-
-
-@dataclass
-class VPNCredentials:
-    """ Interface to :class:`proton.vpn.connection.interfaces.VPNCredentials`
-        See :attr:`proton.vpn.core.session.VPNSession.vpn_account.vpn_credentials` to get one.
-    """
-    userpass_credentials: VPNUserPassCredentials
-    pubkey_credentials: VPNPubkeyCredentials
 
 
 class VPNSecrets:

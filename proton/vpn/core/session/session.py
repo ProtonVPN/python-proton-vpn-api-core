@@ -29,6 +29,7 @@ from proton.vpn.core.session.client_config import ClientConfig
 from proton.vpn.core.session.credentials import VPNSecrets
 from proton.vpn.core.session.dataclasses import LoginResult, BugReportForm
 from proton.vpn.core.session.servers.logicals import ServerList
+from proton.vpn.core.session.feature_flags_fetcher import FeatureFlags
 
 logger = logging.getLogger(__name__)
 
@@ -65,12 +66,14 @@ class VPNSession(Session):
             vpn_account: Optional[VPNAccount] = None,
             server_list: Optional[ServerList] = None,
             client_config: Optional[ClientConfig] = None,
+            feature_flags: Optional[FeatureFlags] = None,
             **kwargs
     ):
         self._fetcher = fetcher or VPNSessionFetcher(session=self)
         self._vpn_account = vpn_account
         self._server_list = server_list
         self._client_config = client_config
+        self._feature_flags = feature_flags
         super().__init__(*args, **kwargs)
 
     @property
@@ -88,6 +91,7 @@ class VPNSession(Session):
                 # but from plain json file due to its size.
                 self._server_list = self._fetcher.load_server_list_from_cache()
                 self._client_config = self._fetcher.load_client_config_from_cache()
+                self._feature_flags = self._fetcher.load_feature_flags_from_cache()
         except ValueError:
             logger.warning("VPN session could not be deserialized.", exc_info=True)
 
@@ -140,6 +144,7 @@ class VPNSession(Session):
         self._vpn_account = None
         self._server_list = None
         self._client_config = None
+        self._feature_flags = None
         self._fetcher.clear_cache()
         return result
 
@@ -202,7 +207,7 @@ class VPNSession(Session):
                 self._fetcher.fetch_certificate(
                     client_public_key=secrets.ed25519_pk_pem, features=features),
                 self._fetcher.fetch_location(),
-                self._fetcher.fetch_client_config()
+                self._fetcher.fetch_client_config(),
             )
 
             self._vpn_account = VPNAccount(
@@ -213,6 +218,8 @@ class VPNSession(Session):
             # The server list should be retrieved after the VPNAccount object
             # has been created, since it requires the location.
             self._server_list = await self._fetcher.fetch_server_list()
+
+            self._feature_flags = await self._fetcher.fetch_feature_flags()
         finally:
             # IMPORTANT: apart from releasing the lock, _requests_unlock triggers the
             # serialization of the session to the keyring.
@@ -274,6 +281,16 @@ class VPNSession(Session):
     def client_config(self) -> ClientConfig:
         """The current client configuration."""
         return self._client_config
+
+    async def fetch_feature_flags(self) -> FeatureFlags:
+        """Fetches API features that dictates which features are to be enabled or not."""
+        self._feature_flags = await self._fetcher.fetch_feature_flags()
+        return self._feature_flags
+
+    @property
+    def feature_flags(self) -> FeatureFlags:
+        """Fetches general client configuration to connect to VPN servers."""
+        return self._feature_flags
 
     async def submit_bug_report(self, bug_report: BugReportForm):
         """Submits a bug report to customer support."""

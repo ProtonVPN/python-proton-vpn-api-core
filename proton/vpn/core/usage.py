@@ -22,7 +22,7 @@ import hashlib
 import getpass
 
 from proton.vpn.core.session_holder import ClientTypeMetadata, DISTRIBUTION_VERSION, DISTRIBUTION_ID
-from proton.vpn.core.session.dataclasses import get_desktop_environment
+from proton.vpn.core.session.utils import get_desktop_environment
 
 DSN = "https://9a5ea555a4dc48dbbb4cfa72bdbd0899@vpn-api.proton.me/core/v4/reports/sentry/25"
 SSL_CERT_FILE = "SSL_CERT_FILE"

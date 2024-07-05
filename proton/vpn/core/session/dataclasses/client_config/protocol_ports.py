@@ -16,18 +16,24 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from proton.vpn.core.session.session import VPNSession
-from proton.vpn.core.session.account import VPNAccount
-from proton.vpn.core.session.client_config import ClientConfig
-from proton.vpn.core.session.servers.logicals import ServerList
-from proton.vpn.core.session.credentials import VPNPubkeyCredentials
-from proton.vpn.core.session.feature_flags_fetcher import FeatureFlags
+from __future__ import annotations
+from typing import List
+from dataclasses import dataclass
 
-__all__ = [
-    "VPNSession",
-    "VPNAccount",
-    "ClientConfig",
-    "ServerList",
-    "VPNPubkeyCredentials",
-    "FeatureFlags"
-]
+
+@dataclass
+class ProtocolPorts:
+    """Dataclass for ports.
+    These ports are mainly used for establishing VPN connections.
+    """
+    udp: List
+    tcp: List
+
+    @staticmethod
+    def from_dict(ports: dict) -> ProtocolPorts:
+        """Creates ProtocolPorts object from data."""
+        # The lists are copied to avoid side effects if the dict is modified.
+        return ProtocolPorts(
+            ports["UDP"].copy(),
+            ports["TCP"].copy()
+        )

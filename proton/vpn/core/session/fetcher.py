@@ -24,11 +24,13 @@ from proton.vpn import logging
 from proton.vpn.core.session.client_config import ClientConfigFetcher, ClientConfig
 from proton.vpn.core.session.credentials import VPNPubkeyCredentials
 from proton.vpn.core.session.dataclasses import (
-    VPNCertificate, VPNSessions, VPNSettings, VPNLocation
+    VPNCertificate, VPNSessions, VPNSettings,
+    VPNLocation
 )
 from proton.vpn.core.session.servers.fetcher import ServerListFetcher
 from proton.vpn.core.session.servers.logicals import ServerList
 from proton.vpn.core.session.utils import rest_api_request
+from proton.vpn.core.session.feature_flags_fetcher import FeatureFlagsFetcher, FeatureFlags
 
 from proton.vpn.core.settings import Features
 
@@ -54,11 +56,13 @@ class VPNSessionFetcher:
     def __init__(
             self, session: "VPNSession",
             server_list_fetcher: Optional[ServerListFetcher] = None,
-            client_config_fetcher: Optional[ClientConfigFetcher] = None
+            client_config_fetcher: Optional[ClientConfigFetcher] = None,
+            features_fetcher: Optional[FeatureFlagsFetcher] = None,
     ):
         self._session = session
         self._server_list_fetcher = server_list_fetcher or ServerListFetcher(session)
         self._client_config_fetcher = client_config_fetcher or ClientConfigFetcher(session)
+        self._feature_flags_fetcher = features_fetcher or FeatureFlagsFetcher(session)
 
     async def fetch_vpn_info(self) -> VPNSettings:
         """Fetches client VPN information."""
@@ -128,10 +132,23 @@ class VPNSessionFetcher:
         """Fetches general client configuration to connect to VPN servers."""
         return await self._client_config_fetcher.fetch()
 
+    def load_feature_flags_from_cache(self) -> FeatureFlags:
+        """
+        Loads the previously persisted client configuration.
+        :returns: the loaded client configuration.
+        :raises ClientConfigDecodeError: if the client configuration could not be loaded.
+        """
+        return self._feature_flags_fetcher.load_from_cache()
+
+    async def fetch_feature_flags(self) -> FeatureFlags:
+        """Fetches general client configuration to connect to VPN servers."""
+        return await self._feature_flags_fetcher.fetch()
+
     def clear_cache(self):
         """Discards the cache, if existing."""
         self._server_list_fetcher.clear_cache()
         self._client_config_fetcher.clear_cache()
+        self._feature_flags_fetcher.clear_cache()
 
     @staticmethod
     def _convert_features(features: Features):
