@@ -16,6 +16,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+import re
+from typing import Optional
+
 from proton.vpn import logging
 
 logger = logging.getLogger(__name__)
@@ -28,3 +31,18 @@ async def rest_api_request(session, route, **api_request_kwargs):  # noqa: E501 
     )
     logger.info(f"'{route}'", category="api", event="response")
     return response
+
+
+def to_semver_build_metadata_format(value: Optional[str]) -> Optional[str]:
+    """
+    Formats the input value in a format that complies with
+    semver's build metadata specs (https://semver.org/#spec-item-10).
+    """
+    if value is None:
+        return None
+
+    value = value.replace("_", "-")
+    # Any character not allowed by semver's build metadata suffix
+    # specs (https://semver.org/#spec-item-10) is removed.
+    value = re.sub(r"[^a-zA-Z0-9\-]", "", value)
+    return value

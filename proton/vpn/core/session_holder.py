@@ -28,10 +28,11 @@ import distro
 from proton.sso import ProtonSSO
 from proton.vpn import logging
 from proton.vpn.core.session import VPNSession
+from proton.vpn.core.session.utils import to_semver_build_metadata_format
 
 logger = logging.getLogger(__name__)
 
-CPU_ARCHITECTURE = platform.machine()
+CPU_ARCHITECTURE = to_semver_build_metadata_format(platform.machine())
 DISTRIBUTION_ID = distro.id()
 DISTRIBUTION_VERSION = distro.version()
 
@@ -51,9 +52,7 @@ class SessionHolder:
         session: VPNSession = None
     ):
         self._proton_sso = ProtonSSO(
-            appversion=f"linux-vpn-{client_type_metadata.type}"
-                       f"@{client_type_metadata.version}"
-                       f"+{client_type_metadata.architecture}",
+            appversion=self._get_app_version_header_value(client_type_metadata),
             user_agent=f"ProtonVPN/{client_type_metadata.version} "
                        f"(Linux; {DISTRIBUTION_ID}/{DISTRIBUTION_VERSION})"
         )
@@ -80,3 +79,12 @@ class SessionHolder:
             )
 
         return self._session
+
+    @staticmethod
+    def _get_app_version_header_value(client_type_metadata: ClientTypeMetadata) -> str:
+        app_version = f"linux-vpn-{client_type_metadata.type}@{client_type_metadata.version}"
+
+        if client_type_metadata.architecture:
+            app_version = f"{app_version}+{client_type_metadata.architecture}"
+
+        return app_version

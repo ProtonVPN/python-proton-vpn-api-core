@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.27.2) unstable; urgency=medium
+
+  * Send CPU architecture following semver's specs.
+
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Tue, 09 Jul 2024 09:00:00
+
 proton-vpn-api-core (0.27.1) unstable; urgency=medium
 
   * Switched over to async local agent api.
