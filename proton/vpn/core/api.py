@@ -23,16 +23,16 @@ import asyncio
 import copy
 
 from proton.vpn import logging
-from proton.vpn.connection.vpnconnector import VPNConnector
 
+from proton.vpn.connection.vpnconnector import VPNConnector
 from proton.vpn.core.connection import VPNConnectorWrapper
 from proton.vpn.core.settings import Settings, SettingsPersistence
 from proton.vpn.core.session_holder import SessionHolder, ClientTypeMetadata
-from proton.vpn.core.session.servers import ServerList
-from proton.vpn.core.session import ClientConfig
-from proton.vpn.core.session.dataclasses import LoginResult, BugReportForm
-from proton.vpn.core.session.account import VPNAccount
-from proton.vpn.core.session import FeatureFlags
+from proton.vpn.session.servers import ServerList
+from proton.vpn.session import ClientConfig
+from proton.vpn.session.dataclasses import LoginResult, BugReportForm
+from proton.vpn.session.account import VPNAccount
+from proton.vpn.session import FeatureFlags
 
 from proton.vpn.core.usage import UsageReporting
 

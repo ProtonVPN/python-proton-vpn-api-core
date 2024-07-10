@@ -21,7 +21,7 @@ import pytest
 import time
 
 
-from proton.vpn.core.session.feature_flags_fetcher import FeatureFlagsFetcher, DEFAULT, FeatureFlags
+from proton.vpn.session.feature_flags_fetcher import FeatureFlagsFetcher, DEFAULT, FeatureFlags
 
 EXPIRATION_TIME = time.time()
 
@@ -34,7 +34,7 @@ def apidata():
     }
 
 
-@patch("proton.vpn.core.session.feature_flags_fetcher.rest_api_request")
+@patch("proton.vpn.session.feature_flags_fetcher.rest_api_request")
 @pytest.mark.asyncio
 async def test_fetch_returns_feature_flags_from_proton_rest_api(mock_rest_api_request, apidata):
     mock_cache_handler = Mock()

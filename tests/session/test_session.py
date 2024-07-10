@@ -23,8 +23,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from proton.vpn.core.session import VPNSession
-from proton.vpn.core.session.dataclasses import BugReportForm
+from proton.vpn.session import VPNSession
+from proton.vpn.session.dataclasses import BugReportForm
 
 MOCK_ISP = "Proton ISP"
 MOCK_COUNTRY = "Middle Earth"

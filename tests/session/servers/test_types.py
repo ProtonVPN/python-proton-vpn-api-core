@@ -16,9 +16,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from proton.vpn.core.session.exceptions import ServerNotFoundError
-from proton.vpn.core.session.servers.types import PhysicalServer, LogicalServer, ServerLoad
-from proton.vpn.core.session.servers.country_codes import get_country_name_by_code
+from proton.vpn.session.exceptions import ServerNotFoundError
+from proton.vpn.session.servers.types import PhysicalServer, LogicalServer, ServerLoad
+from proton.vpn.session.servers.country_codes import get_country_name_by_code
 
 import pytest
 

@@ -14,14 +14,16 @@ setup(
     author_email="contact@protonmail.com",
     url="https://github.com/ProtonMail/python-protonvpn-api-core",
     install_requires=[
-        "proton-core", "proton-vpn-connection",
-        "proton-vpn-logger", "proton-vpn-killswitch", "distro", "sentry-sdk",
-        "cryptography", "PyNaCl", "distro"
+        "proton-core", "proton-vpn-logger", "distro", "sentry-sdk",
+        "cryptography", "PyNaCl", "distro", "jinja2"
     ],
     extras_require={
         "development": ["pytest", "pytest-coverage", "pylint", "flake8", "pytest-asyncio", "PyYAML"]
     },
-    packages=find_namespace_packages(include=['proton.vpn.core*']),
+    packages=find_namespace_packages(include=[
+        'proton.vpn.core*', 'proton.vpn.connection*',
+        'proton.vpn.killswitch.interface*', 'proton.vpn.session*'
+    ]),
     python_requires=">=3.8",
     license="GPLv3",
     platforms="Linux",

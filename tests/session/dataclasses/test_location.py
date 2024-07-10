@@ -18,7 +18,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import pytest
 from dataclasses import asdict
-from proton.vpn.core.session.dataclasses import VPNLocation
+from proton.vpn.session.dataclasses import VPNLocation
 
 
 @pytest.fixture

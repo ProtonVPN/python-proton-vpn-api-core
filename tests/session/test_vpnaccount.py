@@ -20,14 +20,14 @@ import json
 import pathlib
 
 import pytest
-from proton.vpn.core.session import VPNSession, VPNPubkeyCredentials
-from proton.vpn.core.session.fetcher import (
+from proton.vpn.session import VPNSession, VPNPubkeyCredentials
+from proton.vpn.session.fetcher import (
     VPNCertificate, VPNSessions, VPNSettings
 )
-from proton.vpn.core.session.credentials import VPNSecrets
-from proton.vpn.core.session.dataclasses import VPNLocation
-from proton.vpn.core.session.certificates import Certificate
-from proton.vpn.core.session.exceptions import (
+from proton.vpn.session.credentials import VPNSecrets
+from proton.vpn.session.dataclasses import VPNLocation
+from proton.vpn.session.certificates import Certificate
+from proton.vpn.session.exceptions import (
     VPNCertificateExpiredError, VPNCertificateFingerprintError,
     VPNCertificateError
 )

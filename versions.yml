@@ -1,3 +1,12 @@
+version: 0.29.0
+time: 2024/07/10 15:00
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Merge connection and kill switch packages into this one.
+---
 version: 0.28.1
 time: 2024/07/11 12:00
 author: Alexandru Cheltuitor

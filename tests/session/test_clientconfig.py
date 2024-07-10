@@ -18,8 +18,8 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import pytest
 
-from proton.vpn.core.session.exceptions import ClientConfigDecodeError
-from proton.vpn.core.session.session import ClientConfig
+from proton.vpn.session.exceptions import ClientConfigDecodeError
+from proton.vpn.session.session import ClientConfig
 import time
 
 EXPIRATION_TIME = time.time()

@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.28.1
+%define version 0.29.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -19,24 +19,24 @@ BuildArch: noarch
 BuildRoot: %{_tmppath}/%{unmangled_name}-%{version}-%{release}-buildroot
 
 BuildRequires: python3-proton-core
-BuildRequires: python3-proton-vpn-connection
 BuildRequires: python3-proton-vpn-logger
-BuildRequires: python3-proton-vpn-killswitch
 BuildRequires: python3-setuptools
 BuildRequires: python3-distro
 BuildRequires: python3-sentry-sdk
 BuildRequires: python3-pynacl
+BuildRequires: python3-jinja2
 
 Requires: python3-proton-core
-Requires: python3-proton-vpn-connection
 Requires: python3-proton-vpn-logger
-Requires: python3-proton-vpn-killswitch
 Requires: python3-distro
 Requires: python3-sentry-sdk
 Requires: python3-pynacl
+Requires: python3-jinja2
 
-Conflicts: proton-vpn-gtk-app < 4.3.3~rc2
+Conflicts: proton-vpn-gtk-app < 4.4.2~rc5
 Obsoletes: python3-proton-vpn-session
+Obsoletes: python3-proton-vpn-connection
+Obsoletes: python3-proton-vpn-killswitch
 
 %{?python_disable_dependency_generator}
 
@@ -60,6 +60,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Wed Jul 10 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.29.0
+- Merge connection and kill switch packages into this one.
+
 * Thu Jul 11 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.28.1
 - Improve testing to capture when default value is being passed.
 

@@ -17,8 +17,8 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import proton.vpn.core.session.fetcher as fetcher
-from proton.vpn.core.session.fetcher import VPNSessionFetcher
+import proton.vpn.session.fetcher as fetcher
+from proton.vpn.session.fetcher import VPNSessionFetcher
 from proton.vpn.core.settings import Features
 
 

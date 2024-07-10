@@ -18,7 +18,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import pytest
 
-from proton.vpn.core.session.servers.fetcher import truncate_ip_address
+from proton.vpn.session.servers.fetcher import truncate_ip_address
 
 
 def test_truncate_ip_replaces_last_ip_address_byte_with_a_zero():

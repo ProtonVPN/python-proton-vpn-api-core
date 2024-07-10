@@ -27,9 +27,9 @@ from proton.loader import Loader
 from proton.loader.loader import PluggableComponent
 from proton.vpn.connection.states import State
 
-from proton.vpn.core.session.servers import LogicalServer
-from proton.vpn.core.session.client_config import ClientConfig
-from proton.vpn.core.session.client_config import ProtocolPorts
+from proton.vpn.session.servers import LogicalServer
+from proton.vpn.session.client_config import ClientConfig
+from proton.vpn.session.client_config import ProtocolPorts
 
 from proton.vpn.core.settings import SettingsPersistence, Settings
 from proton.vpn.connection import VPNConnection, states
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class VPNServer:  # pylint: disable=too-many-instance-attributes
+class VPNServer:  # pylint: disable=too-many-instance-attributes,R0801
     """
     Implement :class:`proton.vpn.connection.interfaces.VPNServer` to
     provide an interface readily usable to instantiate a

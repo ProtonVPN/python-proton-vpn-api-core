@@ -27,8 +27,8 @@ import distro
 
 from proton.sso import ProtonSSO
 from proton.vpn import logging
-from proton.vpn.core.session import VPNSession
-from proton.vpn.core.session.utils import to_semver_build_metadata_format
+from proton.vpn.session import VPNSession
+from proton.vpn.session.utils import to_semver_build_metadata_format
 
 logger = logging.getLogger(__name__)
 

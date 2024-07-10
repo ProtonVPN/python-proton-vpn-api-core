@@ -16,8 +16,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from proton.vpn.core.session.servers import LogicalServer, ServerFeatureEnum
-from proton.vpn.core.session.servers.logicals import sort_servers_alphabetically_by_country_and_server_name, ServerList
+from proton.vpn.session.servers import LogicalServer, ServerFeatureEnum
+from proton.vpn.session.servers.logicals import sort_servers_alphabetically_by_country_and_server_name, ServerList
 
 
 def test_server_list_get_fastest():
