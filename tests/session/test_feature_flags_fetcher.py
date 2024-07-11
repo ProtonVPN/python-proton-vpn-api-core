@@ -21,7 +21,7 @@ import pytest
 import time
 
 
-from proton.vpn.core.session.feature_flags_fetcher import FeatureFlagsFetcher, DEFAULT
+from proton.vpn.core.session.feature_flags_fetcher import FeatureFlagsFetcher, DEFAULT, FeatureFlags
 
 EXPIRATION_TIME = time.time()
 
@@ -74,3 +74,9 @@ def test_load_from_cache_returns_default_feature_flags_when_no_cache_is_found():
     features = ff.load_from_cache()
 
     assert features.beta_access_toggle_enabled == DEFAULT["toggles"][0]["enabled"]
+
+
+def test_feature_flags_beta_access_toggle_enabled_value_passes_expected_value_when_using_default_value():
+    ff = FeatureFlags({})
+
+    assert ff.beta_access_toggle_enabled == DEFAULT["toggles"][0]["enabled"]

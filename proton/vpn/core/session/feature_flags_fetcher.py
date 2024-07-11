@@ -47,7 +47,6 @@ DEFAULT = {
 
 class FeatureFlags:  # pylint: disable=too-few-public-methods
     """Contains a record of available features."""
-
     def __init__(self, api_data: dict):
         self._api_data = api_data
         self._expiration_time = api_data.get(
@@ -60,8 +59,8 @@ class FeatureFlags:  # pylint: disable=too-few-public-methods
     @property
     def beta_access_toggle_enabled(self) -> bool:
         """Returns if beta access toggle is enabled."""
-        feature_flag = self._search_for_feature_flag("LinuxBetaToggle") or False
-        return feature_flag.get("enabled")
+        feature_flag = self._search_for_feature_flag("LinuxBetaToggle")
+        return feature_flag
 
     def _search_for_feature_flag(self, feature_name: str) -> dict:
         feature_flag_dict = {}
@@ -71,7 +70,7 @@ class FeatureFlags:  # pylint: disable=too-few-public-methods
                 feature_flag_dict = feature
                 break
 
-        return feature_flag_dict
+        return feature_flag_dict.get("enabled", False)
 
     @property
     def is_expired(self) -> bool:
