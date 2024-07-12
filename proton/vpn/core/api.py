@@ -61,7 +61,8 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
 
         # pylint: disable=too-many-function-args
         settings = await self.load_settings()
-        vpn_connector = await VPNConnector.get_instance(settings)
+        credentials = self._session_holder.session.vpn_account.vpn_credentials
+        vpn_connector = await VPNConnector.get_instance(credentials, settings)
         self._vpn_connector = VPNConnectorWrapper(
             self._session_holder, self._settings_persistence, vpn_connector
         )
@@ -182,7 +183,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
 
         vpn_connector = await self.get_vpn_connector()
         if vpn_connector.is_connected:
-            await vpn_connector.refresh_certificate()
+            await vpn_connector.update_credentials()
 
     @property
     def server_list(self):

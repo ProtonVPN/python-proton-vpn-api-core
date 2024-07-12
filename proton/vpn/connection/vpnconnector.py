@@ -50,7 +50,10 @@ class VPNConnector:
     _instance: VPNConnector = None
 
     @classmethod
-    async def get_instance(cls, settings: Settings, kill_switch: KillSwitch = None):
+    async def get_instance(
+            cls, credentials: VPNCredentials, settings: Settings,
+            kill_switch: KillSwitch = None
+    ):
         """
         Gets a singleton instance.
 
@@ -59,9 +62,11 @@ class VPNConnector:
         VPN connections by using multiple VPNConnector instances.
         """
         if cls._instance:
+            await cls._instance.update_credentials(credentials)
+            cls._instance.settings = settings
             return cls._instance
 
-        cls._instance = VPNConnector(settings, kill_switch=kill_switch)
+        cls._instance = VPNConnector(credentials, settings, kill_switch=kill_switch)
         initial_state = await cls._determine_initial_state()
         await cls._instance.initialize_state(initial_state)
         return cls._instance
@@ -80,10 +85,12 @@ class VPNConnector:
 
     def __init__(
             self,
+            credentials: VPNCredentials,
             settings: Settings,
             state: states.State = None,
             kill_switch: KillSwitch = None
     ):
+        self._credentials = credentials
         self._settings = settings
         self._current_state = state
         self._kill_switch = kill_switch
@@ -104,15 +111,16 @@ class VPNConnector:
         if isinstance(self.current_state, states.Disconnected):
             self._set_global_ks()
 
-    async def refresh_certificate(self):
+    async def update_credentials(self, credentials: VPNCredentials):
         """
-        Refreshes the certificate used for the current connection.
+        Updates the credentials used when establishing a new connection.
 
         This is useful when the certificate used for the current connection
         has expired and a new one is needed.
         """
+        self._credentials = credentials
         if self.current_connection:
-            await self.current_connection.refresh_certificate()
+            await self.current_connection.update_credentials(credentials)
 
     async def apply_settings(self, settings: Settings):
         """
@@ -168,6 +176,9 @@ class VPNConnector:
         # kill switch setting (e.g. if the KS setting is set to "permanent" then
         # the permanent KS should be enabled, if it was not the case yet).
         await self.apply_settings(self._settings)
+
+        if isinstance(self.current_state, states.Connected):
+            await self.current_connection.update_credentials(self._credentials)
 
     @property
     def current_state(self) -> states.State:

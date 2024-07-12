@@ -129,8 +129,13 @@ class VPNConnection(ABC):
     async def stop(self):
         """Stops the VPN connection."""
 
-    async def refresh_certificate(self):
-        """Refreshes connection certificate (when that is applicable)."""
+    async def update_credentials(self, credentials: VPNCredentials):
+        """
+        Updates the connection credentials.
+        """
+        self._vpncredentials = credentials
+        # Note that VPN connection implementations can extend this method to send
+        # the new credentials to the back-end. That's why  this method is left async.
 
     def register(self, subscriber: Callable[[Event], None]):
         """

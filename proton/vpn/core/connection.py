@@ -153,9 +153,11 @@ class VPNConnectorWrapper:
 
         return supported_protocols
 
-    async def refresh_certificate(self):
-        """Refreshes the current connection certificate."""
-        await self._connector.refresh_certificate()
+    async def update_credentials(self):
+        """Updates the current connection credentials."""
+        await self._connector.update_credentials(
+            self._session_holder.session.vpn_account.vpn_credentials
+        )
 
     async def connect(self, server: VPNServer, protocol: str, backend: str = None):
         """
