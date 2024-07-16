@@ -61,8 +61,10 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
 
         # pylint: disable=too-many-function-args
         settings = await self.load_settings()
-        credentials = self._session_holder.session.vpn_account.vpn_credentials
-        vpn_connector = await VPNConnector.get_instance(credentials, settings)
+        credentials = None
+        if self.vpn_session_loaded:
+            credentials = self._session_holder.session.vpn_account.vpn_credentials
+        vpn_connector = await VPNConnector.get(credentials, settings)
         self._vpn_connector = VPNConnectorWrapper(
             self._session_holder, self._settings_persistence, vpn_connector
         )

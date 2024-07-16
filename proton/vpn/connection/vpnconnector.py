@@ -50,38 +50,16 @@ class VPNConnector:
     _instance: VPNConnector = None
 
     @classmethod
-    async def get_instance(
+    async def get(
             cls, credentials: VPNCredentials, settings: Settings,
             kill_switch: KillSwitch = None
     ):
         """
-        Gets a singleton instance.
-
-        Each VPNConnector instance ensures a single connection is active at a time.
-        However, a singleton instance is required to avoid creating multiple active
-        VPN connections by using multiple VPNConnector instances.
+        Builds a VPN connector instance and initializes it.
         """
-        if cls._instance:
-            await cls._instance.update_credentials(credentials)
-            cls._instance.settings = settings
-            return cls._instance
-
-        cls._instance = VPNConnector(credentials, settings, kill_switch=kill_switch)
-        initial_state = await cls._determine_initial_state()
-        await cls._instance.initialize_state(initial_state)
-        return cls._instance
-
-    @classmethod
-    async def _determine_initial_state(cls):
-        """Determines the initial state of the state machine."""
-        current_connection = await VPNConnection.get_current_connection()
-
-        if current_connection:
-            return current_connection.initial_state
-
-        return states.Disconnected(
-            StateContext(event=events.Initialized(events.EventContext(connection=None)))
-        )
+        connector = VPNConnector(credentials, settings, kill_switch=kill_switch)
+        await connector.initialize_state()
+        return connector
 
     def __init__(
             self,
@@ -159,8 +137,21 @@ class VPNConnector:
         else:
             raise RuntimeError(f"Unexpected kill switch setting: {kill_switch_setting}")
 
-    async def initialize_state(self, state: states.State):
+    @classmethod
+    async def _get_current_connection_state(cls):
+        """Determines the initial state of the state machine."""
+        current_connection = await VPNConnection.get_current_connection()
+
+        if current_connection:
+            return current_connection.initial_state
+
+        return states.Disconnected(
+            StateContext(event=events.Initialized(events.EventContext(connection=None)))
+        )
+
+    async def initialize_state(self):
         """Initializes the state machine with the specified state."""
+        state = await self._get_current_connection_state()
         self._set_global_ks()
         StateContext.kill_switch_setting = KillSwitchSetting(self._settings.killswitch)
 
