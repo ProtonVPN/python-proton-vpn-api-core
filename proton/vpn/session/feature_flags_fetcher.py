@@ -40,7 +40,16 @@ DEFAULT = {
                 "name": "disabled",
                 "enabled": False
             }
-        }
+        },
+        {
+            "name": "WireGuardExperimental",
+            "enabled": False,
+            "impressionData": False,
+            "variant": {
+                "name": "disabled",
+                "enabled": False
+            }
+        },
     ]
 }
 
@@ -56,11 +65,11 @@ class FeatureFlags:  # pylint: disable=too-few-public-methods
             )
         )
 
-    @property
-    def beta_access_toggle_enabled(self) -> bool:
-        """Returns if beta access toggle is enabled."""
-        feature_flag = self._search_for_feature_flag("LinuxBetaToggle")
-        return feature_flag
+    def get(self, feature_flag_name: str) -> bool:
+        """Get a feature flag by its name.
+        Always returns `False` if the feature flag is not found.
+        """
+        return self._search_for_feature_flag(feature_flag_name)
 
     def _search_for_feature_flag(self, feature_name: str) -> dict:
         feature_flag_dict = {}

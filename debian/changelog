@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.29.4) unstable; urgency=medium
+
+  * Update default feature flags and update feature flags interface.
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Wed, 17 Jul 2024 15:00:00
+
 proton-vpn-api-core (0.29.3) unstable; urgency=medium
 
   * Update credentials in the background

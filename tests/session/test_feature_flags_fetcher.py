@@ -48,7 +48,8 @@ async def test_fetch_returns_feature_flags_from_proton_rest_api(mock_rest_api_re
 
     features = await ff.fetch()
 
-    assert features.beta_access_toggle_enabled == apidata["toggles"][0]["enabled"]
+    assert features.get("LinuxBetaToggle") == apidata["toggles"][0]["enabled"]
+    assert features.get("WireGuardExperimental") == apidata["toggles"][1]["enabled"]
 
 
 def test_load_from_cache_returns_feature_flags_from_cache(apidata):
@@ -62,7 +63,8 @@ def test_load_from_cache_returns_feature_flags_from_cache(apidata):
 
     features = ff.load_from_cache()
 
-    assert features.beta_access_toggle_enabled == apidata["toggles"][0]["enabled"]
+    assert features.get("LinuxBetaToggle") == apidata["toggles"][0]["enabled"]
+    assert features.get("WireGuardExperimental") == apidata["toggles"][1]["enabled"]
 
 
 def test_load_from_cache_returns_default_feature_flags_when_no_cache_is_found():
@@ -73,10 +75,24 @@ def test_load_from_cache_returns_default_feature_flags_when_no_cache_is_found():
 
     features = ff.load_from_cache()
 
-    assert features.beta_access_toggle_enabled == DEFAULT["toggles"][0]["enabled"]
+    assert features.get("LinuxBetaToggle") == DEFAULT["toggles"][0]["enabled"]
+    assert features.get("WireGuardExperimental") == DEFAULT["toggles"][1]["enabled"]
 
 
-def test_feature_flags_beta_access_toggle_enabled_value_passes_expected_value_when_using_default_value():
+def test_get_returns_false_when_there_is_no_cache_and_default_data_is_used():
     ff = FeatureFlags({})
 
-    assert ff.beta_access_toggle_enabled == DEFAULT["toggles"][0]["enabled"]
+    assert ff.get("LinuxBetaToggle") == DEFAULT["toggles"][0]["enabled"]
+    assert ff.get("WireGuardExperimental") == DEFAULT["toggles"][1]["enabled"]
+
+
+def test_get_feature_flag_returns_false_when_feature_flag_does_not_exist(apidata):
+    mock_cache_handler = Mock()
+
+    mock_cache_handler.load.return_value = apidata
+
+    ff = FeatureFlagsFetcher(Mock(), Mock(), mock_cache_handler)
+
+    features = ff.load_from_cache()
+
+    assert features.get("dummy-feature") == False
