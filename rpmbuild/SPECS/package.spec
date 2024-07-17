@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.29.2
+%define version 0.29.3
 %define release 1
 
 Prefix: %{_prefix}
@@ -60,6 +60,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Wed Jul 17 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.29.3
+- Update credentials in the background
+
 * Fri Jul 12 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.29.2
 - Fix crash initializing VPN connector.
 

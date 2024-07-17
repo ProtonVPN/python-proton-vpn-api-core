@@ -35,7 +35,7 @@ from proton.vpn.connection.states import StateContext
 logger = logging.getLogger(__name__)
 
 
-class VPNConnector:
+class VPNConnector:  # pylint: disable=too-many-instance-attributes
     """
     Allows connecting/disconnecting to/from Proton VPN servers, as well as querying
     information about the current VPN connection, or subscribing to its state
@@ -74,6 +74,7 @@ class VPNConnector:
         self._kill_switch = kill_switch
         self._publisher = Publisher()
         self._lock = asyncio.Lock()
+        self._background_tasks = set()
 
     @property
     def settings(self):
@@ -168,8 +169,16 @@ class VPNConnector:
         # the permanent KS should be enabled, if it was not the case yet).
         await self.apply_settings(self._settings)
 
+        # If the client boots with an active connection, we set the vpn credentials
+        # so that any authenticated calls can be made (e.g. local agent requests).
         if isinstance(self.current_state, states.Connected):
-            await self.current_connection.update_credentials(self._credentials)
+            # A task is used to update the credentials in the background because the
+            # client currently blocks when getting the VPN connector instance.
+            task = asyncio.create_task(
+                self.current_connection.update_credentials(self._credentials)
+            )
+            self._background_tasks.add(task)
+            task.add_done_callback(self._background_tasks.discard)
 
     @property
     def current_state(self) -> states.State:
