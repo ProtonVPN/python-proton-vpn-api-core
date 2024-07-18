@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.35.6
+%define version 0.35.7
 %define release 1
 
 Prefix: %{_prefix}
@@ -61,6 +61,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Wed Oct 02 2024 Luke Titley <luke.titley@proton.ch> 0.35.7
+- Use a 'before_send' callback in sentry to sanitize events in sentry
+
 * Wed Oct 02 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.35.6
 - Update location object after successfully connecting to VPN server via local agent.
 

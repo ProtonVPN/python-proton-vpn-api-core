@@ -30,6 +30,8 @@ SSL_CERT_FILE = "SSL_CERT_FILE"
 MACHINE_ID = "/etc/machine-id"
 PROTON_VPN = "protonvpn"
 
+HIDDEN_USERNAME = "<HIDDEN:$USER>"
+
 log = logging.getLogger(__name__)
 
 
@@ -74,8 +76,7 @@ class UsageReporting:
         try:
             if self._enabled:
                 self._add_scope_metadata()
-                sanitized_error = self._sanitize_error(error)
-                self._capture_exception(sanitized_error)
+                self._capture_exception(error)
 
         except Exception:  # pylint: disable=broad-except
             log.exception("Failed to report error '%s'", str(error))
@@ -113,24 +114,32 @@ class UsageReporting:
         return str(combined.hexdigest())
 
     @staticmethod
-    def _sanitize_error(error_info):
+    def _sanitize_event(event, _hint, user_name=getpass.getuser()):
         """
-        This is where we remove personal information from the error before
-        sending it to sentry.
+        Sanitize the event before sending it to sentry.
+        This involves removing the user's name from everywhere in the event.
+
+        :param event: A dictionary representing the event to sanitize.
+        :param _hint: Unused but required by the sentry SDK.
+        :param user_name: The username to replace in the event, defaults to the
+            current user, but can be set for testing purposes.
         """
 
-        def _sanitize(error):
-            if isinstance(error, OSError) and error.filename:
-                # We dont have a lot of files we need to read, so it's safer to
-                # not include the full file path in the report.
-                _, filename = os.path.split(error.filename)
-                error.filename = filename
-            return error
+        def scrub_user(data):
+            """
+            Recursively scrub the username from any values in the event.
+            """
+            if isinstance(data, (tuple, list)):
+                for index, value in enumerate(data):
+                    data[index] = scrub_user(value)
+            elif isinstance(data, dict):
+                for key, value in data.items():
+                    data[key] = scrub_user(value)
+            elif isinstance(data, str):
+                data = data.replace(user_name, HIDDEN_USERNAME)
+            return data
 
-        if isinstance(error_info, tuple):
-            return (error_info[0], _sanitize(error_info[1]), error_info[2])
-
-        return _sanitize(error_info)
+        return scrub_user(event)
 
     def _add_scope_metadata(self):
         """
@@ -172,6 +181,7 @@ class UsageReporting:
         client_type_metadata = self._client_type_metadata
         sentry_sdk.init(
             dsn=DSN,
+            before_send=UsageReporting._sanitize_event,
             release=f"{client_type_metadata.type}-{client_type_metadata.version}",
             server_name=False,           # Don't send the computer name
             default_integrations=False,  # We want to be explicit about the integrations we use

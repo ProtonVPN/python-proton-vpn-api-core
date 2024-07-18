@@ -16,10 +16,12 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+import copy
 import os
 import pytest
 from types import SimpleNamespace
 import tempfile
+import json
 
 from proton.vpn.core.session_holder import ClientTypeMetadata
 from proton.vpn.core.usage import UsageReporting
@@ -29,6 +31,61 @@ SECRET_PATH = os.path.join("/home/wozniak/5nkfiudfmk/.cache", SECRET_FILE)
 MACHINE_ID = "bg77t2rmpjhgt9zim5gkz4t78jfur39f"
 SENTRY_USER_ID = "70cf75689cecae78ec588316320d76477c71031f7fd172dd5577ac95934d4499"
 USERNAME = "tester"
+
+EVENT_TO_SEND = {
+    "frames": [
+        {
+            "filename": "/home/tester/src/quick_connect_widget.py",
+            "abs_path": "/home/tester/src/quick_connect_widget.py",
+            "function": "_on_disconnect_button_clicked",
+            "module": "proton.vpn.app.gtk.widgets.vpn.quick_connect_widget",
+            "lineno": 102,
+            "pre_context": [
+                "        future = self._controller.connect_to_fastest_server()",
+                "        future.add_done_callback(lambda f: GLib.idle_add(f.result))  # bubble up exceptions if any.",
+                "",
+                "    def _on_disconnect_button_clicked(self, _):",
+                "        logger.info(\"Disconnect from VPN\", category=\"ui\", event=\"disconnect\")"
+            ],
+            "context_line": "        future = self._controller.disconnect()",
+            "post_context": [
+                "        future.add_done_callback(lambda f: GLib.idle_add(f.result))  # bubble up exceptions if any."
+            ],
+            "vars": {
+                "self": "<quick_connect_widget.... (proton+... at 0x601b5e322d90)>",
+                "_": "<Gtk.Button object at 0x7f83d4aa8140 (GtkButton at 0x601b5e37ea40)>"
+            },
+            "in_app": True
+        },
+        {
+            "filename": "/home/tester/src/ProtonVPN/linux/proton-vpn-gtk-app/proton/vpn/app/gtk/controller.py",
+            "abs_path": "/home/tester/src/ProtonVPN/linux/proton-vpn-gtk-app/proton/vpn/app/gtk/controller.py",
+            "function": "disconnect",
+            "module": "proton.vpn.app.gtk.controller",
+            "lineno": 224,
+            "pre_context": [
+                "        :return: A Future object that resolves once the connection reaches the",
+                "        \"disconnected\" state.",
+                "        \"\"\"",
+                "        error = FileNotFoundError(\"This method is not implemented\")",
+                "        error.filename = \"/home/wozniak/randomfile.py\""
+            ],
+            "context_line": "        raise error",
+            "post_context": [
+                "",
+                "        return self.executor.submit(self._connector.disconnect)",
+                "",
+                "    @property",
+                "    def account_name(self) -> str:"
+            ],
+            "vars": {
+                "self": "<proton.vpn.app.gtk.controller.Controller object at 0x7f83e1856da0>",
+                "error": "FileNotFoundError('This method is not implemented')"
+            },
+            "in_app": True
+        }
+    ]
+}
 
 @pytest.mark.parametrize("enabled", [True, False])
 def test_usage_report_enabled(enabled):
@@ -48,24 +105,14 @@ def test_usage_report_enabled(enabled):
     assert report_error.invoked == enabled, "UsageReporting enable state does not match the error reporting"
 
 
-@pytest.mark.parametrize("enabled", [True, False])
-def test_sanitize_simple_error(enabled):
+def test_sanitize_event():
 
-    error = FileNotFoundError("File not found")
-    error.filename = SECRET_PATH
+    event = copy.deepcopy(EVENT_TO_SEND)
 
-    assert UsageReporting._sanitize_error(error).filename == SECRET_FILE, "Error sanitization failed"
+    UsageReporting._sanitize_event(event, None, "tester")
 
-
-@pytest.mark.parametrize("enabled", [True, False])
-def test_sanitize_traceback_error(enabled):
-
-    try:
-        open(SECRET_PATH, "r")
-    except FileNotFoundError as exception:
-        error = (type(exception), exception, exception.__traceback__)
-
-    assert UsageReporting._sanitize_error(error)[1].filename == SECRET_FILE, "Error sanitization failed"
+    assert USERNAME in json.dumps(EVENT_TO_SEND), "Username should be in the event"
+    assert USERNAME not in json.dumps(event), "Username should not be in the event"
 
 
 def test_userid_calaculation():
