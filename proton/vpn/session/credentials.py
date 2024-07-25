@@ -26,8 +26,7 @@ from typing import Optional
 from proton.vpn.session.certificates import Certificate
 from proton.vpn.session.dataclasses import VPNCertificate
 from proton.vpn.session.exceptions import (VPNCertificateExpiredError,
-                                           VPNCertificateFingerprintError,
-                                           VPNCertificateNeedRefreshError)
+                                           VPNCertificateFingerprintError)
 from proton.vpn.session.key_mgr import KeyHandler
 from proton.vpn import logging
 
@@ -145,21 +144,14 @@ class VPNPubkeyCredentials:
 
             :raises VPNCertificateNotAvailableError: : certificate cannot be found
                 :class:`VPNSession` must be populated with :meth:`VPNSession.refresh`.
-            :raises VPNCertificateNeedRefreshError: : certificate is expiring soon,
-                refresh asap with :meth:`VPNSession.refresh`.
             :raises VPNCertificateExpiredError: : certificate is expired.
             :return: :class:`api_data.VPNCertificate.Certificate`
         """
         if not self._certificate_obj.has_valid_date:
             raise VPNCertificateExpiredError
 
-        if (
-            self._certificate_obj.validity_period
-            > VPNPubkeyCredentials.MINIMUM_VALIDITY_PERIOD_IN_SECS
-        ):
-            return self._certificate_obj.get_as_pem()
-
-        raise VPNCertificateNeedRefreshError
+        self._log_if_certificate_requires_to_be_refreshed_but_is_not_expired()
+        return self._certificate_obj.get_as_pem()
 
     @property
     def wg_private_key(self) -> str:
@@ -171,16 +163,7 @@ class VPNPubkeyCredentials:
             :return: :class:`api_data.VPNSecrets.wireguard_privatekey`: Wireguard private key
                 in base64 format.
         """
-        if (
-            self._certificate_obj.validity_period
-            <= VPNPubkeyCredentials.MINIMUM_VALIDITY_PERIOD_IN_SECS
-        ):
-            logger.warning(
-                msg="Current certificate is expired.",
-                category="CREDENTIALS",
-                subcategory="CERTIFICATE", event="EXPIRED"
-            )
-
+        self._log_if_certificate_requires_to_be_refreshed_but_is_not_expired()
         return self._secrets.wireguard_privatekey
 
     @property
@@ -213,3 +196,14 @@ class VPNPubkeyCredentials:
             - return `None` if we don't have a certificate
         """
         return self._certificate_obj.duration.total_seconds()
+
+    def _log_if_certificate_requires_to_be_refreshed_but_is_not_expired(self):
+        if (
+            self._certificate_obj.validity_period
+            <= VPNPubkeyCredentials.MINIMUM_VALIDITY_PERIOD_IN_SECS
+        ):
+            logger.warning(
+                msg="Current certificate will expire.",
+                category="CREDENTIALS",
+                subcategory="CERTIFICATE", event="REQUIRE_REFRESH"
+            )

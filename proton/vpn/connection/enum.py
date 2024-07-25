@@ -44,6 +44,7 @@ class StateMachineEventEnum(Enum):
     RETRY = auto()
     UNEXPECTED_ERROR = auto()
     DEVICE_DISCONNECTED = auto()
+    CERTIFICATE_EXPIRED = auto()
 
 
 class KillSwitchSetting(IntEnum):

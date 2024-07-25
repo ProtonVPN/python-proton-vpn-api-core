@@ -99,6 +99,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         """
         self._credentials = credentials
         if self.current_connection:
+            logger.info("Updating credentials for current connection.")
             await self.current_connection.update_credentials(credentials)
 
     async def apply_settings(self, settings: Settings):
@@ -272,7 +273,8 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             category="CONN", event="STATE_CHANGED"
         )
 
-        if not self.is_connection_ongoing and self._current_state.context.connection:
+        if isinstance(self._current_state, states.Disconnected) \
+                and self._current_state.context.connection:
             # Unregister from connection event updates once the connection ended.
             self._current_state.context.connection.unregister(self._on_connection_event)
 

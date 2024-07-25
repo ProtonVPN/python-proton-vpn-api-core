@@ -162,9 +162,9 @@ def test_disconnecting_on_event_transitions(event_type, expected_next_state_type
 
 @pytest.mark.parametrize("event_type, expected_next_state_type", [
     (events.Down, states.Disconnected),
-    (events.Up, states.Connecting),
+    (events.Up, states.Disconnecting),
     (events.UnexpectedError, states.Error),
-    (events.Connected, states.Error),  # Invalid event.
+    (events.Connected, states.Connected),
     (events.Disconnected, states.Error)  # Invalid event.
 ])
 def test_error_on_event_transitions(event_type, expected_next_state_type):
@@ -172,7 +172,7 @@ def test_error_on_event_transitions(event_type, expected_next_state_type):
 
 
 @pytest.mark.parametrize("active_state_type", [
-    states.Connecting, states.Connected, states.Disconnecting
+    states.Connecting, states.Connected, states.Disconnecting, states.Error
 ])
 def test_reconnection_is_triggered_when_up_event_is_received_while_a_connection_is_active(
         active_state_type
@@ -359,23 +359,6 @@ async def test_disconnecting_run_tasks_stops_connection():
     disconnecting = states.Disconnecting(states.StateContext(connection=connection))
 
     await disconnecting.run_tasks()
-
-    connection_calls = connection.method_calls
-    assert len(connection_calls) == 1
-    connection_calls[0].method = connection.stop
-
-
-@pytest.mark.asyncio
-async def test_error_run_tasks_stops_connection():
-    """
-    The only task to be run while on the error state is to stop the connection.
-    The reason for doing so is to release any resources the connection is holding onto.
-    """
-    connection = Mock()
-    connection.stop = AsyncMock(return_value=None)
-    connecting = states.Error(states.StateContext(connection=connection))
-
-    await connecting.run_tasks()
 
     connection_calls = connection.method_calls
     assert len(connection_calls) == 1

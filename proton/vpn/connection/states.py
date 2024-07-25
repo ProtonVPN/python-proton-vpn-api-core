@@ -326,7 +326,24 @@ class Error(State):
             return Disconnected(StateContext(event=event, connection=event.context.connection))
 
         if isinstance(event, events.Up):
-            return Connecting(StateContext(event=event, connection=event.context.connection))
+            return Disconnecting(
+                StateContext(
+                    event=event,
+                    connection=self.context.connection,
+                    reconnection=event.context.connection
+                )
+            )
+
+        if isinstance(event, events.Connected):
+            return Connected(
+                StateContext(
+                    event=event,
+                    connection=self.context.connection,
+                )
+            )
+
+        if isinstance(event, events.Error):
+            return Error(StateContext(event=event, connection=event.context.connection))
 
         return self
 
@@ -336,6 +353,3 @@ class Error(State):
             type(self.context.event).__name__,
             self.context.event.context.error
         )
-
-        # Make sure connection resources are properly released.
-        await self.context.connection.stop()

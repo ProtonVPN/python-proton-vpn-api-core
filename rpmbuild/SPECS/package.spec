@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.29.4
+%define version 0.30.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -60,6 +60,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Fri Jul 26 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.30.0
+- Handle ExpiredCertificate events.
+
 * Wed Jul 17 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.29.4
 - Update default feature flags and update feature flags interface.
 

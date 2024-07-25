@@ -22,9 +22,9 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 import asyncio
 import copy
 
-from proton.vpn import logging
 
 from proton.vpn.connection.vpnconnector import VPNConnector
+from proton.vpn.connection import states
 from proton.vpn.core.connection import VPNConnectorWrapper
 from proton.vpn.core.settings import Settings, SettingsPersistence
 from proton.vpn.core.session_holder import SessionHolder, ClientTypeMetadata
@@ -35,6 +35,7 @@ from proton.vpn.session.account import VPNAccount
 from proton.vpn.session import FeatureFlags
 
 from proton.vpn.core.usage import UsageReporting
+from proton.vpn import logging
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +185,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         )
 
         vpn_connector = await self.get_vpn_connector()
-        if vpn_connector.is_connected:
+        if isinstance(vpn_connector.current_state, (states.Connected, states.Error)):
             await vpn_connector.update_credentials()
 
     @property
