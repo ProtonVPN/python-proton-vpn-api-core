@@ -108,7 +108,7 @@ class ExpiredCertificate(Error):
 
 class MaximumSessionsReached(Error):
     """Signals that the passed certificate has expired and needs to be refreshed."""
-    type = StateMachineEventEnum.CERTIFICATE_EXPIRED
+    type = StateMachineEventEnum.MAXIMUM_SESSIONS_REACHED
 
 
 class TunnelSetupFailed(Error):
