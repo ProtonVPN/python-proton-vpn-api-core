@@ -106,6 +106,11 @@ class ExpiredCertificate(Error):
     type = StateMachineEventEnum.CERTIFICATE_EXPIRED
 
 
+class MaximumSessionsReached(Error):
+    """Signals that the passed certificate has expired and needs to be refreshed."""
+    type = StateMachineEventEnum.CERTIFICATE_EXPIRED
+
+
 class TunnelSetupFailed(Error):
     """Signals that there was an error setting up the VPN tunnel."""
     type = StateMachineEventEnum.TUNNEL_SETUP_FAILED
