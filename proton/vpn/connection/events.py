@@ -107,7 +107,7 @@ class ExpiredCertificate(Error):
 
 
 class MaximumSessionsReached(Error):
-    """Signals that the passed certificate has expired and needs to be refreshed."""
+    """Signals that for the given plan the user has too many devices/sessions connected."""
     type = StateMachineEventEnum.MAXIMUM_SESSIONS_REACHED
 
 
