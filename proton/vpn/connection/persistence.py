@@ -91,7 +91,7 @@ class ConnectionPersistence:
                     server_name=file_content["server_name"],
                     server_domain=file_content["server_domain"]
                 )
-            except (JSONDecodeError, KeyError):
+            except (JSONDecodeError, KeyError, UnicodeDecodeError):
                 logger.exception(
                     "Unexpected error parsing connection persistence file: "
                     f"{self._connection_file_path}",
