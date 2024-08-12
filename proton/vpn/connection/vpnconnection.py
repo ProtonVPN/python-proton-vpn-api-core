@@ -137,6 +137,14 @@ class VPNConnection(ABC):
         # Note that VPN connection implementations can extend this method to send
         # the new credentials to the back-end. That's why  this method is left async.
 
+    async def update_settings(self, settings: Settings):
+        """
+        Updates the connection settings.
+        """
+        self._settings = settings
+        # Note that VPN connection implementations can extend this method to send
+        # the new settings to the back-end. That's why this method is left async.
+
     def register(self, subscriber: Callable[[Event], None]):
         """
         Registers a subscriber to be notified whenever a new connection event happens.

@@ -1,3 +1,12 @@
+version: 0.32.0
+time: 2024/08/12 09:00
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Update connection features via local agent if available.
+---
 version: 0.31.0
 time: 2024/08/08 11:00
 author: Luke Titley

@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.31.0
+%define version 0.32.0
 %define release 1
 
 Prefix: %{_prefix}
@@ -60,6 +60,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Mon Aug 12 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.32.0
+- Update connection features via local agent if available.
+
 * Thu Aug 08 2024 Luke Titley <luke.titley@proton.ch> 0.31.0
 - Disconnect and notify the user when the maximum number of sessions is reached.
 

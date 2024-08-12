@@ -109,6 +109,8 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         """
         self.settings = settings
         await self._apply_kill_switch_setting(KillSwitchSetting(settings.killswitch))
+        if self.current_connection:
+            await self.current_connection.update_settings(settings)
 
     async def _apply_kill_switch_setting(self, kill_switch_setting: KillSwitchSetting):
         """Enables/disables the kill switch depending on the setting value."""
