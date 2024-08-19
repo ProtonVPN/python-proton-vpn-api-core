@@ -26,7 +26,7 @@ import asyncio
 import os
 import sys
 from abc import ABC, abstractmethod
-from typing import Optional, Callable, List
+from typing import Callable, List
 
 from proton.loader import Loader
 
@@ -48,18 +48,6 @@ class VPNConnection(ABC):
     # Class attrs to be set by subclasses.
     backend = None
     protocol = None
-
-    @classmethod
-    def from_persistence(cls, persisted_connection: ConnectionParameters):
-        """
-        Builds a connection object from the connection parameters previously persisted to disk.
-        """
-        return cls(
-            server=persisted_connection.to_vpn_server(),
-            credentials=persisted_connection.to_credentials(),
-            settings=persisted_connection.to_settings(),
-            connection_id=persisted_connection.connection_id
-        )
 
     # pylint: disable=too-many-arguments
     def __init__(
@@ -188,24 +176,6 @@ class VPNConnection(ABC):
         protocol_class = backend.factory(protocol)
         return protocol_class(server, credentials, settings)
 
-    @classmethod
-    async def get_current_connection(
-            cls, connection_persistence: ConnectionPersistence = None
-    ) -> Optional[VPNConnection]:
-        """
-        :return: the current VPN connection or None if there isn't one.
-        """
-        connection_persistence = connection_persistence or ConnectionPersistence()
-        loop = asyncio.get_running_loop()
-        persisted_parameters = await loop.run_in_executor(None, connection_persistence.load)
-        if not persisted_parameters:
-            return None
-
-        backend = Loader.get("backend", persisted_parameters.backend)
-        current_connection = backend.get_persisted_connection(persisted_parameters)
-
-        return current_connection
-
     @property
     def server(self) -> VPNServer:
         """Returns the VPN server of this VPN connection."""
@@ -308,9 +278,7 @@ class VPNConnection(ABC):
             connection_id=self._unique_id,
             backend=type(self).backend,
             protocol=type(self).protocol,
-            server_id=self.server_id,
-            server_name=self.server_name,
-            server_domain=self.server_domain
+            server=self.server
         )
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._connection_persistence.save, params)

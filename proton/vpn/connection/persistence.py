@@ -30,6 +30,7 @@ from typing import Optional
 
 from proton.utils.environment import VPNExecutionEnvironment
 from proton.vpn import logging
+from proton.vpn.connection.interfaces import VPNServer
 
 logger = logging.getLogger(__name__)
 
@@ -40,21 +41,26 @@ class ConnectionParameters:
     connection_id: str
     backend: str
     protocol: str
-    server_id: str
-    server_name: str
-    server_domain: str
+    server: VPNServer
 
-    def to_vpn_server(self) -> PersistedVPNServer:
-        """Returns the server parameters."""
-        return PersistedVPNServer(self)
+    @classmethod
+    def from_dict(cls, data: dict) -> ConnectionParameters:
+        """Creates a ConnectionParameters instance from a dictionary."""
+        return cls(
+            connection_id=data["connection_id"],
+            backend=data["backend"],
+            protocol=data["protocol"],
+            server=VPNServer.from_dict(data["server"])
+        )
 
-    def to_settings(self) -> PersistedSettings:
-        """Returns the settings parameters."""
-        return PersistedSettings()
-
-    def to_credentials(self) -> PersistedCredentials:
-        """Returns the credential parameters."""
-        return PersistedCredentials()
+    def to_dict(self) -> ConnectionParameters:
+        """Creates a dictionary from a ConnectionParameters instance."""
+        return {
+            "connection_id": self.connection_id,
+            "backend": self.backend,
+            "protocol": self.protocol,
+            "server": self.server.to_dict()
+        }
 
 
 class ConnectionPersistence:
@@ -83,14 +89,7 @@ class ConnectionPersistence:
         with open(self._connection_file_path, encoding="utf-8") as file:
             try:
                 file_content = json.load(file)
-                return ConnectionParameters(
-                    connection_id=file_content["connection_id"],
-                    backend=file_content["backend"],
-                    protocol=file_content["protocol"],
-                    server_id=file_content["server_id"],
-                    server_name=file_content["server_name"],
-                    server_domain=file_content["server_domain"]
-                )
+                return ConnectionParameters.from_dict(file_content)
             except (JSONDecodeError, KeyError, UnicodeDecodeError):
                 logger.exception(
                     "Unexpected error parsing connection persistence file: "
@@ -102,7 +101,7 @@ class ConnectionPersistence:
     def save(self, connection_parameters: ConnectionParameters):
         """Saves connection parameters to disk."""
         with open(self._connection_file_path, "w", encoding="utf-8") as file:
-            json.dump(vars(connection_parameters), file)
+            json.dump(connection_parameters.to_dict(), file)
 
     def remove(self):
         """Removes the connection persistence file, if it exists."""
@@ -114,57 +113,3 @@ class ConnectionPersistence:
                 f"to remove it: {self._connection_file_path}",
                 category="CONN", subcategory="PERSISTENCE", event="REMOVE"
             )
-
-
-class PersistedVPNServer:
-    """Holds the server parameters persisted to disk."""
-    # pylint: disable=missing-function-docstring
-
-    def __init__(self, persisted_connection: ConnectionParameters):
-        self.server_id = persisted_connection.server_id
-        self.server_name = persisted_connection.server_name
-        self.domain = persisted_connection.server_domain
-
-    @property
-    def x25519pk(self):
-        raise RuntimeError("WG public key not available: connection loaded from disk.")
-
-    @property
-    def openvpn_ports(self):
-        raise RuntimeError("OpenVPN ports not available: connection loaded from disk.")
-
-    @property
-    def wireguard_ports(self):
-        raise RuntimeError("WireGuard ports not available: connection loaded from disk.")
-
-    @property
-    def label(self):
-        raise RuntimeError("Label not available: connection loaded from disk.")
-
-
-class PersistedSettings:
-    """Holds the settings parameters persisted to disk."""
-    # pylint: disable=missing-function-docstring
-
-    @property
-    def dns_custom_ips(self):
-        raise RuntimeError("DNS custom IPs not available: connection loaded from disk.")
-
-    @property
-    def features(self):
-        raise RuntimeError("Features not available: connection loaded from disk.")
-
-
-class PersistedCredentials:
-    """Holds the credentials parameters persisted to disk."""
-    # pylint: disable=missing-function-docstring
-
-    @property
-    def pubkey_credentials(self):
-        raise RuntimeError("Public key credentials not available: connection loaded from disk.")
-
-    @property
-    def userpass_credentials(self):
-        raise RuntimeError(
-            "User/password credentials not available: connection loaded from disk."
-        )

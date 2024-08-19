@@ -23,9 +23,8 @@ import asyncio
 import copy
 
 
-from proton.vpn.connection.vpnconnector import VPNConnector
 from proton.vpn.connection import states
-from proton.vpn.core.connection import VPNConnectorWrapper
+from proton.vpn.core.connection import VPNConnector
 from proton.vpn.core.settings import Settings, SettingsPersistence
 from proton.vpn.core.session_holder import SessionHolder, ClientTypeMetadata
 from proton.vpn.session.servers import ServerList
@@ -51,7 +50,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         self._usage_reporting = UsageReporting(
             client_type_metadata=client_type_metadata)
 
-    async def get_vpn_connector(self):
+    async def get_vpn_connector(self) -> VPNConnector:
         """Returns an object that wraps around the raw VPN connection object.
 
         This will provide some additional helper methods
@@ -60,15 +59,10 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         if self._vpn_connector:
             return self._vpn_connector
 
-        # pylint: disable=too-many-function-args
-        settings = await self.load_settings()
-        credentials = None
-        if self.vpn_session_loaded:
-            credentials = self._session_holder.session.vpn_account.vpn_credentials
-        vpn_connector = await VPNConnector.get(credentials, settings)
-        self._vpn_connector = VPNConnectorWrapper(
-            self._session_holder, self._settings_persistence, vpn_connector
+        self._vpn_connector = await VPNConnector.get(
+            self._session_holder, self._settings_persistence
         )
+
         return self._vpn_connector
 
     async def load_settings(self) -> Settings:

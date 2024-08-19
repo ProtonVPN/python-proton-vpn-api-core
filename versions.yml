@@ -1,3 +1,12 @@
+version: 0.33.0
+time: 2024/08/20 16:00
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Get rid of VPNConnectorWrapper.
+---
 version: 0.32.2
 time: 2024/08/20 12:00
 author: Josep Llaneras

@@ -34,6 +34,6 @@ class ProtocolPorts:
         """Creates ProtocolPorts object from data."""
         # The lists are copied to avoid side effects if the dict is modified.
         return ProtocolPorts(
-            ports["UDP"].copy(),
-            ports["TCP"].copy()
+            udp=ports["UDP"].copy(),
+            tcp=ports["TCP"].copy()
         )

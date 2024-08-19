@@ -19,20 +19,40 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+from __future__ import annotations
 from typing import List, Optional, Protocol
 from dataclasses import dataclass
 
 
 @dataclass
-class ProtocolPorts(Protocol):
+class ProtocolPorts:  # pylint: disable=R0801
     """Dataclass for ports.
     These ports are mainly used for establishing VPN connections.
     """
     udp: List
     tcp: List
 
+    @staticmethod
+    def from_dict(ports: dict) -> ProtocolPorts:
+        """Creates ProtocolPorts object from data."""
+        # The lists are copied to avoid side effects if the dict is modified.
+        return ProtocolPorts(
+            udp=ports["udp"].copy(),
+            tcp=ports["tcp"].copy()
+        )
 
-class VPNServer(Protocol):  # pylint: disable=too-few-public-methods,R0801
+    def to_dict(self) -> dict:
+        """
+        Returns a dictionary representation of the object.
+        """
+        return {
+            "udp": self.udp.copy(),
+            "tcp": self.tcp.copy()
+        }
+
+
+@dataclass
+class VPNServer:  # pylint: disable=too-few-public-methods,too-many-instance-attributes
     """
     Contains the necessary data about the server to connect to.
 
@@ -60,6 +80,42 @@ class VPNServer(Protocol):  # pylint: disable=too-few-public-methods,R0801
     server_id: str
     server_name: str
     label: str = None
+
+    def __str__(self):
+        return f"Server: {self.server_name} / Domain: {self.domain} / " \
+               f"IP: {self.server_ip} / OpenVPN Ports: {self.openvpn_ports} / " \
+               f"WireGuard Ports: {self.wireguard_ports}"
+
+    @staticmethod
+    def from_dict(data: dict) -> VPNServer:
+        """
+        Creates a VPNServer object from a dictionary.
+        """
+        return VPNServer(
+            server_ip=data["server_ip"],
+            openvpn_ports=ProtocolPorts.from_dict(data["openvpn_ports"]),
+            wireguard_ports=ProtocolPorts.from_dict(data["wireguard_ports"]),
+            domain=data["domain"],
+            x25519pk=data["x25519pk"],
+            server_id=data["server_id"],
+            server_name=data["server_name"],
+            label=data.get("label")
+        )
+
+    def to_dict(self) -> dict:
+        """
+        Returns a dictionary representation of the object.
+        """
+        return {
+            "server_ip": self.server_ip,
+            "openvpn_ports": self.openvpn_ports.to_dict(),
+            "wireguard_ports": self.wireguard_ports.to_dict(),
+            "domain": self.domain,
+            "x25519pk": self.x25519pk,
+            "server_id": self.server_id,
+            "server_name": self.server_name,
+            "label": self.label
+        }
 
 
 class VPNPubkeyCredentials(Protocol):  # pylint: disable=too-few-public-methods

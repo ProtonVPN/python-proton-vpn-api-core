@@ -186,7 +186,7 @@ class WireguardConfig(VPNConfiguration):
         j2_values = {
             "wg_client_secret_key": self._vpncredentials.pubkey_credentials.wg_private_key,
             "wg_ip": self._vpnserver.server_ip,
-            "wg_port": self._vpnserver.wireguard_ports[0],
+            "wg_port": self._vpnserver.wireguard_ports.udp[0],
             "wg_server_pk": self._vpnserver.x25519pk,
         }
 

@@ -1,5 +1,5 @@
 """
-Proton VPN Connection API.
+VPN connector.
 
 
 Copyright (c) 2023 Proton AG
@@ -19,49 +19,32 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+from __future__ import annotations
+
+import asyncio
 import threading
-from dataclasses import dataclass
 from typing import Optional, runtime_checkable, Protocol
 
 from proton.loader import Loader
 from proton.loader.loader import PluggableComponent
-from proton.vpn.connection.states import State
 
-from proton.vpn.session.servers import LogicalServer
-from proton.vpn.session.client_config import ClientConfig
-from proton.vpn.session.client_config import ProtocolPorts
-
-from proton.vpn.core.settings import SettingsPersistence, Settings
-from proton.vpn.connection import VPNConnection, states
-from proton.vpn.connection.enum import ConnectionStateEnum
-from proton.vpn.connection.vpnconnector import VPNConnector
+from proton.vpn.connection.persistence import ConnectionPersistence
 from proton.vpn.core.session_holder import SessionHolder
-from proton.vpn import logging
+from proton.vpn.core.settings import SettingsPersistence
+from proton.vpn.killswitch.interface import KillSwitch
 
+from proton.vpn import logging
+from proton.vpn.connection import (
+    events, states, VPNConnection, VPNServer, ProtocolPorts,
+    VPNCredentials, Settings
+)
+from proton.vpn.connection.enum import KillSwitchSetting, ConnectionStateEnum
+from proton.vpn.connection.publisher import Publisher
+from proton.vpn.connection.states import StateContext
+from proton.vpn.session.client_config import ClientConfig
+from proton.vpn.session.servers import LogicalServer
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class VPNServer:  # pylint: disable=too-many-instance-attributes,R0801
-    """
-    Implement :class:`proton.vpn.connection.interfaces.VPNServer` to
-    provide an interface readily usable to instantiate a
-    :class:`proton.vpn.connection.VPNConnection`.
-    """
-    server_ip: str
-    openvpn_ports: ProtocolPorts
-    wireguard_ports: ProtocolPorts
-    domain: str
-    x25519pk: str
-    server_id: str
-    server_name: str
-    label: str = None
-
-    def __str__(self):
-        return f"Server: {self.server_name} / Domain: {self.domain} / "\
-            f"IP: {self.server_ip} / OpenVPN Ports: {self.openvpn_ports} / "\
-            f"WireGuard Ports: {self.wireguard_ports}"
 
 
 @runtime_checkable
@@ -75,51 +58,210 @@ class VPNStateSubscriber(Protocol):  # pylint: disable=too-few-public-methods
         """
 
 
-class VPNConnectorWrapper:
-    """Holds a reference to the active VPN connection."""
+class VPNConnector:  # pylint: disable=too-many-instance-attributes
+    """
+    Allows connecting/disconnecting to/from Proton VPN servers, as well as querying
+    information about the current VPN connection, or subscribing to its state
+    updates.
 
-    def __init__(
-            self, session_holder: SessionHolder,
+    Multiple simultaneous VPN connections are not allowed. If a connection
+    already exists when a new one is requested then the current one is brought
+    down before starting the new one.
+    """
+
+    @classmethod
+    async def get(
+            cls, session_holder: SessionHolder, settings_persistence: SettingsPersistence,
+            kill_switch: KillSwitch = None
+    ):
+        """
+        Builds a VPN connector instance and initializes it.
+        """
+        connector = VPNConnector(session_holder, settings_persistence, kill_switch=kill_switch)
+        await connector.initialize_state()
+        return connector
+
+    def __init__(  # pylint: disable=too-many-arguments
+            self,
+            session_holder: SessionHolder,
             settings_persistence: SettingsPersistence,
-            vpn_connector: VPNConnector
+            connection_persistence: ConnectionPersistence = None,
+            state: states.State = None,
+            kill_switch: KillSwitch = None
     ):
         self._session_holder = session_holder
         self._settings_persistence = settings_persistence
-        self._connector = vpn_connector
+        self._connection_persistence = connection_persistence or ConnectionPersistence()
+        self._current_state = state
+        self._kill_switch = kill_switch
+        self._publisher = Publisher()
+        self._lock = asyncio.Lock()
+        self._background_tasks = set()
 
     @property
-    def current_state(self) -> State:
-        """Returns the current VPN connection state."""
-        return self._connector.current_state
+    def settings(self) -> Settings:
+        """Returns the user's settings."""
+        return self._settings_persistence.get(
+            self._session_holder.session.vpn_account.max_tier
+        )
+
+    @property
+    def credentials(self) -> VPNCredentials:
+        """Returns the user's credentials."""
+        return self._session_holder.session.vpn_account.vpn_credentials
+
+    def _set_ks_setting(self):
+        StateContext.kill_switch_setting = KillSwitchSetting(self.settings.killswitch)
+
+        if isinstance(self.current_state, states.Disconnected):
+            self._set_ks_impl()
+
+    async def update_credentials(self):
+        """
+        Updates the credentials of the current connection.
+
+        This is useful when the certificate used for the current connection
+        has expired and a new one is needed.
+        """
+        if self.current_connection:
+            logger.info("Updating credentials for current connection.")
+            await self.current_connection.update_credentials(self.credentials)
+
+    async def apply_settings(self, settings: Settings):
+        """
+        Sets the settings to be applied when establishing the next connection and
+        applies them to the current connection whenever that's possible.
+        """
+        self._set_ks_setting()
+        await self._apply_kill_switch_setting(KillSwitchSetting(settings.killswitch))
+        if self.current_connection:
+            await self.current_connection.update_settings(settings)
+
+    async def _apply_kill_switch_setting(self, kill_switch_setting: KillSwitchSetting):
+        """Enables/disables the kill switch depending on the setting value."""
+        kill_switch = self._current_state.context.kill_switch
+
+        if kill_switch_setting == KillSwitchSetting.PERMANENT:
+            await kill_switch.enable(permanent=True)
+            # Since full KS already prevents IPv6 leaks:
+            await kill_switch.disable_ipv6_leak_protection()
+
+        elif kill_switch_setting == KillSwitchSetting.ON:
+            if isinstance(self._current_state, states.Disconnected):
+                await kill_switch.disable()
+                await kill_switch.disable_ipv6_leak_protection()
+            else:
+                await kill_switch.enable(permanent=False)
+                # Since full KS already prevents IPv6 leaks:
+                await kill_switch.disable_ipv6_leak_protection()
+
+        elif kill_switch_setting == KillSwitchSetting.OFF:
+            if isinstance(self._current_state, states.Disconnected):
+                await kill_switch.disable()
+                await kill_switch.disable_ipv6_leak_protection()
+            else:
+                await kill_switch.enable_ipv6_leak_protection()
+                await kill_switch.disable()
+
+        else:
+            raise RuntimeError(f"Unexpected kill switch setting: {kill_switch_setting}")
+
+    async def _get_current_connection(self) -> Optional[VPNConnection]:
+        """
+        :return: the current VPN connection or None if there isn't one.
+        """
+        loop = asyncio.get_running_loop()
+        persisted_parameters = await loop.run_in_executor(None, self._connection_persistence.load)
+        if not persisted_parameters:
+            return None
+
+        # I'm refraining of refactoring the whole thing but this way of loading
+        # the protocol class is madness.
+        backend_class = Loader.get("backend", persisted_parameters.backend)
+        backend_name = backend_class.backend
+        if persisted_parameters.backend != backend_name:
+            return None
+
+        all_protocols = Loader.get_all(backend_name)
+        for protocol in all_protocols:
+            if protocol.cls.protocol == persisted_parameters.protocol:
+                vpn_connection = protocol.cls(
+                    server=persisted_parameters.server,
+                    credentials=self.credentials,
+                    settings=self.settings,
+                    connection_id=persisted_parameters.connection_id
+                )
+                if not isinstance(vpn_connection.initial_state, states.Disconnected):
+                    return vpn_connection
+
+        return None
+
+    async def _get_initial_state(self):
+        """Determines the initial state of the state machine."""
+        current_connection = await self._get_current_connection()
+
+        if current_connection:
+            return current_connection.initial_state
+
+        return states.Disconnected(
+            StateContext(event=events.Initialized(events.EventContext(connection=None)))
+        )
+
+    async def initialize_state(self):
+        """Initializes the state machine with the specified state."""
+        state = await self._get_initial_state()
+
+        StateContext.kill_switch_setting = KillSwitchSetting(self.settings.killswitch)
+        self._set_ks_impl()
+
+        connection = state.context.connection
+        if connection:
+            connection.register(self._on_connection_event)
+
+        # Sets the initial state of the connector and triggers the tasks associated
+        # to the state.
+        await self._update_state(state)
+
+        # Makes sure that the kill switch state is inline with the current
+        # kill switch setting (e.g. if the KS setting is set to "permanent" then
+        # the permanent KS should be enabled, if it was not the case yet).
+        await self._apply_kill_switch_setting(StateContext.kill_switch_setting)
+
+    @property
+    def current_state(self) -> states.State:
+        """Returns the state of the current VPN connection."""
+        return self._current_state
 
     @property
     def current_connection(self) -> Optional[VPNConnection]:
-        """Returns the current VPN connection if there is one. Otherwise,
-        it returns None."""
-        return self._connector.current_connection
+        """Returns the current VPN connection or None if there isn't one."""
+        return self.current_state.context.connection if self.current_state else None
 
     @property
-    def current_server_id(self):
-        """Returns the ID of the server currently connected to, or None when there
-        is not a current VPN connection.
-
-        The server ID is the one that was passed in the `VPNServer` instance passed to
-        the `connect`.
+    def current_server_id(self) -> Optional[str]:
         """
-        return self._connector.current_server_id
+        Returns the server ID of the current VPN connection.
+
+        Note that by if the current state is disconnected, `None` will be
+        returned if a VPN connection was never established. Otherwise,
+        the server ID of the last server the connection was established to
+        will be returned instead.
+        """
+        return self.current_connection.server_id if self.current_connection else None
 
     @property
     def is_connection_active(self) -> bool:
-        """Returns whether there is a VPN connection ongoing or not."""
-        return self._connector.is_connection_ongoing
+        """Returns whether there is currently a VPN connection ongoing or not."""
+        return not isinstance(self._current_state, (states.Disconnected, states.Error))
 
     @property
     def is_connected(self) -> bool:
         """Returns whether the user is connected to a VPN server or not."""
-        return isinstance(self._connector.current_state, states.Connected)
+        return isinstance(self.current_state, states.Connected)
 
+    @staticmethod
     def get_vpn_server(
-            self, logical_server: LogicalServer, client_config: ClientConfig
+            logical_server: LogicalServer, client_config: ClientConfig
     ) -> VPNServer:
         """
         :return: a :class:`proton.vpn.vpnconnection.interfaces.VPNServer` that
@@ -131,19 +273,21 @@ class VPNConnectorWrapper:
             server_ip=physical_server.entry_ip,
             domain=physical_server.domain,
             x25519pk=physical_server.x25519_pk,
-            openvpn_ports=client_config.openvpn_ports,
-            wireguard_ports=client_config.wireguard_ports,
+            openvpn_ports=ProtocolPorts(
+                udp=client_config.openvpn_ports.udp,
+                tcp=client_config.openvpn_ports.tcp
+            ),
+            wireguard_ports=ProtocolPorts(
+                udp=client_config.wireguard_ports.udp,
+                tcp=client_config.wireguard_ports.tcp
+            ),
             server_id=logical_server.id,
             server_name=logical_server.name,
             label=physical_server.label
         )
 
-    async def apply_settings(self, settings: Settings):
-        """See VPNConnector.save_settings."""
-        await self._connector.apply_settings(settings)
-
     def get_available_protocols_for_backend(
-        self, backend_name: str
+            self, backend_name: str
     ) -> Optional[PluggableComponent]:
         """Returns available protocols for the `backend_name`
 
@@ -153,19 +297,13 @@ class VPNConnectorWrapper:
 
         return supported_protocols
 
-    async def update_credentials(self):
-        """Updates the current connection credentials."""
-        await self._connector.update_credentials(
-            self._session_holder.session.vpn_account.vpn_credentials
-        )
-
-    async def connect(self, server: VPNServer, protocol: str, backend: str = None):
-        """
-        Connects asynchronously to the specified VPN server.
-        :param server: VPN server to connect to.
-        :param protocol: One of the supported protocols (e.g. openvpn-tcp or openvpn-udp).
-        :param backend: Backend to user (e.g. networkmanager).
-        """
+    # pylint: disable=too-many-arguments
+    async def connect(
+            self, server: VPNServer,
+            protocol: str = None,
+            backend: str = None
+    ):
+        """Connects to a VPN server."""
         if not self._session_holder.session.logged_in:
             raise RuntimeError("Log in required before starting VPN connections.")
 
@@ -174,19 +312,26 @@ class VPNConnectorWrapper:
             category="CONN", subcategory="CONNECT", event="START"
         )
 
-        await self._connector.connect(
-            server=server,
-            credentials=self._session_holder.session.vpn_account.vpn_credentials,
-            settings=self._settings_persistence.get(
-                self._session_holder.session.vpn_account.max_tier
-            ),
-            protocol=protocol,
-            backend=backend
+        # Sets the settings to be applied when establishing the next connection.
+        self._set_ks_setting()
+
+        protocol = protocol or self.settings.protocol
+
+        connection = VPNConnection.create(
+            server, self.credentials, self.settings, protocol, backend
+        )
+
+        connection.register(self._on_connection_event)
+
+        await self._on_connection_event(
+            events.Up(events.EventContext(connection=connection))
         )
 
     async def disconnect(self):
-        """Disconnects asynchronously from the current server."""
-        await self._connector.disconnect()
+        """Disconnects the current VPN connection, if any."""
+        await self._on_connection_event(
+            events.Down(events.EventContext(connection=self.current_connection))
+        )
 
     def register(self, subscriber: VPNStateSubscriber):
         """
@@ -200,8 +345,9 @@ class VPNConnectorWrapper:
         if not isinstance(subscriber, VPNStateSubscriber):
             raise ValueError(
                 "The specified subscriber does not implement the "
-                f"{VPNStateSubscriber.__name__} protocol.")
-        self._connector.register(subscriber.status_update)
+                f"{VPNStateSubscriber.__name__} protocol."
+            )
+        self._publisher.register(subscriber.status_update)
 
     def unregister(self, subscriber: VPNStateSubscriber):
         """
@@ -211,8 +357,69 @@ class VPNConnectorWrapper:
         if not isinstance(subscriber, VPNStateSubscriber):
             raise ValueError(
                 "The specified subscriber does not implement the "
-                f"{VPNStateSubscriber.__name__} protocol.")
-        self._connector.unregister(subscriber.status_update)
+                f"{VPNStateSubscriber.__name__} protocol."
+            )
+        self._publisher.unregister(subscriber.status_update)
+
+    async def _on_connection_event(self, event: events.Event):
+        """
+        Callback called when a connection event happens.
+        """
+        # The following lock guaranties that each new event is processed only
+        # when the previous event was fully processed.
+        async with self._lock:
+            triggered_events = 0
+            while event:
+                triggered_events += 1
+                if triggered_events > 99:
+                    raise RuntimeError("Maximum number of chained connection events was reached.")
+
+                new_state = self.current_state.on_event(event)
+                event = await self._update_state(new_state)
+
+    async def _update_state(self, new_state) -> Optional[events.Event]:
+        if new_state is self.current_state:
+            return None
+
+        old_state = self._current_state
+        self._current_state = new_state
+
+        logger.info(
+            f"{type(self._current_state).__name__}"
+            f"{' (initial state)' if not old_state else ''}",
+            category="CONN", event="STATE_CHANGED"
+        )
+
+        if isinstance(self._current_state, states.Disconnected) \
+                and self._current_state.context.connection:
+            # Unregister from connection event updates once the connection ended.
+            self._current_state.context.connection.unregister(self._on_connection_event)
+
+        state_tasks = asyncio.create_task(self._current_state.run_tasks())
+        self._publisher.notify(new_state)
+        new_event = await state_tasks
+
+        if (
+            not self._current_state.context.reconnection
+            and isinstance(self._current_state, states.Disconnected)
+        ):
+            self._set_ks_impl()
+
+        return new_event
+
+    def _set_ks_impl(self):
+        """
+        By using this specific method we're leaking implementation details.
+
+        Because we currently have to deal with two kill switch NetworkManager implementations,
+        one for OpenVPN and one for WireGuard, and them not being compatible with each other,
+        we need to ensure that when switching protocols,
+        we only do this when we are in `Disconnected` state, to ensure
+        that the environment is clean and we don't leave any residuals on a users machine.
+        """
+        protocol = self.settings.protocol
+        kill_switch_backend = KillSwitch.get(protocol=protocol)
+        StateContext.kill_switch = self._kill_switch or kill_switch_backend()
 
 
 class Subscriber:

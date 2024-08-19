@@ -19,14 +19,15 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 import os
 
 import pytest
+
+from proton.vpn.connection import VPNServer, ProtocolPorts
 from proton.vpn.connection.vpnconfiguration import (OpenVPNTCPConfig,
                                                     OpenVPNUDPConfig,
                                                     OVPNConfig,
                                                     VPNConfiguration,
                                                     WireguardConfig)
 
-from .common import (CWD, MalformedVPNCredentials, MalformedVPNServer,
-                     MockSettings, MockVpnCredentials, MockVpnServer)
+from .common import (CWD, MockSettings, MockVpnCredentials)
 import shutil
 
 VPNCONFIG_DIR = os.path.join(CWD, "vpnconfig")
@@ -51,6 +52,21 @@ def modified_exec_env():
     ExecutionEnvironment.path_runtime = m
 
 
+@pytest.fixture
+def vpn_server():
+    return VPNServer(
+        server_ip="10.10.1.1",
+        domain="com.test-domain.www",
+        x25519pk="wg_public_key",
+        openvpn_ports=ProtocolPorts(tcp=[80, 1194], udp=[445, 5995]),
+        wireguard_ports=ProtocolPorts(tcp=[443, 88], udp=[445]),
+        server_name="TestServer#10",
+        server_id="OYB-3pMQQA2Z2Qnp5s5nIvTVO2...lRjxhx9DCAUM9uXfM2ZUFjzPXw==",
+        label="0"
+
+    )
+
+
 class MockVpnConfiguration(VPNConfiguration):
     extension = ".test-extension"
 
@@ -58,20 +74,20 @@ class MockVpnConfiguration(VPNConfiguration):
         return "test-content"
 
 
-def test_not_implemented_generate():
-    cfg = VPNConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
+def test_not_implemented_generate(vpn_server):
+    cfg = VPNConfiguration(vpn_server, MockVpnCredentials(), MockSettings())
     with pytest.raises(NotImplementedError):
         cfg.generate()
 
 
-def test_ensure_configuration_file_is_created(modified_exec_env):
-    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
+def test_ensure_configuration_file_is_created(modified_exec_env, vpn_server):
+    cfg = MockVpnConfiguration(vpn_server, MockVpnCredentials(), MockSettings())
     with cfg as f:
         assert os.path.isfile(f)
 
 
-def test_ensure_configuration_file_is_deleted():
-    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
+def test_ensure_configuration_file_is_deleted(vpn_server):
+    cfg = MockVpnConfiguration(vpn_server, MockVpnCredentials(), MockSettings())
     fp = None
     with cfg as f:
         fp = f
@@ -80,17 +96,17 @@ def test_ensure_configuration_file_is_deleted():
     assert not os.path.isfile(fp)
 
 
-def test_ensure_generate_is_returning_expected_content():
-    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
+def test_ensure_generate_is_returning_expected_content(vpn_server):
+    cfg = MockVpnConfiguration(vpn_server, MockVpnCredentials(), MockSettings())
     with cfg as f:
         with open(f) as _f:
             line = _f.readline()
-            _cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
+            _cfg = MockVpnConfiguration(vpn_server, MockVpnCredentials(), MockSettings())
             assert line == _cfg.generate()
 
 
-def test_ensure_same_configuration_file_in_case_of_duplicate():
-    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
+def test_ensure_same_configuration_file_in_case_of_duplicate(vpn_server):
+    cfg = MockVpnConfiguration(vpn_server, MockVpnCredentials(), MockSettings())
     with cfg as f:
         with cfg as _f:
             assert os.path.isfile(f) and os.path.isfile(_f) and f == _f
@@ -105,44 +121,43 @@ def test_ensure_same_configuration_file_in_case_of_duplicate():
         ("255.255.255.255", "32")
     ]
 )
-def test_cidr_to_netmask(cidr, expected_mask):
-    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
+def test_cidr_to_netmask(cidr, expected_mask, vpn_server):
+    cfg = MockVpnConfiguration(vpn_server, MockVpnCredentials(), MockSettings())
     assert cfg.cidr_to_netmask(cidr) == expected_mask
 
 
 @pytest.mark.parametrize("ipv4", ["192.168.1.1", "109.162.10.9", "1.1.1.1", "10.10.10.10"])
-def test_valid_ips(ipv4):
-    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
+def test_valid_ips(ipv4, vpn_server):
+    cfg = MockVpnConfiguration(vpn_server, MockVpnCredentials(), MockSettings())
     cfg.is_valid_ipv4(ipv4)
 
 
 @pytest.mark.parametrize("ipv4", ["192.168.1.90451", "109.", "1.-.1.1", "1111.10.10.10"])
-def test_not_valid_ips(ipv4):
-    cfg = MockVpnConfiguration(MockVpnServer(), MockVpnCredentials(), MockSettings())
+def test_not_valid_ips(ipv4, vpn_server):
+    cfg = MockVpnConfiguration(vpn_server, MockVpnCredentials(), MockSettings())
     cfg.is_valid_ipv4(ipv4)
 
 
 @pytest.mark.parametrize("protocol", ["udp", "tcp"])
-def test_ovpnconfig_with_settings(protocol, modified_exec_env):
-    ovpn_cfg = OVPNConfig(MockVpnServer(), MockVpnCredentials(), MockSettings())
+def test_ovpnconfig_with_settings(protocol, modified_exec_env, vpn_server):
+    ovpn_cfg = OVPNConfig(vpn_server, MockVpnCredentials(), MockSettings())
     ovpn_cfg._protocol = protocol
     output = ovpn_cfg.generate()
     assert ovpn_cfg._vpnserver.server_ip in output
 
 
-def test_wireguard_config_content_generation(modified_exec_env):
-    server = MockVpnServer()
+def test_wireguard_config_content_generation(modified_exec_env, vpn_server):
     credentials = MockVpnCredentials()
     settings = MockSettings()
-    wg_cfg = WireguardConfig(server, credentials, settings, True)
+    wg_cfg = WireguardConfig(vpn_server, credentials, settings, True)
     generated_cfg = wg_cfg.generate()
     assert credentials.pubkey_credentials.wg_private_key in generated_cfg
-    assert server.x25519pk in generated_cfg
-    assert server.server_ip in generated_cfg
+    assert vpn_server.x25519pk in generated_cfg
+    assert vpn_server.server_ip in generated_cfg
 
 
-def test_wireguard_with_non_certificate(modified_exec_env):
-    wg_cfg = WireguardConfig(MockVpnServer(), MockVpnCredentials(), MockSettings())
+def test_wireguard_with_non_certificate(modified_exec_env, vpn_server):
+    wg_cfg = WireguardConfig(vpn_server, MockVpnCredentials(), MockSettings())
     with pytest.raises(RuntimeError):
         wg_cfg.generate()
 
@@ -154,9 +169,9 @@ def test_wireguard_with_non_certificate(modified_exec_env):
         ("wireguard", WireguardConfig),
     ]
 )
-def test_get_expected_config_from_factory(protocol, expected_class):
+def test_get_expected_config_from_factory(protocol, expected_class, vpn_server):
     config = VPNConfiguration.from_factory(protocol)
     assert isinstance(
-        config(MockVpnServer(), MockVpnCredentials(), MockSettings()),
+        config(vpn_server, MockVpnCredentials(), MockSettings()),
         expected_class
     )

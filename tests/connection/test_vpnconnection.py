@@ -24,12 +24,9 @@ import pytest
 from proton.vpn.connection import VPNConnection, states
 from proton.vpn.connection.persistence import ConnectionPersistence, ConnectionParameters
 from proton.vpn.connection.states import StateContext
-from proton.vpn.connection.interfaces import Settings
+from proton.vpn.connection.interfaces import VPNServer, ProtocolPorts
 
-from .common import (
-    MalformedVPNCredentials, MalformedVPNServer, MockSettings,
-    MockVpnCredentials, MockVpnServer
-)
+from .common import MockVpnCredentials
 
 
 @pytest.fixture
@@ -44,7 +41,16 @@ def vpn_credentials():
 
 @pytest.fixture
 def vpn_server():
-    return MockVpnServer()
+    return VPNServer(
+        server_ip="10.10.1.1",
+        domain="com.test-domain.www",
+        x25519pk="wg_public_key",
+        openvpn_ports=ProtocolPorts(tcp=[80, 1194], udp=[445, 5995]),
+        wireguard_ports=ProtocolPorts(tcp=[443, 88], udp=[445]),
+        server_name="TestServer#10",
+        server_id="OYB-3pMQQA2Z2Qnp5s5nIvTVO2...lRjxhx9DCAUM9uXfM2ZUFjzPXw==",
+        label="0"
+    )
 
 
 @pytest.fixture
@@ -119,31 +125,6 @@ def test_vpn_connection_initialized_without_a_persisted_connection():
     assert isinstance(vpnconn.initial_state, states.Disconnected)
 
 
-def test_vpn_connection_from_persistence(
-        connection_persistence_mock
-):
-    """
-    When a VPNConnection object is created passing persisted parameters
-    then it should be initialized with the persisted connection id and
-    the initial state should be determined by calling `_initialize_persisted_connection`.
-    """
-    connection_id = "connection-id"
-    persisted_parameters = ConnectionParameters(
-        connection_id=connection_id,
-        backend=DummyVPNConnection.backend,
-        protocol=DummyVPNConnection.protocol,
-        server_id="server-id",
-        server_name="server-name",
-        server_domain="server-domain"
-    )
-
-    vpnconn = DummyVPNConnection.from_persistence(persisted_parameters)
-
-    assert vpnconn._unique_id == "connection-id"
-    vpnconn.initialize_persisted_connection_mock.assert_called_with(connection_id)
-    assert vpnconn.initial_state is vpnconn.initialize_persisted_connection_mock.return_value
-
-
 @pytest.mark.asyncio
 async def test_add_persistence(vpn_server, vpn_credentials, settings, connection_persistence_mock):
     vpnconn = DummyVPNConnection(
@@ -161,8 +142,7 @@ async def test_add_persistence(vpn_server, vpn_credentials, settings, connection
     assert persistence_params.connection_id == "add-persistence"
     assert persistence_params.backend == vpnconn.backend
     assert persistence_params.protocol == vpnconn.protocol
-    assert persistence_params.server_id == vpn_server.server_id
-    assert persistence_params.server_name == vpn_server.server_name
+    assert persistence_params.server == vpn_server
 
 
 @pytest.mark.asyncio
@@ -204,39 +184,6 @@ def test_unregister_subscriber_delegates_to_publisher():
     vpnconn.unregister(subscriber)
 
     publisher_mock.unregister.assert_called_with(subscriber)
-
-
-@pytest.mark.asyncio
-@patch("proton.vpn.connection.vpnconnection.Loader")
-async def test_get_current_connection_returns_connection_initialized_with_persisted_parameters(
-        Loader, connection_persistence_mock
-):
-    persisted_parameters = ConnectionParameters(
-        connection_id="connection-id",
-        backend="backend",
-        protocol="protocol",
-        server_id="server-id",
-        server_name="server-name",
-        server_domain="server-domain"
-    )
-    connection_persistence_mock.load.return_value = persisted_parameters
-
-    current_connection = await VPNConnection.get_current_connection(connection_persistence_mock)
-
-    connection_persistence_mock.load.assert_called_once()
-    Loader.get.assert_called_with("backend", persisted_parameters.backend)
-    Loader.get.return_value.get_persisted_connection.assert_called_with(persisted_parameters)
-    assert current_connection is Loader.get.return_value.get_persisted_connection.return_value
-
-
-@pytest.mark.asyncio
-async def test_get_current_connection_returns_none_if_persisted_parameters_were_not_found(
-        connection_persistence_mock
-):
-    connection_persistence_mock.load.return_value = None
-    current_connection = await VPNConnection.get_current_connection(connection_persistence_mock)
-
-    assert not current_connection
 
 
 @pytest.mark.parametrize("env_var_value", ["False", "no", "test", "bool", "0", "tr!ue"])

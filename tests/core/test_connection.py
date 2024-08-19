@@ -18,7 +18,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from proton.vpn.session.servers import LogicalServer
 from proton.vpn.session.client_config import ClientConfig
-from proton.vpn.core.connection import VPNConnectorWrapper
+from proton.vpn.core.connection import VPNConnector
 
 LOGICAL_SERVER_DATA = {
   "Name": "IS#1",
@@ -37,7 +37,7 @@ LOGICAL_SERVER_DATA = {
 
 
 def test_get_vpn_server_returns_vpn_server_built_from_logical_server_and_client_config():
-    vpn_connector_wrapper = VPNConnectorWrapper(session_holder=None, settings_persistence=None, vpn_connector=None)
+    vpn_connector_wrapper = VPNConnector(session_holder=None, settings_persistence=None)
 
     logical_server = LogicalServer(data=LOGICAL_SERVER_DATA)
     client_config = ClientConfig.default()

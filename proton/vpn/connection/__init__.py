@@ -32,11 +32,11 @@ except PackageNotFoundError:
 # pylint: disable=wrong-import-position
 from .vpnconnection import VPNConnection
 from .interfaces import (
-    Settings, VPNPubkeyCredentials, VPNServer,
-    VPNUserPassCredentials, VPNCredentials
+    VPNServer, ProtocolPorts, VPNCredentials, VPNPubkeyCredentials,
+    VPNUserPassCredentials, Settings
 )
 
 __all__ = [
-    "VPNConnection", "Settings", "VPNPubkeyCredentials",
-    "VPNServer", "VPNUserPassCredentials", "VPNCredentials"
+    "VPNConnection", "VPNServer", "ProtocolPorts", "VPNCredentials",
+    "VPNPubkeyCredentials", "VPNUserPassCredentials", "Settings"
 ]

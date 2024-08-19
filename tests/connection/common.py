@@ -42,34 +42,7 @@ class MalformedVPNServer:
     pass
 
 
-class MockVpnServer(VPNServer):
-    @property
-    def server_ip(self):
-        return "10.10.1.1"
 
-    @property
-    def domain(self):
-        return "com.test-domain.www"
-
-    @property
-    def x25519pk(self):
-        return "wg_public_key"
-
-    @property
-    def openvpn_ports(self):
-        return OpenVPNPorts([80, 1194], [445, 5995])
-
-    @property
-    def wireguard_ports(self):
-        return WireGuardPorts([443, 88], [443])
-
-    @property
-    def server_name(self):
-        return "TestServer#10"
-
-    @property
-    def server_id(self):
-        return "OYB-3pMQQA2Z2Qnp5s5nIvTVO2...lRjxhx9DCAUM9uXfM2ZUFjzPXw=="
 
 
 class MockVPNPubkeyCredentials(VPNPubkeyCredentials):
