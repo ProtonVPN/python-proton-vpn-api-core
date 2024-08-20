@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.32.1
+%define version 0.32.2
 %define release 1
 
 Prefix: %{_prefix}
@@ -60,6 +60,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Tue Aug 20 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.32.2
+- Enable wireguard feature flag by default.
+
 * Mon Aug 12 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.32.1
 - Handle UnicodeDecodeError when loading persisted VPN connection.
 

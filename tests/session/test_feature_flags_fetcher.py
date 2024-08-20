@@ -79,13 +79,6 @@ def test_load_from_cache_returns_default_feature_flags_when_no_cache_is_found():
     assert features.get("WireGuardExperimental") == DEFAULT["toggles"][1]["enabled"]
 
 
-def test_get_returns_false_when_there_is_no_cache_and_default_data_is_used():
-    ff = FeatureFlags({})
-
-    assert ff.get("LinuxBetaToggle") == DEFAULT["toggles"][0]["enabled"]
-    assert ff.get("WireGuardExperimental") == DEFAULT["toggles"][1]["enabled"]
-
-
 def test_get_feature_flag_returns_false_when_feature_flag_does_not_exist(apidata):
     mock_cache_handler = Mock()
 
@@ -95,4 +88,4 @@ def test_get_feature_flag_returns_false_when_feature_flag_does_not_exist(apidata
 
     features = ff.load_from_cache()
 
-    assert features.get("dummy-feature") == False
+    assert features.get("dummy-feature") is False

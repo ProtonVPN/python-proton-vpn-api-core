@@ -34,7 +34,7 @@ DEFAULT = {
     "toggles": [
         {
             "name": "LinuxBetaToggle",
-            "enabled": False,
+            "enabled": True,
             "impressionData": False,
             "variant": {
                 "name": "disabled",
@@ -43,7 +43,7 @@ DEFAULT = {
         },
         {
             "name": "WireGuardExperimental",
-            "enabled": False,
+            "enabled": True,
             "impressionData": False,
             "variant": {
                 "name": "disabled",
