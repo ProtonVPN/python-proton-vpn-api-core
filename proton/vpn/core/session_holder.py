@@ -23,10 +23,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import platform
+from typing import Optional
+
 import distro
 
 from proton.sso import ProtonSSO
 from proton.vpn import logging
+from proton.vpn.connection import VPNCredentials
 from proton.vpn.session import VPNSession
 from proton.vpn.session.utils import to_semver_build_metadata_format
 
@@ -79,6 +82,22 @@ class SessionHolder:
             )
 
         return self._session
+
+    @property
+    def user_tier(self) -> Optional[int]:
+        """Returns the user tier, if the session is already loaded."""
+        if self.session.loaded:
+            return self.session.vpn_account.max_tier
+
+        return None
+
+    @property
+    def vpn_credentials(self) -> Optional[VPNCredentials]:
+        """Returns the VPN credentials, if the session is already loaded."""
+        if self.session.loaded:
+            return self.session.vpn_account.vpn_credentials
+
+        return None
 
     @staticmethod
     def _get_app_version_header_value(client_type_metadata: ClientTypeMetadata) -> str:

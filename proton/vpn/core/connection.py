@@ -98,23 +98,25 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         self._lock = asyncio.Lock()
         self._background_tasks = set()
 
-    @property
-    def settings(self) -> Settings:
+    async def get_settings(self) -> Settings:
         """Returns the user's settings."""
-        return self._settings_persistence.get(
-            self._session_holder.session.vpn_account.max_tier
+        # Default to free user settings if the session is not loaded yet.
+        user_tier = self._session_holder.user_tier or 0
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None, self._settings_persistence.get, user_tier
         )
 
     @property
-    def credentials(self) -> VPNCredentials:
+    def credentials(self) -> Optional[VPNCredentials]:
         """Returns the user's credentials."""
-        return self._session_holder.session.vpn_account.vpn_credentials
+        return self._session_holder.vpn_credentials
 
-    def _set_ks_setting(self):
-        StateContext.kill_switch_setting = KillSwitchSetting(self.settings.killswitch)
+    def _set_ks_setting(self, settings: Settings):
+        StateContext.kill_switch_setting = KillSwitchSetting(settings.killswitch)
 
         if isinstance(self.current_state, states.Disconnected):
-            self._set_ks_impl()
+            self._set_ks_impl(settings)
 
     async def update_credentials(self):
         """
@@ -132,7 +134,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         Sets the settings to be applied when establishing the next connection and
         applies them to the current connection whenever that's possible.
         """
-        self._set_ks_setting()
+        self._set_ks_setting(settings)
         await self._apply_kill_switch_setting(KillSwitchSetting(settings.killswitch))
         if self.current_connection:
             await self.current_connection.update_settings(settings)
@@ -183,12 +185,13 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             return None
 
         all_protocols = Loader.get_all(backend_name)
+        settings = await self.get_settings()
         for protocol in all_protocols:
             if protocol.cls.protocol == persisted_parameters.protocol:
                 vpn_connection = protocol.cls(
                     server=persisted_parameters.server,
                     credentials=self.credentials,
-                    settings=self.settings,
+                    settings=settings,
                     connection_id=persisted_parameters.connection_id
                 )
                 if not isinstance(vpn_connection.initial_state, states.Disconnected):
@@ -211,8 +214,9 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         """Initializes the state machine with the specified state."""
         state = await self._get_initial_state()
 
-        StateContext.kill_switch_setting = KillSwitchSetting(self.settings.killswitch)
-        self._set_ks_impl()
+        settings = await self.get_settings()
+        StateContext.kill_switch_setting = KillSwitchSetting(settings.killswitch)
+        self._set_ks_impl(settings)
 
         connection = state.context.connection
         if connection:
@@ -313,12 +317,13 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         )
 
         # Sets the settings to be applied when establishing the next connection.
-        self._set_ks_setting()
+        settings = await self.get_settings()
+        self._set_ks_setting(settings)
 
-        protocol = protocol or self.settings.protocol
+        protocol = protocol or settings.protocol
 
         connection = VPNConnection.create(
-            server, self.credentials, self.settings, protocol, backend
+            server, self.credentials, settings, protocol, backend
         )
 
         connection.register(self._on_connection_event)
@@ -403,11 +408,11 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             not self._current_state.context.reconnection
             and isinstance(self._current_state, states.Disconnected)
         ):
-            self._set_ks_impl()
+            self._set_ks_impl(await self.get_settings())
 
         return new_event
 
-    def _set_ks_impl(self):
+    def _set_ks_impl(self, settings: Settings):
         """
         By using this specific method we're leaking implementation details.
 
@@ -417,7 +422,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         we only do this when we are in `Disconnected` state, to ensure
         that the environment is clean and we don't leave any residuals on a users machine.
         """
-        protocol = self.settings.protocol
+        protocol = settings.protocol
         kill_switch_backend = KillSwitch.get(protocol=protocol)
         StateContext.kill_switch = self._kill_switch or kill_switch_backend()
 

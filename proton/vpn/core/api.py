@@ -70,9 +70,8 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         Returns a copy of the settings saved to disk, or the defaults if they
         are not found. Be sure to call save_settings if you want to apply changes.
         """
-        user_tier = 0  # Default to free user tier.
-        if self._session_holder.session.logged_in:
-            user_tier = self._session_holder.session.vpn_account.max_tier
+        # Default to free user settings if the session is not loaded yet.
+        user_tier = self._session_holder.user_tier or 0
 
         loop = asyncio.get_running_loop()
         settings = await loop.run_in_executor(

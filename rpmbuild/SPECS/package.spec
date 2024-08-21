@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.33.0
+%define version 0.33.1
 %define release 1
 
 Prefix: %{_prefix}
@@ -60,6 +60,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Wed Aug 21 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.33.1
+- Fix crash after logout
+
 * Tue Aug 20 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.33.0
 - Get rid of VPNConnectorWrapper.
 
