@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.33.2) unstable; urgency=medium
+
+  * Tier 0 level users can't control the features they have. So dont send any feature requests for them.
+
+ -- Luke Titley <luke.titley@proton.ch>  Wed, 21 Aug 2024 16:00:00 +0000
+
 proton-vpn-api-core (0.33.1) unstable; urgency=medium
 
   * Fix crash after logout

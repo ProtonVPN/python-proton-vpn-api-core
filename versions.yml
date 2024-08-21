@@ -1,3 +1,12 @@
+version: 0.33.2
+time: 2024/08/21 16:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Tier 0 level users can't control the features they have. So dont send any feature requests for them.
+---
 version: 0.33.1
 time: 2024/08/21 15:00
 author: Josep Llaneras

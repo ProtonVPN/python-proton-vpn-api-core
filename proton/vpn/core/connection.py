@@ -22,6 +22,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
 import asyncio
+import copy
 import threading
 from typing import Optional, runtime_checkable, Protocol
 
@@ -100,12 +101,22 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
     async def get_settings(self) -> Settings:
         """Returns the user's settings."""
+
         # Default to free user settings if the session is not loaded yet.
         user_tier = self._session_holder.user_tier or 0
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(
-            None, self._settings_persistence.get, user_tier
+        settings = copy.deepcopy(
+            await loop.run_in_executor(
+                None, self._settings_persistence.get, user_tier
+            )
         )
+
+        if user_tier == 0:
+            # Our servers do not allow setting connection features on the free
+            # tier, not even the defaults.
+            settings.features = None
+
+        return settings
 
     @property
     def credentials(self) -> Optional[VPNCredentials]:

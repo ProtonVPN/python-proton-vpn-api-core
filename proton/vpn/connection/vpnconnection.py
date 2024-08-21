@@ -355,13 +355,15 @@ class VPNConnection(ABC):
 
         features = self._settings.features
 
-        list_flags.append(f"f{features.netshield}")
+        # We only need to add feature flags if there are any
+        if features:
+            list_flags.append(f"f{features.netshield}")
 
-        if not features.vpn_accelerator:
-            list_flags.append("nst")
-        if features.port_forwarding:
-            list_flags.append("pmp")
-        if features.moderate_nat:
-            list_flags.append("nr")
+            if not features.vpn_accelerator:
+                list_flags.append("nst")
+            if features.port_forwarding:
+                list_flags.append("pmp")
+            if features.moderate_nat:
+                list_flags.append("nr")
 
         return list_flags
