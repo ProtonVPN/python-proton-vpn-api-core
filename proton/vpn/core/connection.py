@@ -99,17 +99,9 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         self._lock = asyncio.Lock()
         self._background_tasks = set()
 
-    async def get_settings(self) -> Settings:
-        """Returns the user's settings."""
-
-        # Default to free user settings if the session is not loaded yet.
+    def _filter_features(self, input_settings: Settings) -> Settings:
         user_tier = self._session_holder.user_tier or 0
-        loop = asyncio.get_running_loop()
-        settings = copy.deepcopy(
-            await loop.run_in_executor(
-                None, self._settings_persistence.get, user_tier
-            )
-        )
+        settings = copy.deepcopy(input_settings)
 
         if user_tier == 0:
             # Our servers do not allow setting connection features on the free
@@ -117,6 +109,18 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             settings.features = None
 
         return settings
+
+    async def get_settings(self) -> Settings:
+        """Returns the user's settings."""
+
+        # Default to free user settings if the session is not loaded yet.
+        user_tier = self._session_holder.user_tier or 0
+        loop = asyncio.get_running_loop()
+        settings = await loop.run_in_executor(
+            None, self._settings_persistence.get, user_tier
+        )
+
+        return self._filter_features(settings)
 
     @property
     def credentials(self) -> Optional[VPNCredentials]:
@@ -148,7 +152,9 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         self._set_ks_setting(settings)
         await self._apply_kill_switch_setting(KillSwitchSetting(settings.killswitch))
         if self.current_connection:
-            await self.current_connection.update_settings(settings)
+            await self.current_connection.update_settings(
+                self._filter_features(settings)
+            )
 
     async def _apply_kill_switch_setting(self, kill_switch_setting: KillSwitchSetting):
         """Enables/disables the kill switch depending on the setting value."""

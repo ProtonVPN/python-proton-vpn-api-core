@@ -1,3 +1,12 @@
+version: 0.33.4
+time: 2024/08/22 16:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Make sure features cant be request after connection as well.
+---
 version: 0.33.3
 time: 2024/08/22 11:30
 author: Josep Llaneras

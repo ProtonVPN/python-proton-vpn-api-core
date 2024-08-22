@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.33.3
+%define version 0.33.4
 %define release 1
 
 Prefix: %{_prefix}
@@ -60,6 +60,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Thu Aug 22 2024 Luke Titley <luke.titley@proton.ch> 0.33.4
+- Make sure features cant be request after connection as well.
+
 * Thu Aug 22 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.33.3
 - Expose property in VPNConnection to know if features can be applied on active connections.
 

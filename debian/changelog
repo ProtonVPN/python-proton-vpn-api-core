@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.33.4) unstable; urgency=medium
+
+  * Make sure features cant be request after connection as well.
+
+ -- Luke Titley <luke.titley@proton.ch>  Thu, 22 Aug 2024 16:00:00 +0000
+
 proton-vpn-api-core (0.33.3) unstable; urgency=medium
 
   * Expose property in VPNConnection to know if features can be applied on active connections.
