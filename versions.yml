@@ -1,3 +1,12 @@
+version: 0.33.3
+time: 2024/08/22 11:30
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: medium
+stability: unstable
+description:
+  - Expose property in VPNConnection to know if features can be applied on active connections.
+---
 version: 0.33.2
 time: 2024/08/21 16:00
 author: Luke Titley

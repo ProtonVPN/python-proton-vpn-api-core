@@ -117,6 +117,14 @@ class VPNConnection(ABC):
     async def stop(self):
         """Stops the VPN connection."""
 
+    @property
+    def are_feature_updates_applied_when_active(self) -> bool:
+        """
+        Returns whether the connection features updates are applied on the fly
+        while the connection is already active, without restarting the connection.
+        """
+        return False
+
     async def update_credentials(self, credentials: VPNCredentials):
         """
         Updates the connection credentials.
@@ -211,14 +219,6 @@ class VPNConnection(ABC):
             is instantiated: VPN protocol.
         """
         return self._settings
-
-    @settings.setter
-    def settings(self, new_value: Settings):
-        """ Change the current settings of the connection, only valid for the
-        RW settings of the connection.
-        """
-        # FIX-ME: Should be defined when settings can be set
-        self._settings = new_value
 
     @property
     def _use_certificate(self):
