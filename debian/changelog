@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.33.5) unstable; urgency=medium
+
+  * This adds support for 'If-Modified-Since' header in server list requests.
+
+ -- Luke Titley <luke.titley@proton.ch>  Mon, 26 Aug 2024 16:00:00 +0000
+
 proton-vpn-api-core (0.33.4) unstable; urgency=medium
 
   * Make sure features cant be request after connection as well.

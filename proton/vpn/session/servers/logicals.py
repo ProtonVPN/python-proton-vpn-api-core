@@ -21,6 +21,7 @@ from __future__ import annotations
 import itertools
 import random
 import time
+import datetime
 from enum import Enum
 from typing import Optional, List, Callable
 
@@ -32,16 +33,22 @@ from proton.vpn.session.servers.types import LogicalServer, \
 
 logger = logging.getLogger(__name__)
 
+DAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep",
+          "Oct", "Nov", "Dec")
+UNIX_EPOCH = "Mon, 01 Jan 1970 00:00:00 GMT"
+
 
 class PersistenceKeys(Enum):
     """JSON Keys used to persist the ServerList to disk."""
     LOGICALS = "LogicalServers"
     EXPIRATION_TIME = "ExpirationTime"
     LOADS_EXPIRATION_TIME = "LoadsExpirationTime"
+    FETCH_TIME = "FetchTime"
     USER_TIER = "MaxTier"
 
 
-class ServerList:
+class ServerList:  # pylint: disable=too-many-public-methods
     """
     Server list model class.
     """
@@ -59,14 +66,16 @@ class ServerList:
             logicals: Optional[List[LogicalServer]] = None,
             expiration_time: Optional[int] = None,
             loads_expiration_time: Optional[int] = None,
-            index_servers: bool = True
+            index_servers: bool = True,
+            fetch_time: Optional[str] = None
     ):  # pylint: disable=too-many-arguments
         self._user_tier = user_tier
         self._logicals = logicals or []
         self._expiration_time = expiration_time if expiration_time is not None\
-            else self.get_expiration_time()
+            else ServerList.get_expiration_time()
         self._loads_expiration_time = loads_expiration_time if loads_expiration_time is not None\
-            else self.get_loads_expiration_time()
+            else ServerList.get_loads_expiration_time()
+        self._fetch_time = fetch_time or ServerList.get_fetch_time(at_epoch=True)
 
         if index_servers:
             self._logicals_by_id, self._logicals_by_name = self._build_indexes(logicals)
@@ -121,6 +130,11 @@ class ServerList:
         """
         return time.time() > self._loads_expiration_time
 
+    @property
+    def fetch_time(self) -> str:
+        """The time at which the server list was fetched."""
+        return self._fetch_time
+
     def update(self, server_loads: List[ServerLoad]):
         """Updates the server list with new server loads."""
         try:
@@ -135,7 +149,8 @@ class ServerList:
             # If something unexpected happens when updating the server loads
             # it's safer to always update the loads expiration time to avoid
             # clients potentially retrying in a loop.
-            self._loads_expiration_time = self.get_loads_expiration_time()
+            self._loads_expiration_time = ServerList.get_loads_expiration_time()
+            self._fetch_time = ServerList.get_fetch_time()
 
     @property
     def seconds_until_expiration(self) -> float:
@@ -239,6 +254,21 @@ class ServerList:
         return start_time + cls._get_refresh_interval_in_seconds()
 
     @classmethod
+    def get_fetch_time(cls, at_epoch=False) -> str:
+        """Returns the time in UTC at which the whole server list was fetched.
+
+        In the format of If-Modified-Since header which is
+            <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
+        """
+        if at_epoch:
+            return UNIX_EPOCH
+
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        day = DAYS[now.weekday()]
+        month = MONTHS[now.month - 1]
+        return now.strftime(f'{day}, %d {month} %Y %H:%M:%S GMT')
+
+    @classmethod
     def _get_refresh_interval_in_seconds(cls):
         return cls.LOGICALS_REFRESH_INTERVAL * cls._generate_random_component()
 
@@ -280,8 +310,15 @@ class ServerList:
             cls.get_loads_expiration_time()
         )
 
+        fetch_time = data.get(PersistenceKeys.FETCH_TIME.value,
+                              ServerList.get_fetch_time(at_epoch=True))
+
         return ServerList(
-            user_tier, logicals, expiration_time, loads_expiration_time
+            user_tier=user_tier,
+            logicals=logicals,
+            expiration_time=expiration_time,
+            loads_expiration_time=loads_expiration_time,
+            fetch_time=fetch_time
         )
 
     def to_dict(self) -> dict:
@@ -290,6 +327,7 @@ class ServerList:
             PersistenceKeys.LOGICALS.value: [logical.to_dict() for logical in self.logicals],
             PersistenceKeys.EXPIRATION_TIME.value: self.expiration_time,
             PersistenceKeys.LOADS_EXPIRATION_TIME.value: self.loads_expiration_time,
+            PersistenceKeys.FETCH_TIME.value: self.fetch_time,
             PersistenceKeys.USER_TIER.value: self._user_tier
         }
 

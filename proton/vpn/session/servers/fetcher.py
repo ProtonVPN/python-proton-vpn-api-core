@@ -31,6 +31,9 @@ from proton.vpn.session.utils import rest_api_request
 if TYPE_CHECKING:
     from proton.vpn.session import VPNSession
 
+NETZONE_HEADER = "X-PM-netzone"
+MODIFIED_SINCE_HEADER = "If-Modified-Since"
+
 
 class ServerListFetcher:
     """Fetches the server list either from disk or from the REST API."""
@@ -60,7 +63,8 @@ class ServerListFetcher:
         response = await rest_api_request(
             self._session,
             self.ROUTE_LOGICALS,
-            additional_headers=self._build_netzone_header(),
+            additional_headers=self._build_additional_headers(
+                include_modified_since=True),
         )
 
         response[PersistenceKeys.USER_TIER.value] = self._session.vpn_account.max_tier
@@ -68,6 +72,7 @@ class ServerListFetcher:
         response[
             PersistenceKeys.LOADS_EXPIRATION_TIME.value
         ] = ServerList.get_loads_expiration_time()
+        response[PersistenceKeys.FETCH_TIME.value] = ServerList.get_fetch_time()
 
         self._cache_file.save(response)
 
@@ -86,7 +91,7 @@ class ServerListFetcher:
         response = await rest_api_request(
             self._session,
             self.ROUTE_LOADS,
-            additional_headers=self._build_netzone_header(),
+            additional_headers=self._build_additional_headers(),
         )
 
         server_loads = [ServerLoad(data) for data in response["LogicalServers"]]
@@ -111,12 +116,18 @@ class ServerListFetcher:
         self._server_list = ServerList.from_dict(cache)
         return self._server_list
 
-    def _build_netzone_header(self):
-        headers = {}
+    def _build_header_netzone(self):
         truncated_ip_address = truncate_ip_address(
             self._session.vpn_account.location.IP
         )
-        headers["X-PM-netzone"] = truncated_ip_address
+        return truncated_ip_address
+
+    def _build_additional_headers(self, include_modified_since: bool = False):
+        headers = {}
+        headers[NETZONE_HEADER] = self._build_header_netzone()
+        if include_modified_since and self._server_list:
+            headers[MODIFIED_SINCE_HEADER] = self._server_list.fetch_time
+
         return headers
 
 
