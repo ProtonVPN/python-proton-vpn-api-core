@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.33.5
+%define version 0.33.4
 %define release 1
 
 Prefix: %{_prefix}
@@ -60,6 +60,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Tue Aug 27 2024 Luke Titley <luke.titley@proton.ch> 0.33.4
+- Fixes support for 'If-Modified-Since' header in server list requests.
+
 * Mon Aug 26 2024 Luke Titley <luke.titley@proton.ch> 0.33.5
 - This adds support for 'If-Modified-Since' header in server list requests.
 

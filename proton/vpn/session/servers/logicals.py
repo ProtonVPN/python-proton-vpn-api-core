@@ -21,7 +21,6 @@ from __future__ import annotations
 import itertools
 import random
 import time
-import datetime
 from enum import Enum
 from typing import Optional, List, Callable
 
@@ -33,10 +32,7 @@ from proton.vpn.session.servers.types import LogicalServer, \
 
 logger = logging.getLogger(__name__)
 
-DAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep",
-          "Oct", "Nov", "Dec")
-UNIX_EPOCH = "Mon, 01 Jan 1970 00:00:00 GMT"
+UNIX_EPOCH = "Thu, 01 Jan 1970 00:00:00 GMT"
 
 
 class PersistenceKeys(Enum):
@@ -44,7 +40,7 @@ class PersistenceKeys(Enum):
     LOGICALS = "LogicalServers"
     EXPIRATION_TIME = "ExpirationTime"
     LOADS_EXPIRATION_TIME = "LoadsExpirationTime"
-    FETCH_TIME = "FetchTime"
+    LAST_MODIFIED_TIME = "LastModifiedTime"
     USER_TIER = "MaxTier"
 
 
@@ -67,7 +63,7 @@ class ServerList:  # pylint: disable=too-many-public-methods
             expiration_time: Optional[int] = None,
             loads_expiration_time: Optional[int] = None,
             index_servers: bool = True,
-            fetch_time: Optional[str] = None
+            last_modified_time: Optional[str] = None
     ):  # pylint: disable=too-many-arguments
         self._user_tier = user_tier
         self._logicals = logicals or []
@@ -75,7 +71,7 @@ class ServerList:  # pylint: disable=too-many-public-methods
             else ServerList.get_expiration_time()
         self._loads_expiration_time = loads_expiration_time if loads_expiration_time is not None\
             else ServerList.get_loads_expiration_time()
-        self._fetch_time = fetch_time or ServerList.get_fetch_time(at_epoch=True)
+        self._last_modified_time = last_modified_time or ServerList.get_epoch_time()
 
         if index_servers:
             self._logicals_by_id, self._logicals_by_name = self._build_indexes(logicals)
@@ -131,9 +127,9 @@ class ServerList:  # pylint: disable=too-many-public-methods
         return time.time() > self._loads_expiration_time
 
     @property
-    def fetch_time(self) -> str:
+    def last_modified_time(self) -> str:
         """The time at which the server list was fetched."""
-        return self._fetch_time
+        return self._last_modified_time
 
     def update(self, server_loads: List[ServerLoad]):
         """Updates the server list with new server loads."""
@@ -150,7 +146,6 @@ class ServerList:  # pylint: disable=too-many-public-methods
             # it's safer to always update the loads expiration time to avoid
             # clients potentially retrying in a loop.
             self._loads_expiration_time = ServerList.get_loads_expiration_time()
-            self._fetch_time = ServerList.get_fetch_time()
 
     @property
     def seconds_until_expiration(self) -> float:
@@ -254,19 +249,13 @@ class ServerList:  # pylint: disable=too-many-public-methods
         return start_time + cls._get_refresh_interval_in_seconds()
 
     @classmethod
-    def get_fetch_time(cls, at_epoch=False) -> str:
-        """Returns the time in UTC at which the whole server list was fetched.
+    def get_epoch_time(cls) -> str:
+        """Returns the default fetch time in UTC which is the unix epoch.
 
         In the format of If-Modified-Since header which is
             <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
         """
-        if at_epoch:
-            return UNIX_EPOCH
-
-        now = datetime.datetime.now(tz=datetime.timezone.utc)
-        day = DAYS[now.weekday()]
-        month = MONTHS[now.month - 1]
-        return now.strftime(f'{day}, %d {month} %Y %H:%M:%S GMT')
+        return UNIX_EPOCH
 
     @classmethod
     def _get_refresh_interval_in_seconds(cls):
@@ -310,15 +299,15 @@ class ServerList:  # pylint: disable=too-many-public-methods
             cls.get_loads_expiration_time()
         )
 
-        fetch_time = data.get(PersistenceKeys.FETCH_TIME.value,
-                              ServerList.get_fetch_time(at_epoch=True))
+        last_modified_time = data.get(PersistenceKeys.LAST_MODIFIED_TIME.value,
+                                      ServerList.get_epoch_time())
 
         return ServerList(
             user_tier=user_tier,
             logicals=logicals,
             expiration_time=expiration_time,
             loads_expiration_time=loads_expiration_time,
-            fetch_time=fetch_time
+            last_modified_time=last_modified_time
         )
 
     def to_dict(self) -> dict:
@@ -327,7 +316,7 @@ class ServerList:  # pylint: disable=too-many-public-methods
             PersistenceKeys.LOGICALS.value: [logical.to_dict() for logical in self.logicals],
             PersistenceKeys.EXPIRATION_TIME.value: self.expiration_time,
             PersistenceKeys.LOADS_EXPIRATION_TIME.value: self.loads_expiration_time,
-            PersistenceKeys.FETCH_TIME.value: self.fetch_time,
+            PersistenceKeys.LAST_MODIFIED_TIME.value: self.last_modified_time,
             PersistenceKeys.USER_TIER.value: self._user_tier
         }
 

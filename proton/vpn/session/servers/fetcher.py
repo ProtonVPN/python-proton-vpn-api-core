@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 
 NETZONE_HEADER = "X-PM-netzone"
 MODIFIED_SINCE_HEADER = "If-Modified-Since"
+LAST_MODIFIED_HEADER = "Last-Modified"
 
 
 class ServerListFetcher:
@@ -60,23 +61,34 @@ class ServerListFetcher:
 
     async def fetch(self) -> ServerList:
         """Fetches the list of VPN servers. Warning: this is a heavy request."""
-        response = await rest_api_request(
+        raw_response = await rest_api_request(
             self._session,
             self.ROUTE_LOGICALS,
             additional_headers=self._build_additional_headers(
                 include_modified_since=True),
+            return_raw=True
         )
 
-        response[PersistenceKeys.USER_TIER.value] = self._session.vpn_account.max_tier
-        response[PersistenceKeys.EXPIRATION_TIME.value] = ServerList.get_expiration_time()
-        response[
-            PersistenceKeys.LOADS_EXPIRATION_TIME.value
-        ] = ServerList.get_loads_expiration_time()
-        response[PersistenceKeys.FETCH_TIME.value] = ServerList.get_fetch_time()
+        if raw_response.json:
+            last_modified = raw_response.headers.get(
+                LAST_MODIFIED_HEADER,
+                ServerList.get_epoch_time())
 
-        self._cache_file.save(response)
+            response = raw_response.json
+            response[PersistenceKeys.USER_TIER.value] =\
+                self._session.vpn_account.max_tier
+            response[PersistenceKeys.EXPIRATION_TIME.value] =\
+                ServerList.get_expiration_time()
+            response[
+                PersistenceKeys.LOADS_EXPIRATION_TIME.value
+            ] = ServerList.get_loads_expiration_time()
+            response[PersistenceKeys.LAST_MODIFIED_TIME.value] = last_modified
 
-        self._server_list = ServerList.from_dict(response)
+            self._cache_file.save(response)
+
+            self._server_list = ServerList.from_dict(response)
+
+        assert self._server_list is not None, "Server list should not be None"
         return self._server_list
 
     async def update_loads(self) -> ServerList:
@@ -125,9 +137,12 @@ class ServerListFetcher:
     def _build_additional_headers(self, include_modified_since: bool = False):
         headers = {}
         headers[NETZONE_HEADER] = self._build_header_netzone()
-        if include_modified_since and self._server_list:
-            headers[MODIFIED_SINCE_HEADER] = self._server_list.fetch_time
-
+        if include_modified_since:
+            server_list = self._server_list
+            if server_list:
+                headers[MODIFIED_SINCE_HEADER] = server_list.last_modified_time
+            else:
+                headers[MODIFIED_SINCE_HEADER] = ServerList.get_epoch_time()
         return headers
 
 
