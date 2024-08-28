@@ -1,4 +1,4 @@
-proton-vpn-api-core (0.33.4) unstable; urgency=medium
+proton-vpn-api-core (0.33.6) unstable; urgency=medium
 
   * Fixes support for 'If-Modified-Since' header in server list requests.
 
