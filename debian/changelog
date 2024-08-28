@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.33.7) unstable; urgency=medium
+
+  * Fixes support for 'If-Modified-Since', expiration times.
+
+ -- Luke Titley <luke.titley@proton.ch>  Wed, 28 Aug 2024 11:00:00 +0000
+
 proton-vpn-api-core (0.33.6) unstable; urgency=medium
 
   * Fixes support for 'If-Modified-Since' header in server list requests.

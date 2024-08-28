@@ -70,25 +70,27 @@ class ServerListFetcher:
         )
 
         if raw_response.json:
-            last_modified = raw_response.headers.get(
-                LAST_MODIFIED_HEADER,
-                ServerList.get_epoch_time())
-
             response = raw_response.json
-            response[PersistenceKeys.USER_TIER.value] =\
-                self._session.vpn_account.max_tier
-            response[PersistenceKeys.EXPIRATION_TIME.value] =\
-                ServerList.get_expiration_time()
-            response[
-                PersistenceKeys.LOADS_EXPIRATION_TIME.value
-            ] = ServerList.get_loads_expiration_time()
-            response[PersistenceKeys.LAST_MODIFIED_TIME.value] = last_modified
+        else:
+            response = self._server_list.to_dict()
 
-            self._cache_file.save(response)
+        entries_to_update = {
+            PersistenceKeys.USER_TIER.value:
+                self._session.vpn_account.max_tier,
+            PersistenceKeys.LAST_MODIFIED_TIME.value:
+                raw_response.headers.get(LAST_MODIFIED_HEADER),
+            PersistenceKeys.EXPIRATION_TIME.value:
+                ServerList.get_expiration_time(),
+            PersistenceKeys.LOADS_EXPIRATION_TIME.value:
+                ServerList.get_loads_expiration_time()
+        }
 
-            self._server_list = ServerList.from_dict(response)
+        response.update(entries_to_update)
 
-        assert self._server_list is not None, "Server list should not be None"
+        self._cache_file.save(response)
+
+        self._server_list = ServerList.from_dict(response)
+
         return self._server_list
 
     async def update_loads(self) -> ServerList:
