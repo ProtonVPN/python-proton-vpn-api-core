@@ -50,6 +50,7 @@ async def test_fetch_returns_feature_flags_from_proton_rest_api(mock_rest_api_re
 
     assert features.get("LinuxBetaToggle") == apidata["toggles"][0]["enabled"]
     assert features.get("WireGuardExperimental") == apidata["toggles"][1]["enabled"]
+    assert features.get("TimestampedLogicals") == apidata["toggles"][2]["enabled"]
 
 
 def test_load_from_cache_returns_feature_flags_from_cache(apidata):
@@ -65,6 +66,7 @@ def test_load_from_cache_returns_feature_flags_from_cache(apidata):
 
     assert features.get("LinuxBetaToggle") == apidata["toggles"][0]["enabled"]
     assert features.get("WireGuardExperimental") == apidata["toggles"][1]["enabled"]
+    assert features.get("TimestampedLogicals") == apidata["toggles"][2]["enabled"]
 
 
 def test_load_from_cache_returns_default_feature_flags_when_no_cache_is_found():
@@ -77,6 +79,7 @@ def test_load_from_cache_returns_default_feature_flags_when_no_cache_is_found():
 
     assert features.get("LinuxBetaToggle") == DEFAULT["toggles"][0]["enabled"]
     assert features.get("WireGuardExperimental") == DEFAULT["toggles"][1]["enabled"]
+    assert features.get("TimestampedLogicals") == DEFAULT["toggles"][2]["enabled"]
 
 
 def test_get_feature_flag_returns_false_when_feature_flag_does_not_exist(apidata):

@@ -50,6 +50,15 @@ DEFAULT = {
                 "enabled": False
             }
         },
+        {
+            "name": "TimestampedLogicals",
+            "enabled": False,
+            "impressionData": False,
+            "variant": {
+                "name": "disabled",
+                "enabled": False
+            }
+        },
     ]
 }
 

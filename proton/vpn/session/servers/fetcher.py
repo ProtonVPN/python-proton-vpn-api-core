@@ -34,6 +34,10 @@ if TYPE_CHECKING:
 NETZONE_HEADER = "X-PM-netzone"
 MODIFIED_SINCE_HEADER = "If-Modified-Since"
 LAST_MODIFIED_HEADER = "Last-Modified"
+NOT_MODIFIED_STATUS = 304
+
+# Feature flags
+FF_TIMESTAMPEDLOGICALS = "TimestampedLogicals"
 
 
 class ServerListFetcher:
@@ -59,7 +63,28 @@ class ServerListFetcher:
         self._server_list = None
         self._cache_file.remove()
 
-    async def fetch(self) -> ServerList:
+    async def fetch_old(self) -> ServerList:
+        """Fetches the list of VPN servers. Warning: this is a heavy request."""
+        response = await rest_api_request(
+            self._session,
+            self.ROUTE_LOGICALS,
+            additional_headers={
+                NETZONE_HEADER: self._build_header_netzone(),
+            },
+        )
+
+        response[PersistenceKeys.USER_TIER.value] = self._session.vpn_account.max_tier
+        response[PersistenceKeys.EXPIRATION_TIME.value] = ServerList.get_expiration_time()
+        response[
+            PersistenceKeys.LOADS_EXPIRATION_TIME.value
+        ] = ServerList.get_loads_expiration_time()
+
+        self._cache_file.save(response)
+
+        self._server_list = ServerList.from_dict(response)
+        return self._server_list
+
+    async def fetch_new(self) -> ServerList:
         """Fetches the list of VPN servers. Warning: this is a heavy request."""
         raw_response = await rest_api_request(
             self._session,
@@ -69,16 +94,18 @@ class ServerListFetcher:
             return_raw=True
         )
 
-        if raw_response.json:
-            response = raw_response.json
-        else:
+        if raw_response.status_code == NOT_MODIFIED_STATUS:
             response = self._server_list.to_dict()
+        else:
+            response = raw_response.json
 
         entries_to_update = {
             PersistenceKeys.USER_TIER.value:
                 self._session.vpn_account.max_tier,
             PersistenceKeys.LAST_MODIFIED_TIME.value:
-                raw_response.headers.get(LAST_MODIFIED_HEADER),
+                raw_response.find_first_header(
+                    LAST_MODIFIED_HEADER,
+                    ServerList.get_epoch_time()),
             PersistenceKeys.EXPIRATION_TIME.value:
                 ServerList.get_expiration_time(),
             PersistenceKeys.LOADS_EXPIRATION_TIME.value:
@@ -92,6 +119,14 @@ class ServerListFetcher:
         self._server_list = ServerList.from_dict(response)
 
         return self._server_list
+
+    async def fetch(self) -> ServerList:
+        """Fetches the list of VPN servers. Warning: this is a heavy request."""
+
+        if self._session.feature_flags.get(FF_TIMESTAMPEDLOGICALS):
+            return await self.fetch_new()
+
+        return await self.fetch_old()
 
     async def update_loads(self) -> ServerList:
         """

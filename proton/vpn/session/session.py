@@ -215,11 +215,17 @@ class VPNSession(Session):
             )
             self._client_config = client_config
 
+            # The feature flags must be fetched before the server list,
+            # since the server list can be fetched differently depending on
+            # what feature flags are enabled.
+            self._feature_flags = await self._fetcher.fetch_feature_flags()
+
             # The server list should be retrieved after the VPNAccount object
-            # has been created, since it requires the location.
+            # has been created, since it requires the location, and it should
+            # be retrieved after the feature flags have been fetched, since it
+            # depends in them for chosing the fetch method.
             self._server_list = await self._fetcher.fetch_server_list()
 
-            self._feature_flags = await self._fetcher.fetch_feature_flags()
         finally:
             # IMPORTANT: apart from releasing the lock, _requests_unlock triggers the
             # serialization of the session to the keyring.

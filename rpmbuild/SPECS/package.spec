@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.33.7
+%define version 0.33.8
 %define release 1
 
 Prefix: %{_prefix}
@@ -60,6 +60,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Wed Aug 28 2024 Luke Titley <luke.titley@proton.ch> 0.33.8
+- Put changes to fetching with timestamp (If-Modified-Since), behind a feature flag.
+
 * Wed Aug 28 2024 Luke Titley <luke.titley@proton.ch> 0.33.7
 - Fixes support for 'If-Modified-Since', expiration times.
 
