@@ -81,6 +81,11 @@ OPENVPN_V2_TEMPLATE = """
 # IN THE SOFTWARE.
 # ==============================================================================
 
+{%- if enable_ipv6_support %}
+push-peer-info
+setenv UV_IPV6 1
+{%- endif %}
+
 client
 dev tun
 proto {{ openvpn_protocol|lower }}

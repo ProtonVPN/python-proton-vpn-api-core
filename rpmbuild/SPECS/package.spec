@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.33.9
+%define version 0.33.10
 %define release 1
 
 Prefix: %{_prefix}
@@ -60,6 +60,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Fri Aug 30 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.33.10
+- Properly configure OpenVPN with IPv6 value.
+
 * Thu Aug 29 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.33.9
 - Pass IPv6 value.
 

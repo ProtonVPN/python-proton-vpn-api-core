@@ -130,7 +130,10 @@ class OVPNConfig(VPNConfiguration):
         openvpn_ports = self._vpnserver.openvpn_ports
         ports = openvpn_ports.tcp if "tcp" == self.PROTOCOL else openvpn_ports.udp
 
+        enable_ipv6_support = self._vpnserver.has_ipv6_support and self._settings.features.ipv6
+
         j2_values = {
+            "enable_ipv6_support": enable_ipv6_support,
             "openvpn_protocol": self.PROTOCOL,
             "serverlist": [self._vpnserver.server_ip],
             "openvpn_ports": ports,
