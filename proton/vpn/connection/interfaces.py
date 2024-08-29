@@ -79,6 +79,7 @@ class VPNServer:  # pylint: disable=too-few-public-methods,too-many-instance-att
     x25519pk: str
     server_id: str
     server_name: str
+    has_ipv6_support: bool
     label: str = None
 
     def __str__(self):
@@ -99,6 +100,7 @@ class VPNServer:  # pylint: disable=too-few-public-methods,too-many-instance-att
             x25519pk=data["x25519pk"],
             server_id=data["server_id"],
             server_name=data["server_name"],
+            has_ipv6_support=data["has_ipv6_support"],
             label=data.get("label")
         )
 
@@ -114,6 +116,7 @@ class VPNServer:  # pylint: disable=too-few-public-methods,too-many-instance-att
             "x25519pk": self.x25519pk,
             "server_id": self.server_id,
             "server_name": self.server_name,
+            "has_ipv6_support": self.has_ipv6_support,
             "label": self.label
         }
 
@@ -162,11 +165,12 @@ class Features(Protocol):
     """
     This class is used to define which features are supported.
     """
-    # pylint: disable=too-few-public-methods
+    # pylint: disable=too-few-public-methods duplicate-code
     netshield: int
+    moderate_nat: bool
     vpn_accelerator: bool
     port_forwarding: bool
-    moderate_nat: bool
+    ipv6: bool
 
 
 class Settings(Protocol):

@@ -59,6 +59,15 @@ DEFAULT = {
                 "enabled": False
             }
         },
+        {
+            "name": "IPv6Support",
+            "enabled": False,
+            "impressionData": False,
+            "variant": {
+                "name": "disabled",
+                "enabled": False
+            }
+        },
     ]
 }
 

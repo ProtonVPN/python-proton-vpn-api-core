@@ -51,10 +51,12 @@ DEFAULT_ANONYMOUS_CRASH_REPORTS = True
 @dataclass
 class Features:
     """Contains features that affect a vpn connection"""
+    # pylint: disable=duplicate-code
     netshield: int
     moderate_nat: bool
     vpn_accelerator: bool
     port_forwarding: bool
+    ipv6: bool
 
     @staticmethod
     def from_dict(data: dict, user_tier: int) -> Features:
@@ -66,6 +68,7 @@ class Features:
             moderate_nat=data.get("moderate_nat", default.moderate_nat),
             vpn_accelerator=data.get("vpn_accelerator", default.vpn_accelerator),
             port_forwarding=data.get("port_forwarding", default.port_forwarding),
+            ipv6=data.get("ipv6", default.ipv6),
         )
 
     def to_dict(self) -> dict:
@@ -83,7 +86,8 @@ class Features:
             ),
             moderate_nat=False,
             vpn_accelerator=True,
-            port_forwarding=False
+            port_forwarding=False,
+            ipv6=False
         )
 
     def is_default(self, user_tier: int) -> bool:

@@ -53,6 +53,7 @@ def test_load(temp_dir: str):
     "x25519pk": "public_key",
     "server_id": "server_id",
     "server_name": "server_name",
+    "has_ipv6_support": "0",
     "label": "label"
   }
 }''')
@@ -107,7 +108,7 @@ def test_save_(temp_dir: str):
                 udp=[12345],
                 tcp=[80]
             ),
-            wireguard_ports= ProtocolPorts(
+            wireguard_ports=ProtocolPorts(
                 udp=[54321],
                 tcp=[81]
             ),
@@ -115,6 +116,7 @@ def test_save_(temp_dir: str):
             x25519pk="public_key",
             server_id="server_id",
             server_name="server_name",
+            has_ipv6_support=False,
             label="label"
         )
     )

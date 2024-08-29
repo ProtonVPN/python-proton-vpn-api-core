@@ -43,7 +43,7 @@ from proton.vpn.connection.enum import KillSwitchSetting, ConnectionStateEnum
 from proton.vpn.connection.publisher import Publisher
 from proton.vpn.connection.states import StateContext
 from proton.vpn.session.client_config import ClientConfig
-from proton.vpn.session.servers import LogicalServer
+from proton.vpn.session.servers import LogicalServer, ServerFeatureEnum
 
 logger = logging.getLogger(__name__)
 
@@ -72,8 +72,10 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
     @classmethod
     async def get(
-            cls, session_holder: SessionHolder, settings_persistence: SettingsPersistence,
-            kill_switch: KillSwitch = None
+        cls,
+        session_holder: SessionHolder,
+        settings_persistence: SettingsPersistence,
+        kill_switch: KillSwitch = None
     ):
         """
         Builds a VPN connector instance and initializes it.
@@ -99,11 +101,13 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         self._lock = asyncio.Lock()
         self._background_tasks = set()
 
-    def _filter_features(self, input_settings: Settings) -> Settings:
-        user_tier = self._session_holder.user_tier or 0
+    def _filter_features(self, input_settings: Settings, user_tier: int = None) -> Settings:
+        if not user_tier:
+            user_tier = self._session_holder.user_tier or 0
+
         settings = copy.deepcopy(input_settings)
 
-        if user_tier == 0:
+        if self._is_free_tier(user_tier):
             # Our servers do not allow setting connection features on the free
             # tier, not even the defaults.
             settings.features = None
@@ -112,7 +116,6 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
     async def get_settings(self) -> Settings:
         """Returns the user's settings."""
-
         # Default to free user settings if the session is not loaded yet.
         user_tier = self._session_holder.user_tier or 0
         loop = asyncio.get_running_loop()
@@ -120,7 +123,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             None, self._settings_persistence.get, user_tier
         )
 
-        return self._filter_features(settings)
+        return self._filter_features(settings, user_tier)
 
     @property
     def credentials(self) -> Optional[VPNCredentials]:
@@ -290,6 +293,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         :class:`proton.vpn.vpnconnection.VPNConnection`.
         """
         physical_server = logical_server.get_random_physical_server()
+        has_ipv6_support = ServerFeatureEnum.IPV6 in logical_server.features
         return VPNServer(
             server_ip=physical_server.entry_ip,
             domain=physical_server.domain,
@@ -304,6 +308,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             ),
             server_id=logical_server.id,
             server_name=logical_server.name,
+            has_ipv6_support=has_ipv6_support,
             label=physical_server.label
         )
 
@@ -338,6 +343,11 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         self._set_ks_setting(settings)
 
         protocol = protocol or settings.protocol
+
+        # If IPv6 FF is disabled then the feature should not be toggled client side and
+        # should be disabled.
+        if not self._can_ipv6_be_toggled_client_side(settings):
+            settings.features.ipv6 = False
 
         connection = VPNConnection.create(
             server, self.credentials, settings, protocol, backend
@@ -442,6 +452,13 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         protocol = settings.protocol
         kill_switch_backend = KillSwitch.get(protocol=protocol)
         StateContext.kill_switch = self._kill_switch or kill_switch_backend()
+
+    def _is_free_tier(self, user_tier: int) -> bool:
+        return user_tier == 0
+
+    def _can_ipv6_be_toggled_client_side(self, settings: Settings) -> bool:
+        return settings.features.ipv6 and\
+            not self._session_holder.session.feature_flags.get("IPv6Support")
 
 
 class Subscriber:

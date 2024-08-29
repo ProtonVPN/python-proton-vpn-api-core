@@ -29,7 +29,8 @@ def test_extract_features():
             netshield=2,
             moderate_nat=False,
             vpn_accelerator=False,
-            port_forwarding=True
+            port_forwarding=True,
+            ipv6=True
         )
     )
 

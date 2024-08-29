@@ -18,7 +18,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from unittest.mock import Mock
 import pytest
-from proton.vpn.core.settings import Settings, Features, SettingsPersistence, NetShield
+from proton.vpn.core.settings import Settings, SettingsPersistence, NetShield
 from proton.vpn.killswitch.interface import KillSwitchState
 
 FREE_TIER = 0
@@ -35,7 +35,8 @@ def settings_dict():
             "netshield": NetShield.NO_BLOCK.value,
             "moderate_nat": False,
             "vpn_accelerator": True,
-            "port_forwarding": False
+            "port_forwarding": False,
+            "ipv6": False
         },
         "anonymous_crash_reports": True
     }

@@ -62,6 +62,7 @@ def vpn_server():
         wireguard_ports=ProtocolPorts(tcp=[443, 88], udp=[445]),
         server_name="TestServer#10",
         server_id="OYB-3pMQQA2Z2Qnp5s5nIvTVO2...lRjxhx9DCAUM9uXfM2ZUFjzPXw==",
+        has_ipv6_support=False,
         label="0"
 
     )
