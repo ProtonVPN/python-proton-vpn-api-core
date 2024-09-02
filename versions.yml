@@ -1,3 +1,12 @@
+version: 0.33.11
+time: 2024/09/02 14:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Change IPv6 default value and move out of the features dict.
+---
 version: 0.33.10
 time: 2024/08/30 16:00
 author: Alexandru Cheltuitor

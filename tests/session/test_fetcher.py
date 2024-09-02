@@ -30,7 +30,6 @@ def test_extract_features():
             moderate_nat=False,
             vpn_accelerator=False,
             port_forwarding=True,
-            ipv6=True
         )
     )
 

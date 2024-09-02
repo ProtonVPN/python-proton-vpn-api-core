@@ -26,29 +26,29 @@ PLUS_TIER = 1
 
 
 @pytest.fixture
-def settings_dict():
+def default_free_settings_dict():
     return {
         "protocol": "openvpn-udp",
         "killswitch": KillSwitchState.OFF.value,
         "dns_custom_ips": [],
+        "ipv6": True,
+        "anonymous_crash_reports": True,
         "features": {
             "netshield": NetShield.NO_BLOCK.value,
             "moderate_nat": False,
             "vpn_accelerator": True,
             "port_forwarding": False,
-            "ipv6": False
-        },
-        "anonymous_crash_reports": True
+        }
     }
 
 
-def test_settings_get_default(settings_dict):
+def test_settings_get_default(default_free_settings_dict):
     free_settings = Settings.default(FREE_TIER)
 
-    assert free_settings.to_dict() == settings_dict
+    assert free_settings.to_dict() == default_free_settings_dict
 
 
-def test_settings_save_to_disk(settings_dict):
+def test_settings_save_to_disk(default_free_settings_dict):
     free_settings = Settings.default(FREE_TIER)
     cache_handler_mock = Mock()
 
@@ -58,7 +58,7 @@ def test_settings_save_to_disk(settings_dict):
     cache_handler_mock.save.assert_called_once_with(free_settings.to_dict())
 
 
-def test_settings_persistence_get_returns_default_settings_and_does_not_persist_them(settings_dict):
+def test_settings_persistence_get_returns_default_settings_and_does_not_persist_them(default_free_settings_dict):
     cache_handler_mock = Mock()
     cache_handler_mock.load.return_value = None
     sp = SettingsPersistence(cache_handler_mock)
@@ -68,18 +68,18 @@ def test_settings_persistence_get_returns_default_settings_and_does_not_persist_
     cache_handler_mock.save.assert_not_called()
 
 
-def test_settings_persistence_save_persisted_settings(settings_dict):
+def test_settings_persistence_save_persisted_settings(default_free_settings_dict):
     cache_handler_mock = Mock()
     sp = SettingsPersistence(cache_handler_mock)
 
-    sp.save(Settings.from_dict(settings_dict, FREE_TIER))
+    sp.save(Settings.from_dict(default_free_settings_dict, FREE_TIER))
 
     cache_handler_mock.save.assert_called()
 
 
-def test_settings_persistence_get_returns_in_memory_settings_if_they_were_already_loaded(settings_dict):
+def test_settings_persistence_get_returns_in_memory_settings_if_they_were_already_loaded(default_free_settings_dict):
     cache_handler_mock = Mock()
-    cache_handler_mock.load.return_value = settings_dict
+    cache_handler_mock.load.return_value = default_free_settings_dict
     sp = SettingsPersistence(cache_handler_mock)
 
     sp.get(FREE_TIER)
@@ -102,9 +102,9 @@ def test_settings_persistence_ensure_features_are_loaded_with_default_values_bas
         assert settings.features.netshield == NetShield.BLOCK_MALICIOUS_URL.value
 
 
-def test_settings_persistence_delete_removes_persisted_settings(settings_dict):
+def test_settings_persistence_delete_removes_persisted_settings(default_free_settings_dict):
     cache_handler_mock = Mock()
-    cache_handler_mock.load.return_value = settings_dict
+    cache_handler_mock.load.return_value = default_free_settings_dict
     sp = SettingsPersistence(cache_handler_mock)
 
     sp.get(FREE_TIER)

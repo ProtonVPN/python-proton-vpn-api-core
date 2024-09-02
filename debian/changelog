@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.33.11) unstable; urgency=medium
+
+  * Change IPv6 default value and move out of the features dict.
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Mon, 02 Sep 2024 14:00:00 +0000
+
 proton-vpn-api-core (0.33.10) unstable; urgency=medium
 
   * Properly configure OpenVPN with IPv6 value.

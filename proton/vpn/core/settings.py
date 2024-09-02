@@ -56,7 +56,6 @@ class Features:
     moderate_nat: bool
     vpn_accelerator: bool
     port_forwarding: bool
-    ipv6: bool
 
     @staticmethod
     def from_dict(data: dict, user_tier: int) -> Features:
@@ -68,7 +67,6 @@ class Features:
             moderate_nat=data.get("moderate_nat", default.moderate_nat),
             vpn_accelerator=data.get("vpn_accelerator", default.vpn_accelerator),
             port_forwarding=data.get("port_forwarding", default.port_forwarding),
-            ipv6=data.get("ipv6", default.ipv6),
         )
 
     def to_dict(self) -> dict:
@@ -87,7 +85,6 @@ class Features:
             moderate_nat=False,
             vpn_accelerator=True,
             port_forwarding=False,
-            ipv6=False
         )
 
     def is_default(self, user_tier: int) -> bool:
@@ -101,8 +98,9 @@ class Settings:
     protocol: str
     killswitch: int
     dns_custom_ips: Optional[str]
-    features: Features
+    ipv6: bool
     anonymous_crash_reports: bool
+    features: Features
 
     @staticmethod
     def from_dict(data: dict, user_tier: int) -> Settings:
@@ -115,11 +113,12 @@ class Settings:
             protocol=data.get("protocol", default.protocol),
             killswitch=data.get("killswitch", default.killswitch),
             dns_custom_ips=data.get("dns_custom_ips", default.dns_custom_ips),
-            features=features,
+            ipv6=data.get("ipv6", default.ipv6),
             anonymous_crash_reports=data.get(
                 "anonymous_crash_reports",
                 default.anonymous_crash_reports
-            )
+            ),
+            features=features
         )
 
     def to_dict(self) -> dict:
@@ -133,8 +132,9 @@ class Settings:
             protocol=DEFAULT_PROTOCOL,
             killswitch=DEFAULT_KILLSWITCH,
             dns_custom_ips=[],
-            features=Features.default(user_tier),
-            anonymous_crash_reports=DEFAULT_ANONYMOUS_CRASH_REPORTS
+            ipv6=True,
+            anonymous_crash_reports=DEFAULT_ANONYMOUS_CRASH_REPORTS,
+            features=Features.default(user_tier)
         )
 
 
@@ -164,6 +164,6 @@ class SettingsPersistence:
 
     def delete(self):
         """Deletes the file stored on disk containing the settings
-        and resets internal settings propery."""
+        and resets internal settings property."""
         self._cache_handler.remove()
         self._settings = None

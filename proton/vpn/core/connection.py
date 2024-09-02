@@ -347,7 +347,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         # If IPv6 FF is disabled then the feature should not be toggled client side and
         # should be disabled.
         if not self._can_ipv6_be_toggled_client_side(settings):
-            settings.features.ipv6 = False
+            settings.ipv6 = False
 
         connection = VPNConnection.create(
             server, self.credentials, settings, protocol, backend
@@ -457,8 +457,8 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         return user_tier == 0
 
     def _can_ipv6_be_toggled_client_side(self, settings: Settings) -> bool:
-        return settings.features.ipv6 and\
-            not self._session_holder.session.feature_flags.get("IPv6Support")
+        return settings.ipv6 and\
+            self._session_holder.session.feature_flags.get("IPv6Support")
 
 
 class Subscriber:
