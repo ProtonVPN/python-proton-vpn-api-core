@@ -117,6 +117,8 @@ class State(ABC):
         """Returns the new state based on the received event."""
         self._assert_no_concurrent_connections(event)
 
+        event.check_for_errors()
+
         new_state = self._on_event(event)
 
         if new_state is self:

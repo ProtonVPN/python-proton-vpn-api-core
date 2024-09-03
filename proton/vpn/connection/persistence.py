@@ -91,10 +91,11 @@ class ConnectionPersistence:
                 file_content = json.load(file)
                 return ConnectionParameters.from_dict(file_content)
             except (JSONDecodeError, KeyError, UnicodeDecodeError):
-                logger.exception(
+                logger.warning(
                     "Unexpected error parsing connection persistence file: "
                     f"{self._connection_file_path}",
-                    category="CONN", subcategory="PERSISTENCE", event="LOAD"
+                    category="CONN", subcategory="PERSISTENCE", event="LOAD",
+                    exc_info=True
                 )
                 return None
 

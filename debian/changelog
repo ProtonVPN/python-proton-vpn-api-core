@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.35.0) unstable; urgency=medium
+
+  * Catch and send LA errors to sentry.
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Mon, 09 Sep 2024 11:00:00 +0000
+
 proton-vpn-api-core (0.34.0) unstable; urgency=medium
 
   * Import refreshers from app.

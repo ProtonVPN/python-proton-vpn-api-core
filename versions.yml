@@ -1,3 +1,12 @@
+version: 0.35.0
+time: 2024/09/09 11:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: medium
+stability: unstable
+description:
+- Catch and send LA errors to sentry.
+---
 version: 0.34.0
 time: 2024/09/13 16:00
 author: Josep Llaneras

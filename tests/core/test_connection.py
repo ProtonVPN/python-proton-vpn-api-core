@@ -19,6 +19,9 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 from proton.vpn.session.servers import LogicalServer
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.core.connection import VPNConnector
+from proton.vpn.connection import events, exceptions, states
+from unittest.mock import Mock
+import pytest
 
 LOGICAL_SERVER_DATA = {
   "Name": "IS#1",
@@ -37,7 +40,11 @@ LOGICAL_SERVER_DATA = {
 
 
 def test_get_vpn_server_returns_vpn_server_built_from_logical_server_and_client_config():
-    vpn_connector_wrapper = VPNConnector(session_holder=None, settings_persistence=None)
+    vpn_connector_wrapper = VPNConnector(
+      session_holder=None,
+      settings_persistence=None,
+      usage_reporting=None
+    )
 
     logical_server = LogicalServer(data=LOGICAL_SERVER_DATA)
     client_config = ClientConfig.default()
@@ -55,3 +62,24 @@ def test_get_vpn_server_returns_vpn_server_built_from_logical_server_and_client_
     assert vpn_server.server_id == logical_server.id
     assert vpn_server.server_name == logical_server.name
     assert vpn_server.label == physical_server.label
+
+
+@pytest.mark.parametrize("error_type",
+                         [exceptions.PolicyError("Policy error"),
+                          exceptions.InvalidSyntaxError("Syntax error"),
+                          exceptions.UnexpectedError("Unexpected error")])
+@pytest.mark.asyncio
+async def test_api_errors_are_reported(error_type):
+    vpn_connector_wrapper = VPNConnector(
+      session_holder=None,
+      settings_persistence=None,
+      usage_reporting=Mock(),
+      state=states.Connected(),
+    )
+
+    event = events.Disconnected()
+    event.context.error = error_type
+
+    await vpn_connector_wrapper._on_connection_event(event)
+
+    assert vpn_connector_wrapper._usage_reporting.report_error.called

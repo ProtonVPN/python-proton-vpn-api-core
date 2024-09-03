@@ -84,7 +84,7 @@ def test_load_returns_none_and_logs_error_when_persistence_file_contains_invalid
     persisted_parameters = connection_persistence.load()
 
     assert not persisted_parameters
-    assert len([r for r in caplog.records if r.levelname == "ERROR"]) == 1
+    assert len([r for r in caplog.records if r.levelname == "WARNING"]) == 1
 
 
 def test_load_returns_none_and_logs_error_when_persistence_file_misses_expected_parameters(temp_dir):

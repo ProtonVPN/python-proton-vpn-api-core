@@ -24,6 +24,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, TYPE_CHECKING, Optional
 
+from proton.vpn.connection.exceptions import VPNConnectionError
 from .enum import StateMachineEventEnum
 
 if TYPE_CHECKING:
@@ -53,6 +54,11 @@ class Event:
             raise AttributeError("event attribute not defined")
 
         self.context = context or EventContext(connection=None)
+
+    def check_for_errors(self):
+        """Raises an exception if there one."""
+        if self.context.error and isinstance(self.context.error, VPNConnectionError):
+            raise self.context.error
 
 
 class Initialized(Event):
@@ -119,6 +125,11 @@ class TunnelSetupFailed(Error):
 class UnexpectedError(Error):
     """Signals that an unexpected error occurred."""
     type = StateMachineEventEnum.UNEXPECTED_ERROR
+
+
+class UnhandledError(Error):
+    """Signals that an unhandled error occurred."""
+    type = StateMachineEventEnum.UNHANDLED_ERROR
 
 
 _event_types = [

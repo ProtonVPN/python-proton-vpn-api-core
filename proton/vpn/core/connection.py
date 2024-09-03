@@ -45,6 +45,9 @@ from proton.vpn.connection.publisher import Publisher
 from proton.vpn.connection.states import StateContext
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.session.servers import LogicalServer, ServerFeatureEnum
+from proton.vpn.core.usage import UsageReporting
+from proton.vpn.connection.exceptions import PolicyError, InvalidSyntaxError, UnexpectedError
+
 
 logger = logging.getLogger(__name__)
 
@@ -76,12 +79,18 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         cls,
         session_holder: SessionHolder,
         settings_persistence: SettingsPersistence,
+        usage_reporting: UsageReporting,
         kill_switch: KillSwitch = None,
     ):
         """
         Builds a VPN connector instance and initializes it.
         """
-        connector = VPNConnector(session_holder, settings_persistence, kill_switch=kill_switch)
+        connector = VPNConnector(
+            session_holder,
+            settings_persistence,
+            kill_switch=kill_switch,
+            usage_reporting=usage_reporting
+        )
         await connector.initialize_state()
         return connector
 
@@ -89,6 +98,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             self,
             session_holder: SessionHolder,
             settings_persistence: SettingsPersistence,
+            usage_reporting: UsageReporting,
             connection_persistence: ConnectionPersistence = None,
             state: states.State = None,
             kill_switch: KillSwitch = None
@@ -101,6 +111,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         self._publisher = Publisher()
         self._lock = asyncio.Lock()
         self._background_tasks = set()
+        self._usage_reporting = usage_reporting
 
     def _filter_features(self, input_settings: Settings, user_tier: int = None) -> Settings:
         if not user_tier:
@@ -156,6 +167,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         self._set_ks_setting(settings)
         await self._apply_kill_switch_setting(KillSwitchSetting(settings.killswitch))
         if self.current_connection:
+
             await self.current_connection.update_settings(
                 self._filter_features(settings)
             )
@@ -394,6 +406,20 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             )
         self._publisher.unregister(subscriber.status_update)
 
+    async def _handle_on_event(self, event: events.Event):
+        """
+        Handles the event by updating the current state of the connection,
+        and returning a new event to be processed if any.
+        """
+        try:
+            new_state = self.current_state.on_event(event)
+        except (PolicyError, InvalidSyntaxError, UnexpectedError) as excp:
+            self._usage_reporting.report_error(excp)
+            logger.warning(msg=excp.message)
+        else:
+            return await self._update_state(new_state)
+        return None
+
     async def _on_connection_event(self, event: events.Event):
         """
         Callback called when a connection event happens.
@@ -406,9 +432,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
                 triggered_events += 1
                 if triggered_events > 99:
                     raise RuntimeError("Maximum number of chained connection events was reached.")
-
-                new_state = self.current_state.on_event(event)
-                event = await self._update_state(new_state)
+                event = await self._handle_on_event(event)
 
     async def _update_state(self, new_state) -> Optional[events.Event]:
         if new_state is self.current_state:

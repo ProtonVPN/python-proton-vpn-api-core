@@ -64,4 +64,18 @@ class ConcurrentConnectionsError(VPNConnectionError):
 
 
 class UnexpectedError(VPNConnectionError):
-    """For any unexpected or unhandled error this exception will be thrown."""
+    """This exception will be thrown for any unexpected or unhandled error."""
+
+
+class PolicyError(VPNConnectionError):
+    """For when setting a feature and it returns a policy error.
+    Policy errors are usually programming errors, meaning that what we just tried to do
+    with a feature is not allowed/permitted.
+    """
+
+
+class InvalidSyntaxError(VPNConnectionError):
+    """For when setting a feature and it returns an invalid syntax error.
+    Syntax errors are usually programming errors, meaning that what we just tried to do
+    with a feature is incorrect, ie: passing wrong/non-existent values, format is incorrect, etc.
+    """
