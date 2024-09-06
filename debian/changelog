@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.33.12) unstable; urgency=medium
+
+  * Ensure there is a way to disable IPv6.
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Fri, 06 Sep 2024 11:00:00 +0000
+
 proton-vpn-api-core (0.33.11) unstable; urgency=medium
 
   * Change IPv6 default value and move out of the features dict.

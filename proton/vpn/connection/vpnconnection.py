@@ -336,6 +336,7 @@ class VPNConnection(ABC):
         specific behavior.
         """
         list_flags = []
+        label = self._vpnserver.label
 
         if sys.platform.startswith("linux"):
             list_flags.append("pl")
@@ -346,12 +347,16 @@ class VPNConnection(ABC):
 
         # This is used to ensure that the provided IP matches the one
         # from the exit IP.
-        label = self._vpnserver.label
         if label:
             list_flags.append(f"b:{label}")
 
         if self._settings is None:
             return list_flags
+
+        enable_ipv6_support = self._vpnserver.has_ipv6_support and self._settings.ipv6
+
+        if enable_ipv6_support:
+            list_flags.append("6")
 
         features = self._settings.features
 
