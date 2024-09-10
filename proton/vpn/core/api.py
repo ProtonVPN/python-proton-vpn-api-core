@@ -22,13 +22,11 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 import asyncio
 import copy
 
-
-from proton.vpn.connection import states
 from proton.vpn.core.connection import VPNConnector
+from proton.vpn.core.refresher.scheduler import Scheduler
+from proton.vpn.core.refresher.vpn_data_refresher import VPNDataRefresher
 from proton.vpn.core.settings import Settings, SettingsPersistence
 from proton.vpn.core.session_holder import SessionHolder, ClientTypeMetadata
-from proton.vpn.session.servers import ServerList
-from proton.vpn.session import ClientConfig
 from proton.vpn.session.dataclasses import LoginResult, BugReportForm
 from proton.vpn.session.account import VPNAccount
 from proton.vpn.session import FeatureFlags
@@ -49,6 +47,9 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         self._vpn_connector = None
         self._usage_reporting = UsageReporting(
             client_type_metadata=client_type_metadata)
+        self.refresher = VPNDataRefresher(
+            self._session_holder, Scheduler()
+        )
 
     async def get_vpn_connector(self) -> VPNConnector:
         """Returns an object that wraps around the raw VPN connection object.
@@ -62,6 +63,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         self._vpn_connector = await VPNConnector.get(
             self._session_holder, self._settings_persistence
         )
+        self._vpn_connector.subscribe_to_certificate_updates(self.refresher)
 
         return self._vpn_connector
 
@@ -106,7 +108,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
 
         result = await session.login(username, password)
         if result.success and not session.loaded:
-            await session.fetch_session_data(features=self._get_features())
+            await session.fetch_session_data()
 
         return result
 
@@ -120,7 +122,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         result = await session.provide_2fa(code)
 
         if result.success and not session.loaded:
-            await session.fetch_session_data(features=self._get_features())
+            await session.fetch_session_data()
 
         return result
 
@@ -165,64 +167,20 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         """Returns whether the VPN session data was already loaded or not."""
         return self._session_holder.session.loaded
 
-    async def fetch_session_data(self):
-        """
-        Fetches the required session data from Proton's REST APIs.
-        """
-        return await self._session_holder.session.fetch_session_data()
-
-    async def fetch_certificate(self):
-        """Fetches new certificate from Proton's REST APIs."""
-        await self._session_holder.session.fetch_certificate(
-            features=self._get_features()
-        )
-
-        vpn_connector = await self.get_vpn_connector()
-        if isinstance(vpn_connector.current_state, (states.Connected, states.Error)):
-            await vpn_connector.update_credentials()
-
     @property
     def server_list(self):
         """The last server list fetched from the REST API."""
         return self._session_holder.session.server_list
-
-    async def fetch_server_list(self) -> ServerList:
-        """
-        Fetches a new server list from the REST API.
-        :returns: the new server list.
-        """
-        return await self._session_holder.session.fetch_server_list()
-
-    async def update_server_loads(self):
-        """
-        Fetches new server loads from the REST API and updates
-        the current server list with them.
-        """
-        return await self._session_holder.session.update_server_loads()
 
     @property
     def client_config(self):
         """The last client configuration fetched from the REST API."""
         return self._session_holder.session.client_config
 
-    async def fetch_client_config(self) -> ClientConfig:
-        """
-        Fetches the client configuration asynchronously from the REST API.
-        :returns: the new client configuration.
-        """
-        return await self._session_holder.session.fetch_client_config()
-
     @property
     def feature_flags(self) -> FeatureFlags:
         """The last feature flags fetched from the REST API."""
         return self._session_holder.session.feature_flags
-
-    async def fetch_feature_flags(self) -> FeatureFlags:
-        """
-        Fetches the feature flags asynchronously from the REST API.
-        :returns: new feature flags.
-        """
-        return await self._session_holder.session.fetch_feature_flags()
 
     async def submit_bug_report(self, bug_report: BugReportForm):
         """
@@ -235,6 +193,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         Logs the current user out.
         :raises: VPNConnectionFoundAtLogout if the users is still connected to the VPN.
         """
+        await self.refresher.disable()
         await self._session_holder.session.logout()
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(executor=None, func=self._settings_persistence.delete)
@@ -245,11 +204,3 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
     def usage_reporting(self) -> UsageReporting:
         """Returns the usage reporting instance to send anonymous crash reports."""
         return self._usage_reporting
-
-    def _get_features(self):
-        user_tier = 0
-        settings = self._settings_persistence.get(user_tier)
-        if not settings.features.is_default(user_tier):
-            return settings.features
-
-        return None

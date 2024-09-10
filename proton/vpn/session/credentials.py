@@ -19,7 +19,6 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
 import base64
-import time
 import random
 
 from typing import Optional
@@ -182,8 +181,7 @@ class VPNPubkeyCredentials:
     @property
     def remaining_time_to_next_refresh(self) -> int:
         """Returns a timestamp of when the next refresh should be done."""
-        remaining_time = self._api_certificate.RefreshTime - time.time()
-        return remaining_time if remaining_time > 0 else 0
+        return self._api_certificate.remaining_time_to_next_refresh
 
     @property
     def proton_extensions(self):  # pylint: disable=missing-function-docstring

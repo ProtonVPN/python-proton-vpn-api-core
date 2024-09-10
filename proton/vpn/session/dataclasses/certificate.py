@@ -17,6 +17,8 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
+
+import time
 from dataclasses import dataclass
 from proton.vpn.session.utils import Serializable
 
@@ -38,6 +40,12 @@ class VPNCertificate(Serializable):  # pylint: disable=too-many-instance-attribu
     DeviceName: str
     ServerPublicKeyMode: str
     ServerPublicKey: str
+
+    @property
+    def remaining_time_to_next_refresh(self) -> int:
+        """Returns a timestamp of when the next refresh should be done."""
+        remaining_time = self.RefreshTime - time.time()
+        return remaining_time if remaining_time > 0 else 0
 
     @staticmethod
     def _deserialize(dict_data: dict) -> VPNCertificate:

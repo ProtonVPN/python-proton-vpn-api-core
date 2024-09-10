@@ -27,7 +27,7 @@ from proton.vpn.session.account import VPNAccount
 from proton.vpn.session.fetcher import VPNSessionFetcher
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.session.credentials import VPNSecrets
-from proton.vpn.session.dataclasses import LoginResult, BugReportForm
+from proton.vpn.session.dataclasses import LoginResult, BugReportForm, VPNCertificate
 from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.feature_flags_fetcher import FeatureFlags
 
@@ -231,7 +231,7 @@ class VPNSession(Session):
             # serialization of the session to the keyring.
             self._requests_unlock()
 
-    async def fetch_certificate(self, features: Optional[dict] = None):
+    async def fetch_certificate(self, features: Optional[dict] = None) -> VPNCertificate:
         """Fetches new certificate from API."""
 
         self._requests_lock(no_condition_check=True)
@@ -247,6 +247,8 @@ class VPNSession(Session):
                 features=features
             )
             self._vpn_account.set_certificate(new_certificate)
+
+            return new_certificate
         finally:
             self._requests_unlock()
 

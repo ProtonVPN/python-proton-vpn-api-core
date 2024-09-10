@@ -30,6 +30,7 @@ from proton.loader import Loader
 from proton.loader.loader import PluggableComponent
 
 from proton.vpn.connection.persistence import ConnectionPersistence
+from proton.vpn.core.refresher import VPNDataRefresher
 from proton.vpn.core.session_holder import SessionHolder
 from proton.vpn.core.settings import SettingsPersistence
 from proton.vpn.killswitch.interface import KillSwitch
@@ -75,7 +76,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         cls,
         session_holder: SessionHolder,
         settings_persistence: SettingsPersistence,
-        kill_switch: KillSwitch = None
+        kill_switch: KillSwitch = None,
     ):
         """
         Builds a VPN connector instance and initializes it.
@@ -459,6 +460,15 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
     def _can_ipv6_be_toggled_client_side(self, settings: Settings) -> bool:
         return settings.ipv6 and\
             self._session_holder.session.feature_flags.get("IPv6Support")
+
+    def subscribe_to_certificate_updates(self, refresher: VPNDataRefresher):
+        """Subscribes to certificate updates."""
+        refresher.certificate_updated_callback = self._on_certificate_updated
+
+    async def _on_certificate_updated(self):
+        """Actions to be taken when once the certificate is updated."""
+        if isinstance(self.current_state, (states.Connected, states.Error)):
+            await self.update_credentials()
 
 
 class Subscriber:
