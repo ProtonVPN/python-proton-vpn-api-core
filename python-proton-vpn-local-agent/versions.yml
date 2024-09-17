@@ -1,3 +1,13 @@
+version: 1.0.0
+time: 2024/09/17 17:47
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: low
+description:
+  - Introduced the APIError, SyntaxAPIError and PolicyAPIError exceptions.
+  - Reworked the error handling at the same time.
+---
 version: 0.10.0
 time: 2024/08/12 17:47
 author: Luke Titley

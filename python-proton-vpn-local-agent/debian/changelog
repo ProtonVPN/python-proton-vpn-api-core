@@ -1,3 +1,10 @@
+python3-proton-vpn-local-agent (1.0.0) low; urgency=low
+
+  * Introduced the APIError, SyntaxAPIError and PolicyAPIError exceptions.
+  * Reworked the error handling at the same time.
+
+ -- Luke Titley <luke.titley@proton.ch>  Tue, 17 Sep 2024 17:47:00 +0000
+
 python3-proton-vpn-local-agent (0.10.0) low; urgency=low
 
   * Fix deadlock when doing requests and reads at the same time.

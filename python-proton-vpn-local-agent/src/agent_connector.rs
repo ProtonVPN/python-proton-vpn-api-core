@@ -5,8 +5,7 @@ use pyo3::prelude::*;
 // -----------------------------------------------------------------------------
 use local_agent_rs as la;
 // -----------------------------------------------------------------------------
-use crate::result_to_py;
-use crate::{AgentConnection, DEFAULT_TIMEOUT_IN_SECONDS};
+use crate::{future::future, AgentConnection, DEFAULT_TIMEOUT_IN_SECONDS};
 
 #[pyclass]
 /// Creator of AgentConnections.
@@ -41,45 +40,39 @@ impl AgentConnector {
         cert: String,
         timeout_in_seconds: u64,
     ) -> PyResult<Bound<'p, PyAny>> {
-        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
-            let connection = la::AgentConnector::connect(
-                &domain,
-                &key,
-                &cert,
-                timeout_in_seconds,
-            )
-            .await;
-
-            let new_agent_connection =
-                AgentConnection::new(result_to_py(connection)?);
-
-            result_to_py(Ok(new_agent_connection))
+        future(py, async move {
+            Ok(AgentConnection::new(
+                la::AgentConnector::connect(
+                    &domain,
+                    &key,
+                    &cert,
+                    timeout_in_seconds,
+                )
+                .await?,
+            ))
         })
     }
 
-    /// Opens a LocalAgent playback file and returns an AgentConnection object,
-    /// which behaves like a real connection, but reads responses from the file.
+    /// Reads a string of json containing responses and returns an
+    /// AgentConnection object, which behaves like a real connection.
     ///
     /// This is an async function, and will return a future that will resolve
     /// to an AgentConnection.
     ///
     /// # Arguments
     ///
-    /// * `playback_file` - The path to the playback file.
+    /// * `responses` - A string of json containing reponses.
     ///
-    #[pyo3(signature = (playback_file))]
+    #[pyo3(signature = (responses))]
     pub fn playback<'p>(
         &self,
         py: Python<'p>,
-        playback_file: std::path::PathBuf,
+        responses: String,
     ) -> PyResult<Bound<'p, PyAny>> {
-        pyo3_asyncio_0_21::tokio::future_into_py(py, async move {
-            let connection = la::AgentConnector::playback(&playback_file).await;
-
-            let new_agent_connection =
-                AgentConnection::new(result_to_py(connection)?);
-
-            result_to_py(Ok(new_agent_connection))
+        future(py, async move {
+            Ok(AgentConnection::new(
+                la::AgentConnector::playback(&responses).await?,
+            ))
         })
     }
 }

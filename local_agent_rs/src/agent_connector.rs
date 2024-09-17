@@ -154,20 +154,18 @@ impl AgentConnector {
         AgentConnection::new(TransportStream::new(read, write))
     }
 
-    /// Reads a playback file and returns an AgentConnection which will
-    /// behave like a connection to the local agent server, but will just
-    /// play back the responses from the file.
+    /// Reads a json of server Responses and returns an AgentConnection which
+    /// will behave like a connection to the local agent server, but will just
+    /// play back the responses from the json.
     ///
     /// Returns an AgentConnection if successful.
     ///
     /// # Arguments
     ///
-    /// * `playback_file` - The path to the playback file.
+    /// * `responses` - A string containing the responses that the Mock server.
     ///
-    pub async fn playback(
-        playback_file: &std::path::Path,
-    ) -> Result<AgentConnection> {
-        AgentConnection::new(TransportPlayback::new(playback_file)?)
+    pub async fn playback(responses: &str) -> Result<AgentConnection> {
+        AgentConnection::new(TransportPlayback::new(responses)?)
     }
 }
 

@@ -750,7 +750,7 @@ dependencies = [
 
 [[package]]
 name = "python-proton-vpn-local-agent"
-version = "0.10.0"
+version = "1.0.0"
 dependencies = [
  "env_logger",
  "local-agent-rs",

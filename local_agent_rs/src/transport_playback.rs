@@ -17,15 +17,12 @@ pub struct TransportPlayback {
 }
 
 impl TransportPlayback {
-    pub fn new(responses_path: &std::path::Path) -> Result<Self> {
-        let file = std::fs::File::open(responses_path)?;
-
-        // The responses list contains seconds to wait + the response
-        // per entry.
+    pub fn new(responses_str: &str) -> Result<Self> {
+        // The responses list contains seconds to wait + the response per entry.
         //
         // responses = [ (seconds, response), ... ]
         //
-        let mut responses: Responses = serde_json::from_reader(file)?;
+        let mut responses: Responses = serde_json::from_str(responses_str)?;
         responses.reverse();
 
         Ok(Self {
