@@ -1,0 +1,10 @@
+Source: python3-proton-vpn-local-agent
+Maintainer: Proton Technologies AG <opensource@proton.me>
+
+Package: python3-proton-vpn-local-agent
+Architecture: {{architecture}}
+Depends: python3 (>= 3.8), libc6 (>= 2.31), libgcc-s1 (>= 4.2)
+Section: utils
+Priority: optional
+Description: Local Agent Python Module
+ A python module which implements a client for the Proton Local Agent API.

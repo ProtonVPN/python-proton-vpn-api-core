@@ -1,0 +1,4 @@
+include:
+ - project: 'ProtonVPN/Linux/integration/ci-libraries-rust'
+   ref: develop
+   file: 'develop-pipeline.yml'

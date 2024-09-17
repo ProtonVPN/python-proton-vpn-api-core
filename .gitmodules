@@ -1,0 +1,6 @@
+[submodule "python-proton-vpn-local-agent/scripts/devtools"]
+	path = python-proton-vpn-local-agent/scripts/devtools
+	url = ../integration/devtools.git
+[submodule "ci-libraries-rust"]
+	path = ci-libraries-rust
+	url = ../integration/ci-libraries-rust.git
