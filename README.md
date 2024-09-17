@@ -1,17 +1,26 @@
 # What is this?
-This repo will contain a rust implementation of local agent + python bindings for it.
+This repo contains a rust crate for communicating with a proton LocalAgent,
+server, and python bindings for that crate.
 
-# The status
-There's currently no library, just stubs.
+## From github
 
-# Getting started.
+> cd python-proton-vpn-local-agent
+> cargo build --release
+> mv target/release/libpython_proton_vpn_local_agent.so local_agent.so
 
-> ./ci/build-local wheel
+The local_agent.so file is your python module.
+
+
+## Internally on x86
+
+From the root.
+
+> ci-libraries-rust/scripts/build-python-extension x86_64-unknown-linux-gnu && ci-libraries-rust/scripts/build-wheel
 
 That builds the python module.
 
 Install local_agent to your venv with
-> pip install target/*.whl
+> pip install python-proton-vpn-local-agent/target/*.whl
 
 Now you're away.
 
@@ -24,5 +33,4 @@ connection = local_agent.AgentConnector().connect("localhost", key, certificate)
 The repo is split into 2 projects, these are:
 - local_agent_rs : The rust library
 - python-proton-vpn-local-agent : The python bindings
-
 
