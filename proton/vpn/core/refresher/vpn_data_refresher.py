@@ -75,6 +75,14 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
         self._certificate_refresher_task_id = None
         self._feature_flags_refresher_task_id = None
 
+    def set_error_callback(self, error_callback: Callable[[Exception], None] = None):
+        """Sets the error callback to be called when an error occurs while executing a task."""
+        self._scheduler.set_error_callback(error_callback)
+
+    def unset_error_callback(self):
+        """Unsets the error callback."""
+        self._scheduler.unset_error_callback()
+
     @property
     def _session(self):
         return self._session_holder.session

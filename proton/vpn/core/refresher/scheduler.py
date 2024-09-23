@@ -61,9 +61,18 @@ class Scheduler:
 
     def __init__(self, check_interval_in_ms: int = 10_000):
         self._check_interval_in_ms = check_interval_in_ms
+        self._error_callback = None
         self._last_task_id: int = 0
         self._task_list: List[TaskRecord] = []
         self._scheduler_task: Optional[asyncio.Task] = None
+
+    def set_error_callback(self, error_callback: Callable[[Exception], None] = None):
+        """Sets the error callback to be called when an error occurs while executing a task."""
+        self._error_callback = error_callback
+
+    def unset_error_callback(self):
+        """Unsets the error callback."""
+        self._error_callback = None
 
     @property
     def task_list(self):
@@ -187,13 +196,19 @@ class Scheduler:
         # Get the task record associated with the task.
         task_record = next(filter(lambda record: record.background_task == task, self._task_list))
 
+        result = None
         try:
             # Bubble up exceptions, if any.
             result = task.result()
+        except CancelledError:
+            # CancelledError is raised when the task is cancelled.
+            pass
         except Exception as exc:  # pylint: disable=broad-except
             self._task_list.remove(task_record)
-            if not isinstance(exc, CancelledError):
-                raise
+            if not self._error_callback:
+                raise exc
+            self._error_callback(exc)
+            return
 
         if isinstance(result, RunAgain):
             # if the task record is to be run again then it's rescheduled.

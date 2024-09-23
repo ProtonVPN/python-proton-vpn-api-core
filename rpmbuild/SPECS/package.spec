@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.35.0
+%define version 0.35.1
 %define release 1
 
 Prefix: %{_prefix}
@@ -60,6 +60,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Mon Sep 23 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.35.1
+- Fix refregresion (logout user on 401 API error).
+
 * Mon Sep 09 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.35.0
 - Catch and send LA errors to sentry.
 
