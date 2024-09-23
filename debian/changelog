@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.35.2) unstable; urgency=medium
+
+  * Merge logger package into this one.
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Mon, 23 Sep 2024 12:00:00 +0000
+
 proton-vpn-api-core (0.35.1) unstable; urgency=medium
 
   * Fix refregresion (logout user on 401 API error).
@@ -78,7 +84,7 @@ proton-vpn-api-core (0.33.3) unstable; urgency=medium
 
 proton-vpn-api-core (0.33.2) unstable; urgency=medium
 
-  * Tier 0 level users can't control the features they have. So dont send any feature requests for them.
+  * Tier 0 level users can't control the features they have. So don't send any feature requests for them.
 
  -- Luke Titley <luke.titley@proton.ch>  Wed, 21 Aug 2024 16:00:00 +0000
 

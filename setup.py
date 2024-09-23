@@ -11,18 +11,19 @@ setup(
     version=VERSION,
     description="Proton AG VPN Core API",
     author="Proton AG",
-    author_email="contact@protonmail.com",
-    url="https://github.com/ProtonMail/python-protonvpn-api-core",
+    author_email="opensource@proton.me",
+    url="https://github.com/ProtonVPN/python-proton-vpn-api-core",
     install_requires=[
-        "proton-core", "proton-vpn-logger", "distro", "sentry-sdk",
+        "proton-core", "distro", "sentry-sdk",
         "cryptography", "PyNaCl", "distro", "jinja2"
     ],
     extras_require={
         "development": ["pytest", "pytest-coverage", "pylint", "flake8", "pytest-asyncio", "PyYAML"]
     },
     packages=find_namespace_packages(include=[
-        'proton.vpn.core*', 'proton.vpn.connection*',
-        'proton.vpn.killswitch.interface*', 'proton.vpn.session*'
+        "proton.vpn.core*", "proton.vpn.connection*",
+        "proton.vpn.killswitch.interface*", "proton.vpn.session*",
+        "proton.vpn.logging*"
     ]),
     python_requires=">=3.8",
     license="GPLv3",
