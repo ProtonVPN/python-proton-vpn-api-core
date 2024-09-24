@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.35.3
+%define version 0.35.4
 %define release 1
 
 Prefix: %{_prefix}
@@ -19,7 +19,6 @@ BuildArch: noarch
 BuildRoot: %{_tmppath}/%{unmangled_name}-%{version}-%{release}-buildroot
 
 BuildRequires: python3-proton-core
-BuildRequires: python3-proton-vpn-logger
 BuildRequires: python3-setuptools
 BuildRequires: python3-distro
 BuildRequires: python3-sentry-sdk
@@ -27,7 +26,6 @@ BuildRequires: python3-pynacl
 BuildRequires: python3-jinja2
 
 Requires: python3-proton-core
-Requires: python3-proton-vpn-logger
 Requires: python3-distro
 Requires: python3-sentry-sdk
 Requires: python3-pynacl
@@ -37,6 +35,7 @@ Conflicts: proton-vpn-gtk-app < 4.4.2~rc5
 Obsoletes: python3-proton-vpn-session
 Obsoletes: python3-proton-vpn-connection
 Obsoletes: python3-proton-vpn-killswitch
+Obsoletes: python3-proton-vpn-logger
 
 %{?python_disable_dependency_generator}
 
@@ -60,6 +59,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Tue Sep 24 2024 Luke Titley <luke.titley@proton.ch> 0.35.4
+- Fix to rpm package.spec, added accidentally removed Obsoletes statement.
+
 * Tue Sep 24 2024 Luke Titley <luke.titley@proton.ch> 0.35.3
 - Send all errors to sentry, but swallow api errors.
 

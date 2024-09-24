@@ -43,7 +43,6 @@ BuildArch: noarch
 BuildRoot: %{{_tmppath}}/%{{unmangled_name}}-%{{version}}-%{{release}}-buildroot
 
 BuildRequires: python3-proton-core
-BuildRequires: python3-proton-vpn-logger
 BuildRequires: python3-setuptools
 BuildRequires: python3-distro
 BuildRequires: python3-sentry-sdk
@@ -51,7 +50,6 @@ BuildRequires: python3-pynacl
 BuildRequires: python3-jinja2
 
 Requires: python3-proton-core
-Requires: python3-proton-vpn-logger
 Requires: python3-distro
 Requires: python3-sentry-sdk
 Requires: python3-pynacl
@@ -61,6 +59,7 @@ Conflicts: proton-vpn-gtk-app < 4.4.2~rc5
 Obsoletes: python3-proton-vpn-session
 Obsoletes: python3-proton-vpn-connection
 Obsoletes: python3-proton-vpn-killswitch
+Obsoletes: python3-proton-vpn-logger
 
 %{{?python_disable_dependency_generator}}
 
