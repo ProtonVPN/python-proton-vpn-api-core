@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.35.3) unstable; urgency=medium
+
+  * Send all errors to sentry, but swallow api errors.
+
+ -- Luke Titley <luke.titley@proton.ch>  Tue, 24 Sep 2024 12:00:00 +0000
+
 proton-vpn-api-core (0.35.2) unstable; urgency=medium
 
   * Merge logger package into this one.

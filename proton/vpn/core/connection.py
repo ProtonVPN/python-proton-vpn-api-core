@@ -416,6 +416,11 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         except (PolicyError, InvalidSyntaxError, UnexpectedError) as excp:
             self._usage_reporting.report_error(excp)
             logger.warning(msg=excp.message)
+        except Exception as excp:
+            error_message = f"Unexpected error: {excp}"
+            self._usage_reporting.report_error(error_message)
+            logger.warning(msg=error_message)
+            raise excp
         else:
             return await self._update_state(new_state)
         return None
