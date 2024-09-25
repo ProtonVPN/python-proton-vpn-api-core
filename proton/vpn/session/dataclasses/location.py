@@ -27,8 +27,6 @@ from proton.vpn.session.utils import Serializable
 class VPNLocation(Serializable):
     """Data about the physical location the VPN client runs from."""
     IP: str
-    Lat: float
-    Long: float
     Country: str
     ISP: str
 
@@ -40,8 +38,6 @@ class VPNLocation(Serializable):
         """
         return VPNLocation(
             IP=dict_data["IP"],
-            Lat=dict_data["Lat"],
-            Long=dict_data["Long"],
             Country=dict_data["Country"],
             ISP=dict_data["ISP"]
         )

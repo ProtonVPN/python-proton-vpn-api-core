@@ -44,7 +44,7 @@ class VPNAccount:
         self._vpninfo = vpninfo
         self._certificate = certificate
         self._secrets = secrets
-        self._location = location
+        self.location = location
 
     @staticmethod
     def from_dict(dict_data: dict) -> VPNAccount:
@@ -75,7 +75,7 @@ class VPNAccount:
             "vpninfo": self._vpninfo.to_dict(),
             "certificate": self._certificate.to_dict(),
             "secrets": self._secrets.to_dict(),
-            "location": self._location.to_dict()
+            "location": self.location.to_dict()
         }
 
     @property
@@ -141,10 +141,3 @@ class VPNAccount:
                 strict=True
             )
         )
-
-    @property
-    def location(self) -> VPNLocation:
-        """
-        returns: the physical location the VPN client runs from.
-        """
-        return self._location

@@ -30,6 +30,15 @@ if TYPE_CHECKING:
     from proton.vpn.connection.vpnconnection import VPNConnection
 
 
+@dataclass
+class ConnectionDetails:
+    """Connection details obtained via local agent."""
+    device_ip: Optional[str] = None
+    device_country: Optional[str] = None
+    server_ipv4: Optional[str] = None
+    server_ipv6: Optional[str] = None
+
+
 # pylint: disable=too-few-public-methods
 
 @dataclass
@@ -42,6 +51,7 @@ class EventContext:
         error: an optional exception to be bubbled up while processing the event.
     """
     connection: "VPNConnection"
+    connection_details: Optional[ConnectionDetails] = None
     reason: Optional[Any] = None
     error: Optional[Exception] = None
 

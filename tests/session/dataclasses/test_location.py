@@ -25,8 +25,6 @@ from proton.vpn.session.dataclasses import VPNLocation
 def vpnlocation_data():
     return {
         "IP": "192.168.0.1",
-        "Lat": 46.204391,
-        "Long": 6.143158,
         "Country": "Switzerland",
         "ISP": "SwissRandomProvider",
     }

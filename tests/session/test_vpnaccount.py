@@ -106,12 +106,15 @@ class TestVpnAccountSerialize:
     def test_location_from_dict(self):
         location = VPNLocation.from_dict(VPN_LOCATION_API_RESPONSE)
         assert location.IP == VPN_LOCATION_API_RESPONSE["IP"]
-        assert location.Lat == VPN_LOCATION_API_RESPONSE["Lat"]
-        assert location.Long == VPN_LOCATION_API_RESPONSE["Long"]
         assert location.Country == VPN_LOCATION_API_RESPONSE["Country"]
         assert location.ISP == VPN_LOCATION_API_RESPONSE["ISP"]
 
     def test_location_to_dict(self):
+        # We delete it because the VPNLocation does not contain these two properties,
+        # even though the API response returns these values,
+        del VPN_LOCATION_API_RESPONSE["Lat"]
+        del VPN_LOCATION_API_RESPONSE["Long"]
+
         assert VPNLocation.from_dict(VPN_LOCATION_API_RESPONSE).to_dict() == VPN_LOCATION_API_RESPONSE
 
 

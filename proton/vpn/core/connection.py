@@ -44,6 +44,7 @@ from proton.vpn.connection.enum import KillSwitchSetting, ConnectionStateEnum
 from proton.vpn.connection.publisher import Publisher
 from proton.vpn.connection.states import StateContext
 from proton.vpn.session.client_config import ClientConfig
+from proton.vpn.session.dataclasses import VPNLocation
 from proton.vpn.session.servers import LogicalServer, ServerFeatureEnum
 from proton.vpn.core.usage import UsageReporting
 from proton.vpn.connection.exceptions import FeatureSyntaxError, FeatureError
@@ -100,17 +101,20 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             usage_reporting: UsageReporting,
             connection_persistence: ConnectionPersistence = None,
             state: states.State = None,
-            kill_switch: KillSwitch = None
+            kill_switch: KillSwitch = None,
+            publisher: Publisher = None
     ):
         self._session_holder = session_holder
         self._settings_persistence = settings_persistence
         self._connection_persistence = connection_persistence or ConnectionPersistence()
         self._current_state = state
         self._kill_switch = kill_switch
-        self._publisher = Publisher()
+        self._publisher = publisher or Publisher()
         self._lock = asyncio.Lock()
         self._background_tasks = set()
         self._usage_reporting = usage_reporting
+
+        self._publisher.register(self._on_state_change)
 
     def _filter_features(self, input_settings: Settings, user_tier: int = None) -> Settings:
         if not user_tier:
@@ -467,6 +471,23 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             self._set_ks_impl(await self.get_settings())
 
         return new_event
+
+    def _on_state_change(self, state: states.State):
+        """Updates the user location when the connection is established."""
+        if not isinstance(state, states.Connected):
+            return
+
+        connection_details = state.context.event.context.connection_details
+        if not connection_details and not connection_details.device_ip:
+            return
+
+        current_location = self._session_holder.session.vpn_account.location
+        vpnlocation = VPNLocation(
+            IP=connection_details.device_ip,
+            Country=connection_details.device_country,
+            ISP=current_location.ISP
+        )
+        self._session_holder.session.set_location(vpnlocation)
 
     def _set_ks_impl(self, settings: Settings):
         """

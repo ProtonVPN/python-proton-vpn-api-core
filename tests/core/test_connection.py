@@ -20,8 +20,9 @@ from proton.vpn.session.servers import LogicalServer
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.core.connection import VPNConnector
 from proton.vpn.connection import events, exceptions, states
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 import pytest
+
 
 LOGICAL_SERVER_DATA = {
   "Name": "IS#1",
@@ -121,3 +122,38 @@ async def test__on_connection_event_reports_unexpected_exceptions_and_bubbles_th
         await vpn_connector_wrapper._on_connection_event(event)
 
     vpn_connector_wrapper._usage_reporting.report_error.assert_called_once_with(event.context.error)
+
+
+def test_on_state_change_stores_new_device_ip_when_successfully_connected_to_vpn():
+    publisher_mock = Mock()
+    session_holder_mock = Mock()
+    new_connection_details = events.ConnectionDetails(
+        device_ip="192.168.0.1",
+        device_country="PT",
+        server_ipv4="0.0.0.0",
+        server_ipv6=None,
+    )
+    _ = VPNConnector(
+        session_holder=session_holder_mock,
+        settings_persistence=None,
+        usage_reporting=None,
+        connection_persistence=Mock(),
+        publisher=publisher_mock
+    )
+
+    on_state_change_callback = publisher_mock.register.call_args[0][0]
+
+    connected_event = events.Connected(
+        context=events.EventContext(
+            connection=Mock(),
+            connection_details=new_connection_details
+        )
+    )
+    connected_state = states.Connected(context=states.StateContext(connected_event))
+
+    on_state_change_callback(connected_state)
+
+    vpn_location = session_holder_mock.session.set_location.call_args[0][0]
+
+    session_holder_mock.session.set_location.assert_called_once()
+    assert vpn_location.IP == new_connection_details.device_ip

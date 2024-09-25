@@ -13,6 +13,6 @@ Architecture: all
 Depends: ${python3:Depends}, ${misc:Depends},
     python3-proton-core,
     python3-distro, python3-sentry-sdk, python3-nacl, python3-jinja2
-Breaks: proton-vpn-gtk-app (<< 4.4.2~rc6), python3-proton-vpn-network-manager (<< 0.9.1)
+Breaks: proton-vpn-gtk-app (<< 4.4.2~rc6), python3-proton-vpn-network-manager (<< 0.9.2)
 Replaces: python3-proton-vpn-session, python3-proton-vpn-connection, python3-proton-vpn-killswitch, python3-proton-vpn-logger
 Description: Python3 ProtonVPN Core API

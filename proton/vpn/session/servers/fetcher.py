@@ -180,6 +180,7 @@ class ServerListFetcher:
                 headers[MODIFIED_SINCE_HEADER] = server_list.last_modified_time
             else:
                 headers[MODIFIED_SINCE_HEADER] = ServerList.get_epoch_time()
+
         return headers
 
 

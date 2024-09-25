@@ -27,7 +27,7 @@ from proton.vpn.session.account import VPNAccount
 from proton.vpn.session.fetcher import VPNSessionFetcher
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.session.credentials import VPNSecrets
-from proton.vpn.session.dataclasses import LoginResult, BugReportForm, VPNCertificate
+from proton.vpn.session.dataclasses import LoginResult, BugReportForm, VPNCertificate, VPNLocation
 from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.feature_flags_fetcher import FeatureFlags
 
@@ -259,6 +259,14 @@ class VPNSession(Session):
         If it was not loaded yet then None is returned instead.
         """
         return self._vpn_account
+
+    def set_location(self, location: VPNLocation):
+        """Set new location data and store it."""
+        self._requests_lock(no_condition_check=False)
+        try:
+            self._vpn_account.location = location
+        finally:
+            self._requests_unlock()
 
     async def fetch_server_list(self) -> ServerList:
         """
