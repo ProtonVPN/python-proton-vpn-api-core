@@ -52,6 +52,7 @@ impl Server {
                 state: State::Connected,
                 reason: None,
                 features: None,
+                connection_details: None,
             }),
             error: None,
         };

@@ -1,3 +1,12 @@
+version: 1.1.0
+time: 2024/10/02 13:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: low
+description:
+  - Implement and expose connection details.
+---
 version: 1.0.0
 time: 2024/09/17 17:47
 author: Luke Titley

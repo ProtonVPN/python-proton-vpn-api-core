@@ -1,5 +1,5 @@
 Source: python3-proton-vpn-local-agent
-Maintainer: Proton Technologies AG <opensource@proton.me>
+Maintainer: Proton AG <opensource@proton.me>
 
 Package: python3-proton-vpn-local-agent
 Architecture: {{architecture}}

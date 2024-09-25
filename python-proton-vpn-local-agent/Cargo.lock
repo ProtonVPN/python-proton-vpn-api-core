@@ -488,7 +488,7 @@ checksum = "78b3ae25bc7c8c38cec158d1f2757ee79e9b3740fbc7ccf0e59e4b08d793fa89"
 
 [[package]]
 name = "local-agent-rs"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "async-trait",
  "env_logger",
@@ -750,7 +750,7 @@ dependencies = [
 
 [[package]]
 name = "python-proton-vpn-local-agent"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "env_logger",
  "local-agent-rs",

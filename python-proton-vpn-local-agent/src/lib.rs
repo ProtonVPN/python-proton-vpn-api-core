@@ -6,6 +6,7 @@ use pyo3::prelude::*;
 mod agent_connection;
 mod agent_connector;
 mod agent_features;
+mod connection_details;
 mod error;
 mod exception;
 mod future;
@@ -19,6 +20,7 @@ const DEFAULT_TIMEOUT_IN_SECONDS: u64 = 10;
 pub use agent_connection::AgentConnection;
 pub use agent_connector::AgentConnector;
 pub use agent_features::AgentFeatures;
+pub use connection_details::ConnectionDetails;
 pub use error::{Error, Result};
 pub use exception::*;
 pub use reason::{Reason, ReasonCode};
@@ -46,6 +48,7 @@ fn local_agent(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<ReasonCode>()?;
     m.add_class::<Reason>()?;
     m.add_class::<Status>()?;
+    m.add_class::<ConnectionDetails>()?;
 
     Ok(())
 }

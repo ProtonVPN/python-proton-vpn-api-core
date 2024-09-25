@@ -1,7 +1,10 @@
 // -----------------------------------------------------------------------------
 // Copyright (c) 2024 Proton AG
 // -----------------------------------------------------------------------------
-use crate::{reason::Reason, state::State, AgentFeatures};
+use crate::{
+    connection_details::ConnectionDetails, reason::Reason, state::State,
+    AgentFeatures,
+};
 pub use local_agent_rs as la;
 use pyo3::prelude::*;
 
@@ -14,6 +17,8 @@ pub struct Status {
     reason: Option<Reason>,
     #[pyo3(get)]
     features: Option<AgentFeatures>,
+    #[pyo3(get)]
+    connection_details: Option<ConnectionDetails>,
 }
 
 #[pymethods]
@@ -31,6 +36,9 @@ impl std::convert::From<la::StatusMessage> for Status {
             state: State::from(status.state),
             reason: status.reason.map(Reason::from),
             features: status.features.map(AgentFeatures::from),
+            connection_details: status
+                .connection_details
+                .map(ConnectionDetails::from),
         }
     }
 }

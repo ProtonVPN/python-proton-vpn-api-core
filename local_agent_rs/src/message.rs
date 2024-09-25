@@ -22,6 +22,15 @@ pub struct Reason {
     pub description: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct ConnectionDetails {
+    pub device_ip: Option<String>,
+    pub device_country: Option<String>,
+    pub server_ipv4: Option<String>,
+    pub server_ipv6: Option<String>,
+}
+
 /// Represents the status message from the local agent server.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -29,6 +38,8 @@ pub struct StatusMessage {
     pub state: State,
     pub reason: Option<Reason>,
     pub features: Option<AgentFeatures>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub connection_details: Option<ConnectionDetails>,
     /*
       "state": "connected",
         "features": {

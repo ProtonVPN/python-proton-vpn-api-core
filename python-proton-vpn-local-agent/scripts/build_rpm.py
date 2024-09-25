@@ -48,7 +48,7 @@ devtools.versions.build_rpm(
     f"Summary:        A client for interacting with local agent\n"
     f"License:        GPLv3\n"
     f"Version:        {VERSION}\n"
-    f"URL: https://github.com/ProtonVPN\n"
+    f"URL: https://github.com/ProtonVPN/python-proton-vpn-local-agent\n"
     f"\n"
     f"Requires: python3 >= {CPYTHON_VERSION}\n"
     f"\n"
