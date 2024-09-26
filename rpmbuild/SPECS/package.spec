@@ -1,6 +1,6 @@
 
 %define unmangled_name proton-vpn-api-core
-%define version 0.35.4
+%define version 0.35.5
 %define release 1
 
 Prefix: %{_prefix}
@@ -32,6 +32,7 @@ Requires: python3-pynacl
 Requires: python3-jinja2
 
 Conflicts: proton-vpn-gtk-app < 4.4.2~rc5
+Conflicts: python3-proton-vpn-network-manager < 0.9.1
 Obsoletes: python3-proton-vpn-session
 Obsoletes: python3-proton-vpn-connection
 Obsoletes: python3-proton-vpn-killswitch
@@ -59,6 +60,9 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
+* Fri Sep 27 2024 Josep Llaneras <josep.llaneras@proton.ch> 0.35.5
+- Fix regression sending errors to sentry.
+
 * Tue Sep 24 2024 Luke Titley <luke.titley@proton.ch> 0.35.4
 - Fix to rpm package.spec, added accidentally removed Obsoletes statement.
 

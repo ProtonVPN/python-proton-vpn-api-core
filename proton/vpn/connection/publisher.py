@@ -81,11 +81,15 @@ class Publisher:
                 if inspect.iscoroutinefunction(subscriber):
                     notification_task = asyncio.create_task(subscriber(*args, **kwargs))
                     self._pending_tasks.add(notification_task)
-                    notification_task.add_done_callback(self._pending_tasks.discard)
+                    notification_task.add_done_callback(self._on_notification_task_done)
                 else:
                     subscriber(*args, **kwargs)
             except Exception:  # pylint: disable=broad-except
                 logger.exception(f"An error occurred notifying subscriber {subscriber}.")
+
+    def _on_notification_task_done(self, task: asyncio.Task):
+        self._pending_tasks.discard(task)
+        task.result()
 
     def is_subscriber_registered(self, subscriber: Callable) -> bool:
         """Returns whether a subscriber is registered or not."""

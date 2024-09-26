@@ -64,12 +64,8 @@ def test_get_vpn_server_returns_vpn_server_built_from_logical_server_and_client_
     assert vpn_server.label == physical_server.label
 
 
-@pytest.mark.parametrize("error_type",
-                         [exceptions.PolicyError("Policy error"),
-                          exceptions.InvalidSyntaxError("Syntax error"),
-                          exceptions.UnexpectedError("Unexpected error")])
 @pytest.mark.asyncio
-async def test_api_errors_are_reported(error_type):
+async def test__on_connection_event_swallows_and_does_not_report_policy_errors():
     vpn_connector_wrapper = VPNConnector(
       session_holder=None,
       settings_persistence=None,
@@ -78,8 +74,50 @@ async def test_api_errors_are_reported(error_type):
     )
 
     event = events.Disconnected()
-    event.context.error = error_type
+    event.context.error = exceptions.FeaturePolicyError("Policy error")
 
     await vpn_connector_wrapper._on_connection_event(event)
 
-    assert vpn_connector_wrapper._usage_reporting.report_error.called
+    vpn_connector_wrapper._usage_reporting.report_error.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("error", [
+    exceptions.FeatureError("generic feature error"),
+    exceptions.FeatureSyntaxError("Feature syntax error")
+])
+async def test__on_connection_event_reports_feature_syntax_errors_but_no_other_feature_error(error):
+    vpn_connector_wrapper = VPNConnector(
+        session_holder=None,
+        settings_persistence=None,
+        usage_reporting=Mock(),
+        state=states.Connected(),
+    )
+
+    event = events.Disconnected()
+    event.context.error = error
+
+    await vpn_connector_wrapper._on_connection_event(event)
+    if isinstance(error, exceptions.FeatureSyntaxError):
+        vpn_connector_wrapper._usage_reporting.report_error.assert_called_once_with(event.context.error)
+    elif isinstance(error, exceptions.FeatureError):
+        vpn_connector_wrapper._usage_reporting.report_error.assert_not_called()
+    else:
+        raise ValueError(f"Unexpected test parameter: {error}")
+
+@pytest.mark.asyncio
+async def test__on_connection_event_reports_unexpected_exceptions_and_bubbles_them_up():
+    vpn_connector_wrapper = VPNConnector(
+        session_holder=None,
+        settings_persistence=None,
+        usage_reporting=Mock(),
+        state=states.Connected(),
+    )
+
+    event = events.Disconnected()
+    event.context.error = Exception("Unexpected error")
+
+    with pytest.raises(Exception):
+        await vpn_connector_wrapper._on_connection_event(event)
+
+    vpn_connector_wrapper._usage_reporting.report_error.assert_called_once_with(event.context.error)

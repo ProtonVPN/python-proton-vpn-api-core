@@ -46,8 +46,7 @@ from proton.vpn.connection.states import StateContext
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.session.servers import LogicalServer, ServerFeatureEnum
 from proton.vpn.core.usage import UsageReporting
-from proton.vpn.connection.exceptions import PolicyError, InvalidSyntaxError, UnexpectedError
-
+from proton.vpn.connection.exceptions import FeatureSyntaxError, FeatureError
 
 logger = logging.getLogger(__name__)
 
@@ -413,13 +412,13 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         """
         try:
             new_state = self.current_state.on_event(event)
-        except (PolicyError, InvalidSyntaxError, UnexpectedError) as excp:
+        except FeatureSyntaxError as excp:
             self._usage_reporting.report_error(excp)
+            logger.exception(msg=excp.message)
+        except FeatureError as excp:
             logger.warning(msg=excp.message)
         except Exception as excp:
-            error_message = f"Unexpected error: {excp}"
-            self._usage_reporting.report_error(error_message)
-            logger.warning(msg=error_message)
+            self._usage_reporting.report_error(excp)
             raise excp
         else:
             return await self._update_state(new_state)

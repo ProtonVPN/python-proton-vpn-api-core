@@ -56,6 +56,8 @@ Requires: python3-pynacl
 Requires: python3-jinja2
 
 Conflicts: proton-vpn-gtk-app < 4.4.2~rc5
+Conflicts: python3-proton-vpn-network-manager < 0.9.1
+
 Obsoletes: python3-proton-vpn-session
 Obsoletes: python3-proton-vpn-connection
 Obsoletes: python3-proton-vpn-killswitch

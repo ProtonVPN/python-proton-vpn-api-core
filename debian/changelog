@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.35.5) unstable; urgency=medium
+
+  * Fix regression sending errors to sentry.
+
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Fri, 27 Sep 2024 11:00:00 +0000
+
 proton-vpn-api-core (0.35.4) unstable; urgency=medium
 
   * Fix to rpm package.spec, added accidentally removed Obsoletes statement.

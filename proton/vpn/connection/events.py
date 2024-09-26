@@ -22,9 +22,8 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Any
 
-from proton.vpn.connection.exceptions import VPNConnectionError
 from .enum import StateMachineEventEnum
 
 if TYPE_CHECKING:
@@ -37,12 +36,14 @@ if TYPE_CHECKING:
 class EventContext:
     """
     Relevant event context.
-
-    It should always contain the VPN connection that emitted the event.
+    Args:
+        connection: the VPN connection object that emitted this event.
+        reason: optional backend-dependent data providing more context about the event.
+        error: an optional exception to be bubbled up while processing the event.
     """
-
     connection: "VPNConnection"
-    error: Optional[Any] = None
+    reason: Optional[Any] = None
+    error: Optional[Exception] = None
 
 
 class Event:
@@ -56,8 +57,8 @@ class Event:
         self.context = context or EventContext(connection=None)
 
     def check_for_errors(self):
-        """Raises an exception if there one."""
-        if self.context.error and isinstance(self.context.error, VPNConnectionError):
+        """Raises an exception if there is one."""
+        if self.context.error:
             raise self.context.error
 
 
@@ -125,11 +126,6 @@ class TunnelSetupFailed(Error):
 class UnexpectedError(Error):
     """Signals that an unexpected error occurred."""
     type = StateMachineEventEnum.UNEXPECTED_ERROR
-
-
-class UnhandledError(Error):
-    """Signals that an unhandled error occurred."""
-    type = StateMachineEventEnum.UNHANDLED_ERROR
 
 
 _event_types = [
