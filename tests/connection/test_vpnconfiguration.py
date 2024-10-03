@@ -147,6 +147,19 @@ def test_ovpnconfig_with_settings(protocol, modified_exec_env, vpn_server):
     assert ovpn_cfg._vpnserver.server_ip in output
 
 
+@pytest.mark.parametrize("protocol", ["udp", "tcp"])
+def test_ovpnconfig_with_certificate(protocol, modified_exec_env, vpn_server):
+    credentials = MockVpnCredentials()
+    ovpn_cfg = OVPNConfig(vpn_server, MockVpnCredentials(), MockSettings(),
+                          use_certificate=True)
+    ovpn_cfg._protocol = protocol
+    output = ovpn_cfg.generate()
+
+    assert credentials.pubkey_credentials.certificate_pem in output
+    assert credentials.pubkey_credentials.openvpn_private_key in output
+    assert "auth-user-pass" not in output
+
+
 def test_wireguard_config_content_generation(modified_exec_env, vpn_server):
     credentials = MockVpnCredentials()
     settings = MockSettings()

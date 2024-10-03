@@ -61,9 +61,8 @@ python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUI
 %defattr(-,root,root)
 
 %changelog
-* Thu Oct 03 2024 Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch> 0.35.8
-- Improve logic on when to update location details.
-- Add tests.
+* Fri Oct 04 2024 Luke Titley <luke.titley@proton.ch> 0.35.8
+- Enable certificate based authentication for openvpn.
 
 * Wed Oct 02 2024 Luke Titley <luke.titley@proton.ch> 0.35.7
 - Use a 'before_send' callback in sentry to sanitize events in sentry

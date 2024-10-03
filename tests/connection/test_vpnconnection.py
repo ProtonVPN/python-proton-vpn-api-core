@@ -187,20 +187,6 @@ def test_unregister_subscriber_delegates_to_publisher():
     publisher_mock.unregister.assert_called_with(subscriber)
 
 
-@pytest.mark.parametrize("env_var_value", ["False", "no", "test", "bool", "0", "tr!ue"])
-def test_not_use_certificate(vpn_server, vpn_credentials, settings, env_var_value):
-    vpnconn = DummyVPNConnection(vpn_server, vpn_credentials, settings)
-    os.environ["PROTON_VPN_USE_CERTIFICATE"] = env_var_value
-    assert vpnconn._use_certificate is False
-
-
-@pytest.mark.parametrize("env_var_value", ["True", "true", "tr ue", "tru e", "TRue", "TRUe!"])
-def test_use_certificate(vpn_server, vpn_credentials, settings, env_var_value):
-    vpnconn = DummyVPNConnection(vpn_server, vpn_credentials, settings)
-    os.environ["PROTON_VPN_USE_CERTIFICATE"] = env_var_value
-    assert vpnconn._use_certificate is True
-
-
 def test_get_user_pass(vpn_server, vpn_credentials, settings):
     vpnconn = DummyVPNConnection(vpn_server, vpn_credentials, settings)
     u, p = vpn_credentials.userpass_credentials.username, vpn_credentials.userpass_credentials.password

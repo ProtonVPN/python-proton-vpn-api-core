@@ -1,9 +1,8 @@
 proton-vpn-api-core (0.35.8) low; urgency=low
 
-  * Improve logic on when to update location details.
-  * Add tests.
+  * Enable certificate based authentication for openvpn.
 
- -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Thu, 03 Oct 2024 10:00:00 +0000
+ -- Luke Titley <luke.titley@proton.ch>  Fri, 04 Oct 2024 10:00:00 +0000
 
 proton-vpn-api-core (0.35.7) low; urgency=low
 

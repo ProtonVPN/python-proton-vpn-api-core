@@ -63,7 +63,8 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         self._vpn_connector = await VPNConnector.get(
             session_holder=self._session_holder,
             settings_persistence=self._settings_persistence,
-            usage_reporting=self._usage_reporting
+            usage_reporting=self._usage_reporting,
+            feature_flags=self.feature_flags
         )
         self._vpn_connector.subscribe_to_certificate_updates(self.refresher)
 

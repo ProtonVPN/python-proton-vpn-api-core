@@ -23,7 +23,6 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
 import asyncio
-import os
 import sys
 from abc import ABC, abstractmethod
 from typing import Callable, List
@@ -57,7 +56,8 @@ class VPNConnection(ABC):
         settings: Settings,
         connection_id: str = None,
         connection_persistence: ConnectionPersistence = None,
-        publisher: Publisher = None
+        publisher: Publisher = None,
+        use_certificate: bool = False,
     ):
         """Initialize a VPNConnection object.
 
@@ -74,6 +74,8 @@ class VPNConnection(ABC):
             persistence implementation will be used instead.
         :param publisher: Publisher implementation. This parameter is optional. Pass it
             only if you know what you are doing.
+        :param use_certificate: whether to use a certificate for authentication,
+            as opposed to username and password.
         """
         self._vpnserver = server
         self._vpncredentials = credentials
@@ -81,6 +83,7 @@ class VPNConnection(ABC):
 
         self._connection_persistence = connection_persistence or ConnectionPersistence()
         self._publisher = publisher or Publisher()
+        self._use_certificate = use_certificate
 
         if connection_id:
             self._unique_id = connection_id
@@ -167,7 +170,8 @@ class VPNConnection(ABC):
 
     @staticmethod
     def create(server: VPNServer, credentials: VPNCredentials, settings: Settings = None,
-               protocol: str = None, backend: str = None):
+               protocol: str = None, backend: str = None,
+               use_certificate: bool = False):
         """
         Creates a new VPN connection object. Note the VPN connection won't be initiated. For that
         to happen, see the `start` method.
@@ -178,11 +182,15 @@ class VPNConnection(ABC):
         :param protocol: protocol to connect with. If None, the default protocol will be used.
         :param backend: Name of the class implementing the VPNConnection interface.
             If None, the default implementation will be used.
+        :param use_certificate: whether to use a certificate for authentication,
+            as opposed to username and password.
+
         """
         backend = Loader.get("backend", class_name=backend)
         protocol = protocol.lower() if protocol else None
         protocol_class = backend.factory(protocol)
-        return protocol_class(server, credentials, settings)
+        return protocol_class(server, credentials, settings,
+                              use_certificate=use_certificate)
 
     @property
     def server(self) -> VPNServer:
@@ -219,17 +227,6 @@ class VPNConnection(ABC):
             is instantiated: VPN protocol.
         """
         return self._settings
-
-    @property
-    def _use_certificate(self):
-        use_certificate = False
-        env_var = os.environ.get("PROTON_VPN_USE_CERTIFICATE", False)
-        if isinstance(env_var, str):
-            env_filtered = env_var.strip("").replace(" ", "").lower()
-            if env_filtered == "true" or "true" in env_filtered:
-                use_certificate = True
-
-        return use_certificate
 
     @classmethod
     @abstractmethod

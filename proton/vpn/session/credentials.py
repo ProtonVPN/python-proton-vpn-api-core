@@ -153,6 +153,14 @@ class VPNPubkeyCredentials:
         return self._certificate_obj.get_as_pem()
 
     @property
+    def openvpn_private_key(self) -> str:
+        """ Get OpenVPN private key in pem format, directly usable in an
+            OpenVPN configuration file.
+        """
+        self._log_if_certificate_requires_to_be_refreshed_but_is_not_expired()
+        return self._secrets.get_ed5519_sk_pem()
+
+    @property
     def wg_private_key(self) -> str:
         """ Get Wireguard private key in base64 format,
             directly usable in a wireguard configuration file. This key

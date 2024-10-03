@@ -68,6 +68,15 @@ DEFAULT = {
                 "enabled": False
             }
         },
+        {
+            "name": "CertificateBasedOpenVPN",
+            "enabled": False,
+            "impressionData": False,
+            "variant": {
+                "name": "disabled",
+                "enabled": False
+            }
+        },
     ]
 }
 

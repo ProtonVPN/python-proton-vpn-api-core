@@ -45,6 +45,7 @@ from proton.vpn.connection.publisher import Publisher
 from proton.vpn.connection.states import StateContext
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.session.dataclasses import VPNLocation
+from proton.vpn.session.feature_flags_fetcher import FeatureFlags
 from proton.vpn.session.servers import LogicalServer, ServerFeatureEnum
 from proton.vpn.core.usage import UsageReporting
 from proton.vpn.connection.exceptions import FeatureSyntaxError, FeatureError
@@ -75,12 +76,13 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
     """
 
     @classmethod
-    async def get(
+    async def get(  # pylint: disable=too-many-arguments
         cls,
         session_holder: SessionHolder,
         settings_persistence: SettingsPersistence,
         usage_reporting: UsageReporting,
         kill_switch: KillSwitch = None,
+        feature_flags: FeatureFlags = None,
     ):
         """
         Builds a VPN connector instance and initializes it.
@@ -89,7 +91,8 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             session_holder,
             settings_persistence,
             kill_switch=kill_switch,
-            usage_reporting=usage_reporting
+            usage_reporting=usage_reporting,
+            feature_flags=feature_flags
         )
         await connector.initialize_state()
         return connector
@@ -102,7 +105,8 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             connection_persistence: ConnectionPersistence = None,
             state: states.State = None,
             kill_switch: KillSwitch = None,
-            publisher: Publisher = None
+            publisher: Publisher = None,
+            feature_flags: FeatureFlags = None,
     ):
         self._session_holder = session_holder
         self._settings_persistence = settings_persistence
@@ -113,6 +117,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         self._lock = asyncio.Lock()
         self._background_tasks = set()
         self._usage_reporting = usage_reporting
+        self._feature_flags = feature_flags or FeatureFlags.default()
 
         self._publisher.register(self._on_state_change)
 
@@ -365,8 +370,14 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         if not self._can_ipv6_be_toggled_client_side(settings):
             settings.ipv6 = False
 
+        use_certificate = self._feature_flags.get("CertificateBasedOpenVPN")
+
+        logger.info("Using certificate based authentication"
+                    f" for openvpn: {use_certificate}")
+
         connection = VPNConnection.create(
-            server, self.credentials, settings, protocol, backend
+            server, self.credentials, settings, protocol, backend,
+            use_certificate=use_certificate
         )
 
         connection.register(self._on_connection_event)
