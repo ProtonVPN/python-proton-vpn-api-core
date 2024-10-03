@@ -1,3 +1,10 @@
+proton-vpn-api-core (0.35.8) low; urgency=low
+
+  * Improve logic on when to update location details.
+  * Add tests.
+
+ -- Alexandru Cheltuitor <alexandru.cheltuitor@proton.ch>  Thu, 03 Oct 2024 10:00:00 +0000
+
 proton-vpn-api-core (0.35.7) low; urgency=low
 
   * Use a 'before_send' callback in sentry to sanitize events in sentry

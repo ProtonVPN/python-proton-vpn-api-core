@@ -124,7 +124,7 @@ async def test__on_connection_event_reports_unexpected_exceptions_and_bubbles_th
     vpn_connector_wrapper._usage_reporting.report_error.assert_called_once_with(event.context.error)
 
 
-def test_on_state_change_stores_new_device_ip_when_successfully_connected_to_vpn():
+def test_on_state_change_stores_new_device_ip_when_successfully_connected_to_vpn_and_connection_details_and_device_ip_are_set():
     publisher_mock = Mock()
     session_holder_mock = Mock()
     new_connection_details = events.ConnectionDetails(
@@ -157,3 +157,61 @@ def test_on_state_change_stores_new_device_ip_when_successfully_connected_to_vpn
 
     session_holder_mock.session.set_location.assert_called_once()
     assert vpn_location.IP == new_connection_details.device_ip
+
+
+def test_on_state_change_skip_store_new_device_ip_when_successfully_connected_to_vpn_and_connection_details_is_none():
+    publisher_mock = Mock()
+    session_holder_mock = Mock()
+    _ = VPNConnector(
+        session_holder=session_holder_mock,
+        settings_persistence=None,
+        usage_reporting=None,
+        connection_persistence=Mock(),
+        publisher=publisher_mock
+    )
+
+    on_state_change_callback = publisher_mock.register.call_args[0][0]
+
+    connected_event = events.Connected(
+        context=events.EventContext(
+            connection=Mock(),
+            connection_details=None
+        )
+    )
+    connected_state = states.Connected(context=states.StateContext(connected_event))
+
+    on_state_change_callback(connected_state)
+
+    session_holder_mock.session.set_location.assert_not_called()
+
+
+def test_on_state_change_skip_store_new_device_ip_when_successfully_connected_to_vpn_and_device_ip_is_none():
+    publisher_mock = Mock()
+    session_holder_mock = Mock()
+    new_connection_details = events.ConnectionDetails(
+        device_ip=None,
+        device_country="PT",
+        server_ipv4="0.0.0.0",
+        server_ipv6=None,
+    )
+    _ = VPNConnector(
+        session_holder=session_holder_mock,
+        settings_persistence=None,
+        usage_reporting=None,
+        connection_persistence=Mock(),
+        publisher=publisher_mock
+    )
+
+    on_state_change_callback = publisher_mock.register.call_args[0][0]
+
+    connected_event = events.Connected(
+        context=events.EventContext(
+            connection=Mock(),
+            connection_details=new_connection_details
+        )
+    )
+    connected_state = states.Connected(context=states.StateContext(connected_event))
+
+    on_state_change_callback(connected_state)
+
+    session_holder_mock.session.set_location.assert_not_called()

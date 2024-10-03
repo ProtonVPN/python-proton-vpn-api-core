@@ -478,7 +478,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             return
 
         connection_details = state.context.event.context.connection_details
-        if not connection_details and not connection_details.device_ip:
+        if not connection_details or not connection_details.device_ip:
             return
 
         current_location = self._session_holder.session.vpn_account.location
