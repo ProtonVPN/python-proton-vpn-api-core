@@ -523,7 +523,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
     def subscribe_to_certificate_updates(self, refresher: VPNDataRefresher):
         """Subscribes to certificate updates."""
-        refresher.certificate_updated_callback = self._on_certificate_updated
+        refresher.set_certificate_updated_callback(self._on_certificate_updated)
 
     async def _on_certificate_updated(self):
         """Actions to be taken when once the certificate is updated."""

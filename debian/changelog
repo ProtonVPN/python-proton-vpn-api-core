@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.36.2) low; urgency=low
+
+  * Fix certificate expired regression
+
+ -- Josep Llaneras <josep.llaneras@proton.ch>  Tue, 08 Oct 2024 15:00:00 +0000
+
 proton-vpn-api-core (0.36.1) low; urgency=low
 
   * Enable certificate based authentication for openvpn.

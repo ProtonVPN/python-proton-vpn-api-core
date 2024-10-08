@@ -16,11 +16,12 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+from proton.vpn.core.refresher import VPNDataRefresher
 from proton.vpn.session.servers import LogicalServer
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.core.connection import VPNConnector
 from proton.vpn.connection import events, exceptions, states
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, AsyncMock
 import pytest
 
 
@@ -215,3 +216,37 @@ def test_on_state_change_skip_store_new_device_ip_when_successfully_connected_to
     on_state_change_callback(connected_state)
 
     session_holder_mock.session.set_location.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("state_class, update_credentials_expected", [
+    (states.Connected, True),
+    (states.Error, True),
+    (states.Disconnected, False),
+    (states.Connecting, False),
+    (states.Disconnecting, False),
+])
+async def test_connector_updates_connection_credentials_when_certificate_is_refreshed_and_current_state_is_connected_or_error(
+        state_class, update_credentials_expected
+):
+    session_holder = Mock()
+    current_state = state_class(states.StateContext(connection=AsyncMock()))
+
+    connector = VPNConnector(
+        session_holder=session_holder,
+        settings_persistence=Mock(),
+        usage_reporting=Mock(),
+        connection_persistence=Mock(),
+        state=current_state
+    )
+
+    refresher = VPNDataRefresher(session_holder=session_holder, scheduler=Mock())
+    connector.subscribe_to_certificate_updates(refresher)
+
+    # Trigger certificated updated callback
+    await refresher._certificate_refresher.certificate_updated_callback()
+
+    assert current_state.context.connection.update_credentials.called is update_credentials_expected
+
+    if update_credentials_expected:
+        current_state.context.connection.update_credentials.assert_called_once_with(session_holder.vpn_credentials)
