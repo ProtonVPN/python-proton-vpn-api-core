@@ -1,4 +1,4 @@
-version: 0.35.8
+version: 0.36.1
 time: 2024/10/04 10:00
 author: Luke Titley
 email: luke.titley@proton.ch
@@ -6,6 +6,16 @@ urgency: low
 stability: low
 description:
 - Enable certificate based authentication for openvpn.
+---
+version: 0.35.8
+time: 2024/10/03 10:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: low
+description:
+- Improve logic on when to update location details.
+- Add tests.
 ---
 version: 0.35.7
 time: 2024/10/02 15:00
