@@ -1,9 +1,18 @@
+version: 1.1.2
+time: 2024/10/09 13:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+  - Build changelog automatically
+---
 version: 1.1.1
 time: 2024/10/03 13:00
 author: Alexandru Cheltuitor
 email: alexandru.cheltuitor@proton.ch
 urgency: low
-stability: low
+stability: unstable
 description:
   - Truncate IP.
 ---
@@ -12,7 +21,7 @@ time: 2024/10/02 13:00
 author: Alexandru Cheltuitor
 email: alexandru.cheltuitor@proton.ch
 urgency: low
-stability: low
+stability: unstable
 description:
   - Implement and expose connection details.
 ---
@@ -21,7 +30,7 @@ time: 2024/09/17 17:47
 author: Luke Titley
 email: luke.titley@proton.ch
 urgency: low
-stability: low
+stability: unstable
 description:
   - Introduced the APIError, SyntaxAPIError and PolicyAPIError exceptions.
   - Reworked the error handling at the same time.
@@ -31,7 +40,7 @@ time: 2024/08/12 17:47
 author: Luke Titley
 email: luke.titley@proton.ch
 urgency: low
-stability: low
+stability: unstable
 description:
   - Fix deadlock when doing requests and reads at the same time.
 ---
@@ -40,7 +49,7 @@ time: 2024/08/9 19:26
 author: Luke Titley
 email: luke.titley@proton.ch
 urgency: low
-stability: low
+stability: unstable
 description:
   - AgentConnection::read now also returns what features have been set.
   - Python ErrorMessage exception is raised when reading responses from Local Agent (Josep Llaneras)
@@ -50,7 +59,7 @@ time: 2024/08/9 09:00
 author: Luke Titley
 email: luke.titley@proton.ch
 urgency: low
-stability: low
+stability: unstable
 description:
   - Adds support for AgentConnection::request_features, and AgentFeatures object.
 ---
@@ -59,7 +68,7 @@ time: 2024/08/9 09:00
 author: Luke Titley
 email: luke.titley@proton.ch
 urgency: low
-stability: low
+stability: unstable
 description:
 - Adds a playback mechanism which makes it possible to test responses from the server.
 ---
@@ -68,7 +77,7 @@ time: 2024/08/07 16:00
 author: Josep Llaneras
 email: josep.llaneras@proton.ch
 urgency: low
-stability: low
+stability: unstable
 description:
 - Configure TCP connection keep alive.
 ---
@@ -77,7 +86,7 @@ time: 2024/08/1 09:00
 author: Luke Titley
 email: luke.titley@proton.ch
 urgency: low
-stability: low
+stability: unstable
 description:
 - Report an error if certificate is expired during session.
 ---
@@ -86,7 +95,7 @@ time: 2024/07/23 09:00
 author: Josep Llaneras
 email: josep.llaneras@proton.ch
 urgency: low
-stability: low
+stability: unstable
 description:
 - Add method to read asynchronous local agent messages.
 ---
@@ -95,7 +104,7 @@ time: 2024/07/18 12:50
 author: Luke Titley
 email: luke.titley@proton.ch
 urgency: low
-stability: low
+stability: unstable
 description:
 - Add a timeout for the tls handshake
 ---

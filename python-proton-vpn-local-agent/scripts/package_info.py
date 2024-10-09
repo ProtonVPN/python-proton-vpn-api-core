@@ -27,6 +27,7 @@ PYTHON_MODULE_NAME = MODULE_NAME.removeprefix(PROTON_PREFIX).replace("-", "_")
 PACKAGE_NAME = MODULE_NAME.replace("python", f"python{CPYTHON_MAJOR}")
 
 BUILD_DIR = pathlib.Path(PROJECT_DIR) / MODULE_NAME / "target"
+CARGO = pathlib.Path(PROJECT_DIR) / MODULE_NAME / "Cargo.toml"
 
 CPYTHON_MIN = f"cp{CPYTHON_MAJOR}{CPYTHON_MINOR}"     # Minimum supported version of c python
 CPYTHON_MAX = "abi3"                                  # Maximum supported version is c python 3.x
@@ -41,8 +42,7 @@ PYTHON_EXTENSION_PATH = os.path.sep.join(
 # The build process should not write any files outside of this folder.
 HOME = os.path.expanduser('~')
 
-
-VERSIONS = "versions.yml"
+VERSIONS = pathlib.Path(PROJECT_DIR) / MODULE_NAME / "versions.yml"
 
 
 def get_lib_path(triplet: str):
@@ -91,7 +91,7 @@ def get_version_from_cargo():
     """
     version = None
     VERSION_RE = re.compile(r'^version = "(.*)"$')
-    with open("Cargo.toml") as cargo:
+    with open(CARGO) as cargo:
         for line in cargo.readlines():
             version_match = VERSION_RE.match(line)
             if version_match:
