@@ -1,3 +1,12 @@
+version: 0.36.3
+time: 2024/10/09 10:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: low
+description:
+- Fix for certificate based authentication for openvpn, feature flag was out of date.
+---
 version: 0.36.2
 time: 2024/10/08 15:00
 author: Josep Llaneras

@@ -1,3 +1,9 @@
+proton-vpn-api-core (0.36.3) low; urgency=low
+
+  * Fix for certificate based authentication for openvpn, feature flag was out of date.
+
+ -- Luke Titley <luke.titley@proton.ch>  Wed, 09 Oct 2024 10:00:00 +0000
+
 proton-vpn-api-core (0.36.2) low; urgency=low
 
   * Fix certificate expired regression
