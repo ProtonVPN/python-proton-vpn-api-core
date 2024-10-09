@@ -1,9 +1,18 @@
+version: 0.36.4
+time: 2024/10/09 14:50
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Automatically generate the changelog files for debian and fedora.
+---
 version: 0.36.3
 time: 2024/10/09 10:00
 author: Luke Titley
 email: luke.titley@proton.ch
 urgency: low
-stability: low
+stability: unstable
 description:
 - Fix for certificate based authentication for openvpn, feature flag was out of date.
 ---
@@ -12,7 +21,7 @@ time: 2024/10/08 15:00
 author: Josep Llaneras
 email: josep.llaneras@proton.ch
 urgency: low
-stability: low
+stability: unstable
 description:
   - Fix certificate expired regression
 ---
@@ -21,7 +30,7 @@ time: 2024/10/04 10:00
 author: Luke Titley
 email: luke.titley@proton.ch
 urgency: low
-stability: low
+stability: unstable
 description:
 - Enable certificate based authentication for openvpn.
 ---
@@ -30,7 +39,7 @@ time: 2024/10/03 10:00
 author: Alexandru Cheltuitor
 email: alexandru.cheltuitor@proton.ch
 urgency: low
-stability: low
+stability: unstable
 description:
 - Improve logic on when to update location details.
 - Add tests.
@@ -40,7 +49,7 @@ time: 2024/10/02 15:00
 author: Luke Titley
 email: luke.titley@proton.ch
 urgency: low
-stability: low
+stability: unstable
 description:
 - Use a 'before_send' callback in sentry to sanitize events in sentry
 ---
