@@ -32,10 +32,8 @@ install_path = os.path.join(
     *(PROTON_VPN_NAMESPACE.split("-"))
 )
 
-module_path = os.path.join(
-    HOME,
-    f"rpmbuild/BUILDROOT/{PACKAGE_NAME}-{VERSION}-1.{FEDORA_VERSION}.{RPM_ARCH}",
-    install_path)
+BUILDROOT=os.path.join(HOME, "rpmbuild", "BUILDROOT", f"{PACKAGE_NAME}-{VERSION}-1.{FEDORA_VERSION}.{RPM_ARCH}")
+module_path=os.path.join(BUILDROOT, install_path)
 
 os.makedirs(f"target/rpmbuild/{PACKAGE_NAME}/SPECS", exist_ok=True)
 os.makedirs(module_path, exist_ok=True)
@@ -64,7 +62,9 @@ devtools.versions.build_rpm(
 lib_path = get_lib_path(RUST_TRIPLET)
 shutil.copyfile(lib_path, os.path.join(module_path, PYTHON_EXTENSION_NAME))
 
-subprocess.check_output(["rpmbuild", "--quiet", "-bb", "--target", RPM_ARCH, "package.spec"],
-                        cwd=f"target/rpmbuild/{PACKAGE_NAME}/SPECS/")
+subprocess.check_output(["rpmbuild", "--quiet", "-bb",
+                         "--buildroot", BUILDROOT,
+                         "--target", RPM_ARCH, "package.spec"],
+                         cwd=f"target/rpmbuild/{PACKAGE_NAME}/SPECS/")
 
 print(TIME)

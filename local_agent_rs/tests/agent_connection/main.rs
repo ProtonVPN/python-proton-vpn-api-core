@@ -28,9 +28,8 @@ async fn test_request_status() {
 
     // Create a new AgentConnection
     // and send a request to get the status
-    let connection =
-        AgentConnection::new(TransportStream::new(read, write))
-            .expect("AgentConnection couldn't be created");
+    let connection = AgentConnection::new(TransportStream::new(read, write))
+        .expect("AgentConnection couldn't be created");
 
     connection
         .request_status(1)
