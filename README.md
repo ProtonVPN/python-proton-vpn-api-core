@@ -33,4 +33,3 @@ connection = local_agent.AgentConnector().connect("localhost", key, certificate)
 The repo is split into 2 projects, these are:
 - local_agent_rs : The rust library
 - python-proton-vpn-local-agent : The python bindings
-
