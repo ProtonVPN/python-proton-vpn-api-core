@@ -6,14 +6,11 @@ It reads versions.yml.
 '''
 import os
 import devtools.versions as versions
-from package_info import PACKAGE_NAME, get_versions
+from package_info import PACKAGE_NAME, get_versions, MODULE_PATH
 
 # The root of this repo
-ROOT = os.path.dirname(
-    os.path.dirname(os.path.realpath(__file__))
-)
-
-DEB = os.path.join(ROOT, "debian", "changelog")  # Path of debian changelog.
+DEB = os.path.join(MODULE_PATH, "debian", "changelog")  # Path of debian
+                                                        # changelog.
 
 
 def build():

@@ -18,6 +18,7 @@ PROTON_VPN_NAMESPACE = 'proton-vpn'
 # ------------------------------------------------------------------------------
 PROTON_PREFIX = f'python-{PROTON_VPN_NAMESPACE}-'
 MODULE_NAME = f'{PROTON_PREFIX}{NAME}'
+MODULE_PATH = pathlib.Path(PROJECT_DIR) / MODULE_NAME
 OS = "linux"                                          # The operating system we're building for
 
 CPYTHON_MAJOR = sys.version_info.major
@@ -26,8 +27,8 @@ CPYTHON_MINOR = sys.version_info.minor
 PYTHON_MODULE_NAME = MODULE_NAME.removeprefix(PROTON_PREFIX).replace("-", "_")
 PACKAGE_NAME = MODULE_NAME.replace("python", f"python{CPYTHON_MAJOR}")
 
-BUILD_DIR = pathlib.Path(PROJECT_DIR) / MODULE_NAME / "target"
-CARGO = pathlib.Path(PROJECT_DIR) / MODULE_NAME / "Cargo.toml"
+BUILD_DIR = MODULE_PATH / "target"
+CARGO = MODULE_PATH / "Cargo.toml"
 
 CPYTHON_MIN = f"cp{CPYTHON_MAJOR}{CPYTHON_MINOR}"     # Minimum supported version of c python
 CPYTHON_MAX = "abi3"                                  # Maximum supported version is c python 3.x
@@ -42,7 +43,7 @@ PYTHON_EXTENSION_PATH = os.path.sep.join(
 # The build process should not write any files outside of this folder.
 HOME = os.path.expanduser('~')
 
-VERSIONS = pathlib.Path(PROJECT_DIR) / MODULE_NAME / "versions.yml"
+VERSIONS = MODULE_PATH / "versions.yml"
 
 
 def get_lib_path(triplet: str):

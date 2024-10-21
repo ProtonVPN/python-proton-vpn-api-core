@@ -1,0 +1,16 @@
+Name:           {PACKAGE_NAME}
+Release:        1%{{?dist}}
+Summary:        A client for interacting with local agent
+License:        GPLv3
+Version:        {VERSION}
+URL: https://github.com/ProtonVPN/python-proton-vpn-local-agent
+
+Requires: python3 >= {CPYTHON_VERSION}
+
+%description
+A client for interacting with local agent
+
+%files
+/{install_path}
+
+%changelog

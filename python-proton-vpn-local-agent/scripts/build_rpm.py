@@ -13,7 +13,10 @@ import shutil
 import subprocess
 # ------------------------------------------------------------------------------
 import devtools.versions
-from package_info import *
+from package_info import (get_versions, get_lib_path, MODULE_PATH,
+                          PACKAGE_NAME, PROTON_VPN_NAMESPACE,
+                          PYTHON_EXTENSION_NAME, CPYTHON_VERSION, HOME,
+                          VERSION, TIME)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("fedora_version")
@@ -32,8 +35,14 @@ install_path = os.path.join(
     *(PROTON_VPN_NAMESPACE.split("-"))
 )
 
-BUILDROOT=os.path.join(HOME, "rpmbuild", "BUILDROOT", f"{PACKAGE_NAME}-{VERSION}-1.{FEDORA_VERSION}.{RPM_ARCH}")
-module_path=os.path.join(BUILDROOT, install_path)
+SPEC_TEMPLATE = MODULE_PATH / "rpmbuild" / "SPECS" / "package.spec.template"
+
+BUILDROOT =\
+    os.path.join(HOME,
+                 "rpmbuild",
+                 "BUILDROOT",
+                 f"{PACKAGE_NAME}-{VERSION}-1.{FEDORA_VERSION}.{RPM_ARCH}")
+module_path = os.path.join(BUILDROOT, install_path)
 
 os.makedirs(f"target/rpmbuild/{PACKAGE_NAME}/SPECS", exist_ok=True)
 os.makedirs(module_path, exist_ok=True)
@@ -41,22 +50,13 @@ os.makedirs(module_path, exist_ok=True)
 devtools.versions.build_rpm(
     f"target/rpmbuild/{PACKAGE_NAME}/SPECS/package.spec",
     get_versions(),
-    f"Name:           {PACKAGE_NAME}\n"
-    "Release:        1%{{?dist}}\n"
-    f"Summary:        A client for interacting with local agent\n"
-    f"License:        GPLv3\n"
-    f"Version:        {VERSION}\n"
-    f"URL: https://github.com/ProtonVPN/python-proton-vpn-local-agent\n"
-    f"\n"
-    f"Requires: python3 >= {CPYTHON_VERSION}\n"
-    f"\n"
-    f"%description\n"
-    f"A client for interacting with local agent\n"
-    f"\n"
-    f"%files\n"
-    f"/{install_path}\n"
-    f"\n"
-    f"%changelog"
+    SPEC_TEMPLATE,
+    additional_variables={
+        "PACKAGE_NAME": PACKAGE_NAME,
+        "VERSION": VERSION,
+        "CPYTHON_VERSION": CPYTHON_VERSION,
+        "install_path": install_path,
+    }
 )
 
 lib_path = get_lib_path(RUST_TRIPLET)
@@ -65,6 +65,6 @@ shutil.copyfile(lib_path, os.path.join(module_path, PYTHON_EXTENSION_NAME))
 subprocess.check_output(["rpmbuild", "--quiet", "-bb",
                          "--buildroot", BUILDROOT,
                          "--target", RPM_ARCH, "package.spec"],
-                         cwd=f"target/rpmbuild/{PACKAGE_NAME}/SPECS/")
+                        cwd=f"target/rpmbuild/{PACKAGE_NAME}/SPECS/")
 
 print(TIME)
