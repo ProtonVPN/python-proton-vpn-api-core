@@ -43,8 +43,8 @@ FF_TIMESTAMPEDLOGICALS = "TimestampedLogicals"
 class ServerListFetcher:
     """Fetches the server list either from disk or from the REST API."""
 
-    ROUTE_LOGICALS = "/vpn/logicals?SecureCoreFilter=all"
-    ROUTE_LOADS = "/vpn/loads"
+    ROUTE_LOGICALS = "/vpn/v1/logicals?SecureCoreFilter=all"
+    ROUTE_LOADS = "/vpn/v1/loads"
     CACHE_PATH = Path(VPNExecutionEnvironment().path_cache) / "serverlist.json"
 
     """Fetches and caches the list of VPN servers from the REST API."""
