@@ -21,14 +21,19 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 from __future__ import annotations
-from typing import Optional
+from ipaddress import ip_address, IPv4Address, IPv6Address
+from typing import Optional, Union, List
 from dataclasses import dataclass, asdict
 from enum import IntEnum
 import os
 
+from proton.vpn import logging
 from proton.utils.environment import VPNExecutionEnvironment
 from proton.vpn.core.cache_handler import CacheHandler
 from proton.vpn.killswitch.interface import KillSwitchState
+
+
+logger = logging.getLogger(__name__)
 
 
 class NetShield(IntEnum):  # pylint: disable=missing-class-docstring
@@ -97,7 +102,8 @@ class Settings:
     """Contains general settings."""
     protocol: str
     killswitch: int
-    dns_custom_ips: Optional[str]
+    custom_dns_enabled: bool
+    custom_dns_ips: Optional[str]
     ipv6: bool
     anonymous_crash_reports: bool
     features: Features
@@ -112,7 +118,8 @@ class Settings:
         return Settings(
             protocol=data.get("protocol", default.protocol),
             killswitch=data.get("killswitch", default.killswitch),
-            dns_custom_ips=data.get("dns_custom_ips", default.dns_custom_ips),
+            custom_dns_enabled=data.get("custom_dns_enabled", default.custom_dns_enabled),
+            custom_dns_ips=data.get("custom_dns_ips", default.custom_dns_ips),
             ipv6=data.get("ipv6", default.ipv6),
             anonymous_crash_reports=data.get(
                 "anonymous_crash_reports",
@@ -131,11 +138,33 @@ class Settings:
         return Settings(
             protocol=DEFAULT_PROTOCOL,
             killswitch=DEFAULT_KILLSWITCH,
-            dns_custom_ips=[],
+            custom_dns_enabled=False,
+            custom_dns_ips=[],
             ipv6=True,
             anonymous_crash_reports=DEFAULT_ANONYMOUS_CRASH_REPORTS,
             features=Features.default(user_tier)
         )
+
+    def get_ipv4_custom_dns_ips(self) -> List[IPv4Address]:
+        """Returns a list of IPv4 objects."""
+        return self._get_dns_list_based_on_ip_version(IPv4Address)
+
+    def get_ipv6_custom_dns_ips(self) -> List[IPv6Address]:
+        """Returns a list of IPv6 objects."""
+        return self._get_dns_list_based_on_ip_version(IPv6Address)
+
+    def _get_dns_list_based_on_ip_version(self, version: Union[IPv4Address, IPv6Address]):
+        dns_list = []
+        for dns_entry in self.custom_dns_ips:
+            try:
+                dns_object = ip_address(dns_entry)
+                if isinstance(dns_object, version):
+                    dns_list.append(dns_object)
+            except ValueError:
+                logger.warning(msg=f"Invalid DNS: {dns_entry}")
+                continue
+
+        return dns_list
 
 
 class SettingsPersistence:

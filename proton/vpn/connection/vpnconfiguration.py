@@ -139,25 +139,11 @@ class OVPNConfig(VPNConfiguration):
             "openvpn_ports": ports,
             "ca_certificate": CA_CERT,
             "certificate_based": self.use_certificate,
-            "custom_dns": len(self._settings.dns_custom_ips) > 0,
         }
 
         if self.use_certificate:
             j2_values["cert"] = self._vpncredentials.pubkey_credentials.certificate_pem
             j2_values["priv_key"] = self._vpncredentials.pubkey_credentials.openvpn_private_key
-
-        if len(self._settings.dns_custom_ips) > 0:
-            dns_ips = []
-            for ip_address in self._settings.dns_custom_ips:
-
-                # FIX-ME: Should custom DNS IPs be tested
-                # if they are in a valid form ?
-                #
-                # if not VPNConfiguration.is_valid_ipv4(ip):
-                #     continue
-                dns_ips.append(ip_address)
-
-            j2_values["dns_ips"] = dns_ips
 
         template = Environment(loader=BaseLoader, autoescape=True).from_string(OPENVPN_V2_TEMPLATE)
 
