@@ -145,7 +145,9 @@ class OVPNConfig(VPNConfiguration):
             j2_values["cert"] = self._vpncredentials.pubkey_credentials.certificate_pem
             j2_values["priv_key"] = self._vpncredentials.pubkey_credentials.openvpn_private_key
 
-        template = Environment(loader=BaseLoader, autoescape=True).from_string(OPENVPN_V2_TEMPLATE)
+        template =\
+            (Environment(loader=BaseLoader, autoescape=True)  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
+                .from_string(OPENVPN_V2_TEMPLATE))
 
         return template.render(j2_values)
 
@@ -179,5 +181,7 @@ class WireguardConfig(VPNConfiguration):
             "wg_server_pk": self._vpnserver.x25519pk,
         }
 
-        template = Environment(loader=BaseLoader, autoescape=True).from_string(WIREGUARD_TEMPLATE)
+        template =\
+            (Environment(loader=BaseLoader, autoescape=True)  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
+                .from_string(WIREGUARD_TEMPLATE))
         return template.render(j2_values)

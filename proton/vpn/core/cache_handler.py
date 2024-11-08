@@ -38,7 +38,7 @@ class CacheHandler:
     def save(self, newdata: dict):
         """Save data to cache file."""
         self._fp.parent.mkdir(parents=True, exist_ok=True)
-        with open(self._fp, "w") as f:  # pylint: disable=W1514, C0103
+        with open(self._fp, "w", encoding="utf-8") as f:  # pylint: disable=C0103
             json.dump(newdata, f, indent=4)  # pylint: disable=C0103
 
     def load(self):
@@ -46,7 +46,7 @@ class CacheHandler:
         if not self.exists:
             return None
 
-        with open(self._fp, "r") as f:  # pylint: disable=W1514, C0103
+        with open(self._fp, "r", encoding="utf-8") as f:  # pylint: disable=C0103
             return json.load(f)  # pylint: disable=C0103
 
     def remove(self):

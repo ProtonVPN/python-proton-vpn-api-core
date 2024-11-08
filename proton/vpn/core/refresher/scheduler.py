@@ -101,14 +101,14 @@ class Scheduler:
 
     def start(self):
         """Starts the scheduler."""
-        if self.is_started:
+        if self.is_started:  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
             raise RuntimeError("Scheduler was already started.")
 
         self._scheduler_task = asyncio.create_task(self._run_periodic_task_list_check())
 
     async def stop(self):
         """Stops the scheduler and discards all remaining tasks."""
-        if self.is_started:
+        if self.is_started:    # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
             self._scheduler_task.cancel()
 
             for record in self._task_list:
@@ -121,7 +121,7 @@ class Scheduler:
 
     async def wait_for_shutdown(self, timeout=1):
         """Waits for the scheduler to be stopped."""
-        if self.is_started:
+        if self.is_started:  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
             try:
                 await asyncio.wait_for(self._scheduler_task, timeout)
             except CancelledError:
@@ -166,13 +166,13 @@ class Scheduler:
 
     def cancel_task(self, task_id):
         """Cancels a task to be executed given its task id."""
-        for task in self._task_list:
+        for task in self._task_list:  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.correctness.list-modify-iterating.list-modify-while-iterate
             if task.id == task_id:
                 if task.background_task:
                     task.background_task.cancel()
                 else:
                     self._task_list.remove(task)
-                break
+                break  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.correctness.list-modify-iterating.list-modify-while-iterate
 
     async def _run_periodic_task_list_check(self):
         while True:

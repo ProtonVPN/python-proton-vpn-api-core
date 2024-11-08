@@ -268,7 +268,7 @@ class LogicalServer:  # pylint: disable=too-many-public-methods
         if len(enabled_servers) == 0:
             raise ServerNotFoundError("No physical servers could be found")
 
-        return random.choice(enabled_servers)  # nosec B311
+        return random.choice(enabled_servers)  # nosec B311 # noqa: E501 # pylint: disable=line-too-long # nosemgrep: gitlab.bandit.B311
 
     def to_dict(self) -> Dict:
         """Converts this object to a dictionary for serialization purposes."""

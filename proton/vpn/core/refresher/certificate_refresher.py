@@ -69,7 +69,7 @@ class CertificateRefresher:
             next_refresh_delay = self._get_next_refresh_delay()
             self._number_of_failed_refresh_attempts += 1
         except Exception:
-            logger.error(
+            logger.error(  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.best-practice.logging-error-without-handling.logging-error-without-handling
                 "Certificate refresh failed unexpectedly."
                 "Stopping certificate refresh."
             )
@@ -117,4 +117,5 @@ def generate_backoff_value(
 
 def _generate_random_component() -> int:
     """Generates random component between 1 - randones_percentage and 1 + randomness_percentage."""
-    return 1 + VPNPubkeyCredentials.REFRESH_RANDOMNESS * (2 * random.random() - 1)  # nosec B311
+    return 1 + VPNPubkeyCredentials.REFRESH_RANDOMNESS *\
+        (2 * random.random() - 1)  # nosec B311 # noqa: E501 # pylint: disable=line-too-long # nosemgrep: gitlab.bandit.B311

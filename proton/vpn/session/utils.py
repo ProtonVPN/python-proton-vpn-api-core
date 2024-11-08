@@ -100,7 +100,7 @@ class RefreshCalculator:
         return self._refresh_interval * self._generate_random_component()
 
     def _generate_random_component(self):
-        return 1 + self._refresh_randomness * (2 * random.random() - 1)  # nosec B311
+        return 1 + self._refresh_randomness * (2 * random.random() - 1)  # nosec B311 # noqa: E501 # pylint: disable=line-too-long # nosemgrep: gitlab.bandit.B311
 
 
 async def rest_api_request(session, route, **api_request_kwargs):  # noqa: E501 pylint: disable=missing-function-docstring

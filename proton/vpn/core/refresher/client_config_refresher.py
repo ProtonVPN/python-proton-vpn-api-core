@@ -58,7 +58,7 @@ class ClientConfigRefresher:
             logger.warning(f"Client config refresh failed: {error}")
             next_refresh_delay = ClientConfig.get_refresh_interval_in_seconds()
         except Exception:
-            logger.error(
+            logger.error(  # nosec B311 # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.best-practice.logging-error-without-handling.logging-error-without-handling
                 "Client config refresh failed unexpectedly. "
                 "Stopping client config refresh."
             )

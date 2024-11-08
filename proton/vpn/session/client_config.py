@@ -146,7 +146,7 @@ class ClientConfig:
     @classmethod
     def _generate_random_component(cls):
         # 1 +/- 0.22*random  # nosec B311
-        return 1 + cls.REFRESH_RANDOMNESS * (2 * random.random() - 1)  # nosec B311
+        return 1 + cls.REFRESH_RANDOMNESS * (2 * random.random() - 1)   # nosec B311 # noqa: E501 # pylint: disable=line-too-long # nosemgrep: gitlab.bandit.B311
 
     @classmethod
     def get_refresh_interval_in_seconds(cls):  # pylint: disable=missing-function-docstring

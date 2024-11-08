@@ -78,7 +78,7 @@ class KeyHandler:  # pylint: disable=missing-class-docstring
             pem_data.encode("ascii"), password=None, backend=backend_default
         )
 
-        assert isinstance(
+        assert isinstance(  # nosec B311, B101 # noqa: E501 # pylint: disable=line-too-long # nosemgrep: gitlab.bandit.B101
             key,
             cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey)  # nosec: B101
         private_key = key.private_bytes(

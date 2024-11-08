@@ -57,7 +57,7 @@ class FeatureFlagsRefresher:
             logger.warning(f"Feature flag refresh failed: {error}")
             next_refresh_delay = FeatureFlags.get_refresh_interval_in_seconds()
         except Exception:
-            logger.error(
+            logger.error(  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.best-practice.logging-error-without-handling.logging-error-without-handling
                 "Feature flag refresh failed unexpectedly."
                 "Stopping feature flag refresh."
             )
