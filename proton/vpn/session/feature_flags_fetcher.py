@@ -86,6 +86,16 @@ DEFAULT = {
                 "enabled": False
             }
         },
+        {
+            "name": "CustomDNS",
+            "enabled": False,
+            "impressionData": False,
+            "variant": {
+                "name": "disabled",
+                "enabled": False
+            }
+        },
+
     ]
 }
 

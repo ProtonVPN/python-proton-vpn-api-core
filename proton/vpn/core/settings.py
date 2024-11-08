@@ -22,8 +22,8 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 
 from __future__ import annotations
 from ipaddress import ip_address, IPv4Address, IPv6Address
-from typing import Optional, Union, List
-from dataclasses import dataclass, asdict
+from typing import Union, List
+from dataclasses import dataclass, asdict, field
 from enum import IntEnum
 import os
 
@@ -98,12 +98,120 @@ class Features:
 
 
 @dataclass
+class CustomDNSEntry:
+    """Custom DNS IP object."""
+    ip: Union[IPv4Address, IPv6Address]  # pylint: disable=invalid-name
+    enabled: bool = True
+
+    @staticmethod
+    def from_dict(data: dict) -> CustomDNSEntry:
+        """Creates and returns `CustomDNSEntry` from the provided dict."""
+        try:
+            ip = data["ip"]  # pylint: disable=invalid-name
+        except KeyError as excp:
+            raise ValueError("Missing 'ip' in custom DNS entry") from excp
+
+        try:
+            converted_ip = ip_address(ip)
+        except ValueError as excp:
+            raise ValueError("Invalid custom DNS IP") from excp
+
+        return CustomDNSEntry(
+            ip=converted_ip,
+            enabled=data.get("enabled", True)
+        )
+
+    def convert_ip_to_short_format(self) -> str:
+        """Converts long format IP to short format IP.
+
+        Mainly for IPv6 addresses.
+        """
+        return self.ip.compressed
+
+    @staticmethod
+    def new_from_string(new_dns_ip: str, enabled: bool = True) -> CustomDNSEntry:
+        """Returns a new CustomDNSEntry from a string IP.
+
+        This is an alternative way to instantiate this class, allowing the user to
+        pass only the string IP, which internally will validate and convert it to
+        and IPv4Address/IPv6Address object.
+        """
+        try:
+            converted_ip = ip_address(new_dns_ip)
+        except ValueError as excp:
+            raise ValueError("Invalid custom DNS IP") from excp
+
+        return CustomDNSEntry(ip=converted_ip, enabled=enabled)
+
+    def to_dict(self) -> dict:
+        """Converts the class to dict."""
+        return {
+            "ip": self.ip.compressed,
+            "enabled": self.enabled
+        }
+
+
+@dataclass
+class CustomDNS:
+    """Contains all settings related to custom DNS."""
+    enabled: bool = False
+    ip_list: List[CustomDNSEntry] = field(default_factory=list)
+
+    @staticmethod
+    def from_dict(data: dict) -> CustomDNS:
+        """Creates and returns `CustomDNS` from the provided dict."""
+        default = CustomDNS.default()
+        loaded_ip_list = data.get("ip_list", default.ip_list)
+        ip_list = []
+
+        for dns_entry_dict in loaded_ip_list:
+            try:
+                dns_ip = CustomDNSEntry.from_dict(dns_entry_dict)
+            except ValueError as excp:
+                logger.warning(msg=f"Invalid custom DNS entry: {dns_entry_dict} : {excp}")
+            else:
+                ip_list.append(dns_ip)
+
+        return CustomDNS(
+            enabled=data.get("enabled", default.enabled),
+            ip_list=ip_list
+        )
+
+    @staticmethod
+    def default() -> CustomDNS:  # pylint: disable=unused-argument
+        """Creates and returns `CustomDNS` from default configurations."""
+        return CustomDNS()
+
+    def get_enabled_ipv4_ips(self) -> List[IPv4Address]:
+        """Returns a list of IPv4 custom DNSs that are enabled."""
+        return self._get_dns_list_based_on_ip_version(IPv4Address)
+
+    def get_enabled_ipv6_ips(self) -> List[IPv6Address]:
+        """Returns a list of IPv6 custom DNSs that are enabled."""
+        return self._get_dns_list_based_on_ip_version(IPv6Address)
+
+    def _get_dns_list_based_on_ip_version(self, version: Union[IPv4Address, IPv6Address]):
+        dns_list = []
+        for dns in self.ip_list:
+            if isinstance(dns.ip, version) and dns.enabled:
+                dns_list.append(dns.ip)
+
+        return dns_list
+
+    def to_dict(self) -> dict:
+        """Converts the class to dict."""
+        return {
+            "enabled": self.enabled,
+            "ip_list": [ip.to_dict() for ip in self.ip_list]
+        }
+
+
+@dataclass
 class Settings:
     """Contains general settings."""
     protocol: str
     killswitch: int
-    custom_dns_enabled: bool
-    custom_dns_ips: Optional[str]
+    custom_dns: CustomDNS
     ipv6: bool
     anonymous_crash_reports: bool
     features: Features
@@ -112,14 +220,16 @@ class Settings:
     def from_dict(data: dict, user_tier: int) -> Settings:
         """Creates and returns `Settings` from the provided dict."""
         default = Settings.default(user_tier)
+
         features = data.get("features")
         features = Features.from_dict(features, user_tier) if features else default.features
+        custom_dns = data.get("custom_dns")
+        custom_dns = CustomDNS.from_dict(custom_dns) if custom_dns else default.custom_dns
 
         return Settings(
             protocol=data.get("protocol", default.protocol),
             killswitch=data.get("killswitch", default.killswitch),
-            custom_dns_enabled=data.get("custom_dns_enabled", default.custom_dns_enabled),
-            custom_dns_ips=data.get("custom_dns_ips", default.custom_dns_ips),
+            custom_dns=custom_dns,
             ipv6=data.get("ipv6", default.ipv6),
             anonymous_crash_reports=data.get(
                 "anonymous_crash_reports",
@@ -130,7 +240,14 @@ class Settings:
 
     def to_dict(self) -> dict:
         """Converts the class to dict."""
-        return asdict(self)
+        return {
+            "protocol": self.protocol,
+            "killswitch": self.killswitch,
+            "custom_dns": self.custom_dns.to_dict(),
+            "ipv6": self.ipv6,
+            "anonymous_crash_reports": self.anonymous_crash_reports,
+            "features": self.features.to_dict()
+        }
 
     @staticmethod
     def default(user_tier: int) -> Settings:
@@ -138,33 +255,11 @@ class Settings:
         return Settings(
             protocol=DEFAULT_PROTOCOL,
             killswitch=DEFAULT_KILLSWITCH,
-            custom_dns_enabled=False,
-            custom_dns_ips=[],
+            custom_dns=CustomDNS.default(),
             ipv6=True,
             anonymous_crash_reports=DEFAULT_ANONYMOUS_CRASH_REPORTS,
             features=Features.default(user_tier)
         )
-
-    def get_ipv4_custom_dns_ips(self) -> List[IPv4Address]:
-        """Returns a list of IPv4 objects."""
-        return self._get_dns_list_based_on_ip_version(IPv4Address)
-
-    def get_ipv6_custom_dns_ips(self) -> List[IPv6Address]:
-        """Returns a list of IPv6 objects."""
-        return self._get_dns_list_based_on_ip_version(IPv6Address)
-
-    def _get_dns_list_based_on_ip_version(self, version: Union[IPv4Address, IPv6Address]):
-        dns_list = []
-        for dns_entry in self.custom_dns_ips:
-            try:
-                dns_object = ip_address(dns_entry)
-                if isinstance(dns_object, version):
-                    dns_list.append(dns_object)
-            except ValueError:
-                logger.warning(msg=f"Invalid DNS: {dns_entry}")
-                continue
-
-        return dns_list
 
 
 class SettingsPersistence:

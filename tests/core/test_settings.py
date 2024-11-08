@@ -31,8 +31,10 @@ def default_free_settings_dict():
     return {
         "protocol": "openvpn-udp",
         "killswitch": KillSwitchState.OFF.value,
-        "custom_dns_enabled": False,
-        "custom_dns_ips": [],
+        "custom_dns": {
+            "enabled": False,
+            "ip_list": []
+        },
         "ipv6": True,
         "anonymous_crash_reports": True,
         "features": {
@@ -117,31 +119,40 @@ def test_settings_persistence_delete_removes_persisted_settings(default_free_set
 
 
 def test_get_ipv4_custom_dns_ips_returns_only_valid_ips(default_free_settings_dict):
-    valid_ips = ["1.1.1.1", "2.2.2.2", "3.3.3.3"]
-    invalid_ips = [
-        "asdasd", "wasd2.q212.123123",
-        "123123123.123123123.123123123.123123", "ef0e:e1d4:87f9:a578:5e52:fb88:46a7:010a"
+    valid_ips = [
+        {"ip": "1.1.1.1"},
+        {"ip": "2.2.2.2"},
+        {"ip": "3.3.3.3"}
     ]
-    default_free_settings_dict["custom_dns_ips"] = list(itertools.chain.from_iterable([valid_ips, invalid_ips]))
+    invalid_ips = [
+        {"ip": "asdasd"},
+        {"ip": "wasd2.q212.123123"},
+        {"ip": "123123123.123123123.123123123.123123"},
+        {"ip": "ef0e:e1d4:87f9:a578:5e52:fb88:46a7:010a"}
+    ]
+    default_free_settings_dict["custom_dns"]["ip_list"] = list(itertools.chain.from_iterable([valid_ips, invalid_ips]))
     sp = Settings.from_dict(default_free_settings_dict, FREE_TIER)
-    list_of_ipv4_addresses_in_string_form = [ip.exploded for ip in sp.get_ipv4_custom_dns_ips()]
+    list_of_ipv4_addresses_in_string_form = [ip.exploded for ip in sp.custom_dns.get_enabled_ipv4_ips()]
 
-    assert valid_ips == list_of_ipv4_addresses_in_string_form
+    assert [dns["ip"] for dns in valid_ips] == list_of_ipv4_addresses_in_string_form
 
 
 def test_get_ipv6_custom_dns_ips_returns_only_valid_ips(default_free_settings_dict):
     valid_ips = [
-        "ef0e:e1d4:87f9:a578:5e52:fb88:46a7:010a",
-        "0275:ef68:faeb:736b:49af:36f7:1620:9308",
-        "4e69:39c4:9c55:5b26:7fa7:730e:4012:48b6"
+        {"ip": "ef0e:e1d4:87f9:a578:5e52:fb88:46a7:010a"},
+        {"ip": "0275:ef68:faeb:736b:49af:36f7:1620:9308"},
+        {"ip": "4e69:39c4:9c55:5b26:7fa7:730e:4012:48b6"}
     ]
     invalid_ips = [
-        "asdasd", "wasd2.q212.123123",
-        "1.1.1.1", "2.2.2.2", "3.3.3.3"
-        "123123123.123123123.123123123.123123"
+        {"ip": "asdasd"},
+        {"ip": "wasd2.q212.123123"},
+        {"ip": "1.1.1.1"},
+        {"ip": "2.2.2.2"},
+        {"ip": "3.3.3.3"},
+        {"ip": "123123123.123123123.123123123.123123"}
     ]
-    default_free_settings_dict["custom_dns_ips"] = list(itertools.chain.from_iterable([valid_ips, invalid_ips]))
+    default_free_settings_dict["custom_dns"]["ip_list"] = list(itertools.chain.from_iterable([valid_ips, invalid_ips]))
     sp = Settings.from_dict(default_free_settings_dict, FREE_TIER)
-    list_of_ipv6_addresses_in_string_form = [ip.exploded for ip in sp.get_ipv6_custom_dns_ips()]
+    list_of_ipv6_addresses_in_string_form = [ip.exploded for ip in sp.custom_dns.get_enabled_ipv6_ips()]
 
-    assert valid_ips == list_of_ipv6_addresses_in_string_form
+    assert [dns["ip"] for dns in valid_ips] == list_of_ipv6_addresses_in_string_form
