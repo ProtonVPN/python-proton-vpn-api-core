@@ -72,7 +72,7 @@ def get_changelog_time():
     """
     changelog_time = None
     CHANGELOG_RE = re.compile(r'^time:\s*(.*)')
-    with open(VERSIONS) as versions:
+    with open(VERSIONS, encoding="utf-8") as versions:
         for line in versions.readlines():
             version_match = CHANGELOG_RE.match(line)
             if version_match:
@@ -92,7 +92,7 @@ def get_version_from_cargo():
     """
     version = None
     VERSION_RE = re.compile(r'^version = "(.*)"$')
-    with open(CARGO) as cargo:
+    with open(CARGO, encoding="utf-8") as cargo:
         for line in cargo.readlines():
             version_match = VERSION_RE.match(line)
             if version_match:

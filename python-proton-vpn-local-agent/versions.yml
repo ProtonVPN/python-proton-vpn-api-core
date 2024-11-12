@@ -1,3 +1,12 @@
+version: 1.1.5
+time: 2024/11/13 16:17
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: low
+description:
+- Added semgrep scanning to CI
+---
 version: 1.1.4
 time: 2024/10/21 13:00
 author: Luke Titley

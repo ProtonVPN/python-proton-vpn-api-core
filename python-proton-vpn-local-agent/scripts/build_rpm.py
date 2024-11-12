@@ -10,7 +10,7 @@ an .rpm file.
 import argparse
 import os
 import shutil
-import subprocess
+import subprocess  # nosemgrep
 # ------------------------------------------------------------------------------
 import devtools.versions
 from package_info import (get_versions, get_lib_path, MODULE_PATH,

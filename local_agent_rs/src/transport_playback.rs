@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 // Copyright (c) 2024 Proton AG
 // -----------------------------------------------------------------------------
-use crate::{transport::Transport, Request, Response, Result};
+use crate::{Error, transport::Transport, Request, Response, Result};
 use async_trait::async_trait;
 use tokio::sync::Mutex;
 // -----------------------------------------------------------------------------
@@ -47,8 +47,7 @@ impl Transport for TransportPlayback {
             .responses
             .lock()
             .await
-            .pop()
-            .expect("No more responses");
+            .pop().ok_or(Error::NoMoreResponses)?;
 
         // First we wait a bit before we return the response
         std::thread::sleep(std::time::Duration::from_secs(seconds));

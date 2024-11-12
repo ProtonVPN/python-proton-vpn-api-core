@@ -19,6 +19,8 @@ pub enum Error {
     NoPrivateKeyFound,
     #[error("No status from local agent")]
     NoStatusReturned,
+    #[error("No more responses")]
+    NoMoreResponses,
     #[error("Error received from local agent server")]
     GetStatusError(ErrorMessage),
     #[error("Invalid DNS name")]
