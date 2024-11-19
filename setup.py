@@ -25,11 +25,11 @@ setup(
         "proton.vpn.killswitch.interface*", "proton.vpn.session*",
         "proton.vpn.logging*"
     ]),
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     license="GPLv3",
     platforms="Linux",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: POSIX :: Linux",
