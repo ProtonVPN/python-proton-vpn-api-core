@@ -19,7 +19,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-import datetime
+from datetime import datetime, timezone
 import logging
 import os
 from logging.handlers import RotatingFileHandler
@@ -134,7 +134,7 @@ def config(filename, logdirpath=None):
         fmt="%(asctime)s | %(name)s:%(lineno)d | %(levelname)s | %(message)s",
     )
     _formatter.formatTime = (
-        lambda record, datefmt=None: datetime.datetime.utcnow().isoformat()
+        lambda record, datefmt=None: datetime.now(timezone.utc).isoformat()
     )
 
     # Starts a new file at 3MB size limit
