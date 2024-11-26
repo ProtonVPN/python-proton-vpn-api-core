@@ -467,9 +467,8 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             # Unregister from connection event updates once the connection ended.
             self._current_state.context.connection.unregister(self._on_connection_event)
 
-        state_tasks = asyncio.create_task(self._current_state.run_tasks())
+        new_event = await self._current_state.run_tasks()
         self._publisher.notify(new_state)
-        new_event = await state_tasks
 
         if (
             not self._current_state.context.reconnection
