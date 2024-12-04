@@ -1,3 +1,13 @@
+version: 0.38.4
+time: 2024/12/09 12:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- Ensure no crash occurs if cache files are non-decodable.
+- Set default expiration time for features flags to expired, so that they're fetched from the API and cached as soon as possible.
+---
 version: 0.38.2
 time: 2024/11/26 11:56
 author: Josep Llaneras

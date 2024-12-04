@@ -23,6 +23,10 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 from pathlib import Path
+from proton.vpn import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class CacheHandler:
@@ -46,8 +50,16 @@ class CacheHandler:
         if not self.exists:
             return None
 
-        with open(self._fp, "r", encoding="utf-8") as f:  # pylint: disable=C0103
-            return json.load(f)  # pylint: disable=C0103
+        try:
+            with open(self._fp, "r", encoding="utf-8") as f:  # pylint: disable=C0103
+                return json.load(f)  # pylint: disable=C0103
+        except (json.decoder.JSONDecodeError, UnicodeDecodeError):
+            filename = os.path.basename(self._fp)
+            logger.warning(
+                msg=f"Unable to decode JSON file \"{filename}\"",
+                category="cache", event="load", exc_info=True
+            )
+            return None
 
     def remove(self):
         """ Remove cache from disk."""

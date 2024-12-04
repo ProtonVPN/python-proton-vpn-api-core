@@ -95,8 +95,8 @@ DEFAULT = {
                 "enabled": False
             }
         },
-
-    ]
+    ],
+    "ExpirationTime": 0
 }
 
 
@@ -191,7 +191,6 @@ class FeatureFlagsFetcher:
         Loads the client configuration from persistence.
         :returns: the persisted client configuration. If no persistence
             was found then the default client configuration is returned.
-
         """
         cache = self._cache_file.load()
         self._features = FeatureFlags(cache) if cache else FeatureFlags.default()

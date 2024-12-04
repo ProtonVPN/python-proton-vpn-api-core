@@ -32,9 +32,6 @@ from proton.vpn.session.account import VPNAccount
 from proton.vpn.session import FeatureFlags
 
 from proton.vpn.core.usage import UsageReporting
-from proton.vpn import logging
-
-logger = logging.getLogger(__name__)
 
 
 class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
