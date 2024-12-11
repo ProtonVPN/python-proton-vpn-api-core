@@ -135,7 +135,9 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         user_tier = self._session_holder.user_tier or 0
         loop = asyncio.get_running_loop()
         settings = await loop.run_in_executor(
-            None, self._settings_persistence.get, user_tier
+            None, self._settings_persistence.get,
+            user_tier,
+            self._session_holder.session.feature_flags
         )
 
         return self._filter_features(settings, user_tier)

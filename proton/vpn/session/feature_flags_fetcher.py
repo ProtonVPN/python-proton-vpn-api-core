@@ -95,6 +95,15 @@ DEFAULT = {
                 "enabled": False
             }
         },
+        {
+            "name": "SwitchDefaultProtocolToWireguard",
+            "enabled": False,
+            "impressionData": False,
+            "variant": {
+                "name": "disabled",
+                "enabled": False
+            }
+        },
     ],
     "ExpirationTime": 0
 }

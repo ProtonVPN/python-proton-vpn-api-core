@@ -67,7 +67,7 @@ def test_settings_persistence_get_returns_default_settings_and_does_not_persist_
     cache_handler_mock.load.return_value = None
     sp = SettingsPersistence(cache_handler_mock)
 
-    sp.get(FREE_TIER)
+    sp.get(FREE_TIER, Mock(name="feature-flags"))
 
     cache_handler_mock.save.assert_not_called()
 
@@ -86,7 +86,7 @@ def test_settings_persistence_get_returns_in_memory_settings_if_they_were_alread
     cache_handler_mock.load.return_value = default_free_settings_dict
     sp = SettingsPersistence(cache_handler_mock)
 
-    sp.get(FREE_TIER)
+    sp.get(FREE_TIER, Mock(name="feature-flags"))
 
     # The persistend settings should be loaded once, not twice.
     cache_handler_mock.load.assert_called_once()
@@ -98,7 +98,7 @@ def test_settings_persistence_ensure_features_are_loaded_with_default_values_bas
     cache_handler_mock.load.return_value = None
     sp = SettingsPersistence(cache_handler_mock)
 
-    settings = sp.get(user_tier)
+    settings = sp.get(user_tier, Mock(name="feature-flags"))
 
     if user_tier == FREE_TIER:
         assert settings.features.netshield == NetShield.NO_BLOCK.value
@@ -111,7 +111,7 @@ def test_settings_persistence_delete_removes_persisted_settings(default_free_set
     cache_handler_mock.load.return_value = default_free_settings_dict
     sp = SettingsPersistence(cache_handler_mock)
 
-    sp.get(FREE_TIER)
+    sp.get(FREE_TIER, Mock(name="feature-flags"))
 
     sp.delete()
 

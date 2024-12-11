@@ -72,11 +72,14 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         are not found. Be sure to call save_settings if you want to apply changes.
         """
         # Default to free user settings if the session is not loaded yet.
+        # pylint: disable=duplicate-code
         user_tier = self._session_holder.user_tier or 0
 
         loop = asyncio.get_running_loop()
         settings = await loop.run_in_executor(
-            None, self._settings_persistence.get, user_tier
+            None, self._settings_persistence.get,
+            user_tier,
+            self.feature_flags
         )
         self._usage_reporting.enabled = settings.anonymous_crash_reports
 
