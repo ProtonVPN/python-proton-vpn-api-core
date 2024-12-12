@@ -1,3 +1,12 @@
+version: 0.39.0
+time: 2024/12/17 13:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- Update event context so that it passes a forwarded port.
+---
 version: 0.38.6
 time: 2024/12/16 10:00
 author: Alexandru Cheltuitor

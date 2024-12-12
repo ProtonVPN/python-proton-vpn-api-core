@@ -139,6 +139,11 @@ class State(ABC):
     async def run_tasks(self) -> Optional[events.Event]:
         """Tasks to be run when this state instance becomes the current VPN state."""
 
+    @property
+    def forwarded_port(self) -> Optional[int]:
+        """Returns the forwarded port if it exists."""
+        return self.context.event.context.forwarded_port
+
 
 class Disconnected(State):
     """

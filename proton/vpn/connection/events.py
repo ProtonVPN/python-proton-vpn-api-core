@@ -52,6 +52,7 @@ class EventContext:
     """
     connection: "VPNConnection"
     connection_details: Optional[ConnectionDetails] = None
+    forwarded_port: Optional[int] = None
     reason: Optional[Any] = None
     error: Optional[Exception] = None
 
