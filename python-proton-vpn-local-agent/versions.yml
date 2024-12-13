@@ -1,3 +1,12 @@
+version: 1.2.1
+time: 2024/12/17 21:34
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Added port forwarding module to local-agent-rs
+---
 version: 1.2.0
 time: 2024/11/19 13:00
 author: Alexandru Cheltuitor

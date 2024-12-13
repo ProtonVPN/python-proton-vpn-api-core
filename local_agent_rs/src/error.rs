@@ -35,6 +35,10 @@ pub enum Error {
     TokioElapsed(#[from] tokio::time::error::Elapsed),
     #[error("Invalid agent connection: {0}")]
     InvalidAgentConnection(String),
+    #[error("Port Forwarding: {0}")]
+    PortForwarding(String),
+    #[error("Bincode: {0}")]
+    BincodeError(#[from] bincode::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
