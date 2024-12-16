@@ -268,19 +268,26 @@ class SettingsPersistence:
     def __init__(self, cache_handler: CacheHandler = None):
         self._cache_handler = cache_handler or CacheHandler(SETTINGS)
         self._settings = None
+        self._settings_are_default = True
 
     def get(self, user_tier: int, feature_flags: "FeatureFlags" = None) -> Settings:
         """Load the user settings, either the ones stored on disk or getting
         default based on tier"""
         feature_flags = feature_flags or FeatureFlags.default()
 
-        if self._settings is None:
-            raw_settings = self._cache_handler.load()
-            if raw_settings is None:
-                self._settings = Settings.default(user_tier)
+        if self._settings is not None:
+            if self._settings_are_default:
                 self._update_default_settings_based_on_feature_flags(feature_flags)
-            else:
-                self._settings = Settings.from_dict(raw_settings, user_tier)
+
+            return self._settings
+
+        raw_settings = self._cache_handler.load()
+        if raw_settings is None:
+            self._settings = Settings.default(user_tier)
+            self._update_default_settings_based_on_feature_flags(feature_flags)
+        else:
+            self._settings = Settings.from_dict(raw_settings, user_tier)
+            self._settings_are_default = False
 
         return self._settings
 
@@ -292,9 +299,11 @@ class SettingsPersistence:
         """Store settings to disk."""
         self._cache_handler.save(settings.to_dict())
         self._settings = settings
+        self._settings_are_default = False
 
     def delete(self):
         """Deletes the file stored on disk containing the settings
         and resets internal settings property."""
         self._cache_handler.remove()
         self._settings = None
+        self._settings_are_default = True
