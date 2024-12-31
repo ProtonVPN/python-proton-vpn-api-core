@@ -17,7 +17,7 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Dict
 import re
 
 from proton.utils.environment import VPNExecutionEnvironment
@@ -35,9 +35,6 @@ NETZONE_HEADER = "X-PM-netzone"
 MODIFIED_SINCE_HEADER = "If-Modified-Since"
 LAST_MODIFIED_HEADER = "Last-Modified"
 NOT_MODIFIED_STATUS = 304
-
-# Feature flags
-FF_TIMESTAMPEDLOGICALS = "TimestampedLogicals"
 
 
 class ServerListFetcher:
@@ -63,34 +60,12 @@ class ServerListFetcher:
         self._server_list = None
         self._cache_file.remove()
 
-    async def fetch_old(self) -> ServerList:
-        """Fetches the list of VPN servers. Warning: this is a heavy request."""
-        response = await rest_api_request(
-            self._session,
-            self.ROUTE_LOGICALS,
-            additional_headers={
-                NETZONE_HEADER: self._build_header_netzone(),
-            },
-        )
-
-        response[PersistenceKeys.USER_TIER.value] = self._session.vpn_account.max_tier
-        response[PersistenceKeys.EXPIRATION_TIME.value] = ServerList.get_expiration_time()
-        response[
-            PersistenceKeys.LOADS_EXPIRATION_TIME.value
-        ] = ServerList.get_loads_expiration_time()
-
-        self._cache_file.save(response)
-
-        self._server_list = ServerList.from_dict(response)
-        return self._server_list
-
-    async def fetch_new(self) -> ServerList:
+    async def fetch(self) -> ServerList:
         """Fetches the list of VPN servers. Warning: this is a heavy request."""
         raw_response = await rest_api_request(
             self._session,
             self.ROUTE_LOGICALS,
-            additional_headers=self._build_additional_headers(
-                include_modified_since=True),
+            additional_headers=self._build_additional_headers(),
             return_raw=True
         )
 
@@ -99,17 +74,15 @@ class ServerListFetcher:
         else:
             response = raw_response.json
 
+        last_modified_time = raw_response.find_first_header(
+            LAST_MODIFIED_HEADER, ServerList.get_epoch_time()
+        )
+
         entries_to_update = {
-            PersistenceKeys.USER_TIER.value:
-                self._session.vpn_account.max_tier,
-            PersistenceKeys.LAST_MODIFIED_TIME.value:
-                raw_response.find_first_header(
-                    LAST_MODIFIED_HEADER,
-                    ServerList.get_epoch_time()),
-            PersistenceKeys.EXPIRATION_TIME.value:
-                ServerList.get_expiration_time(),
-            PersistenceKeys.LOADS_EXPIRATION_TIME.value:
-                ServerList.get_loads_expiration_time()
+            PersistenceKeys.USER_TIER.value: self._session.vpn_account.max_tier,
+            PersistenceKeys.LAST_MODIFIED_TIME.value: last_modified_time,
+            PersistenceKeys.EXPIRATION_TIME.value: ServerList.get_expiration_time(),
+            PersistenceKeys.LOADS_EXPIRATION_TIME.value: ServerList.get_loads_expiration_time()
         }
 
         response.update(entries_to_update)
@@ -119,14 +92,6 @@ class ServerListFetcher:
         self._server_list = ServerList.from_dict(response)
 
         return self._server_list
-
-    async def fetch(self) -> ServerList:
-        """Fetches the list of VPN servers. Warning: this is a heavy request."""
-
-        if self._session.feature_flags.get(FF_TIMESTAMPEDLOGICALS):
-            return await self.fetch_new()
-
-        return await self.fetch_old()
 
     async def update_loads(self) -> ServerList:
         """
@@ -165,23 +130,23 @@ class ServerListFetcher:
         self._server_list = ServerList.from_dict(cache)
         return self._server_list
 
-    def _build_header_netzone(self):
+    def _build_additional_headers(self) -> Dict[str, str]:
+        headers = {}
+        headers[NETZONE_HEADER] = self._build_header_netzone()
+        headers[MODIFIED_SINCE_HEADER] = self._extract_modified_since_header()
+
+        return headers
+
+    def _build_header_netzone(self) -> str:
         truncated_ip_address = truncate_ip_address(
             self._session.vpn_account.location.IP
         )
         return truncated_ip_address
 
-    def _build_additional_headers(self, include_modified_since: bool = False):
-        headers = {}
-        headers[NETZONE_HEADER] = self._build_header_netzone()
-        if include_modified_since:
-            server_list = self._server_list
-            if server_list:
-                headers[MODIFIED_SINCE_HEADER] = server_list.last_modified_time
-            else:
-                headers[MODIFIED_SINCE_HEADER] = ServerList.get_epoch_time()
-
-        return headers
+    def _extract_modified_since_header(self) -> str:
+        return self._server_list.last_modified_time \
+            if self._server_list \
+            else ServerList.get_epoch_time()
 
 
 def truncate_ip_address(ip_address: str) -> str:

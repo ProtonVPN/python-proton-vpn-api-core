@@ -33,52 +33,7 @@ REFRESH_INTERVAL = 2 * 60 * 60  # 2 hours
 DEFAULT = {
     "toggles": [
         {
-            "name": "LinuxBetaToggle",
-            "enabled": True,
-            "impressionData": False,
-            "variant": {
-                "name": "disabled",
-                "enabled": False
-            }
-        },
-        {
-            "name": "WireGuardExperimental",
-            "enabled": True,
-            "impressionData": False,
-            "variant": {
-                "name": "disabled",
-                "enabled": False
-            }
-        },
-        {
-            "name": "TimestampedLogicals",
-            "enabled": False,
-            "impressionData": False,
-            "variant": {
-                "name": "disabled",
-                "enabled": False
-            }
-        },
-        {
-            "name": "IPv6Support",
-            "enabled": False,
-            "impressionData": False,
-            "variant": {
-                "name": "disabled",
-                "enabled": False
-            }
-        },
-        {
             "name": "CertificateBasedOpenVPN",
-            "enabled": False,
-            "impressionData": False,
-            "variant": {
-                "name": "disabled",
-                "enabled": False
-            }
-        },
-        {
-            "name": "LinuxDeferredUI",
             "enabled": False,
             "impressionData": False,
             "variant": {

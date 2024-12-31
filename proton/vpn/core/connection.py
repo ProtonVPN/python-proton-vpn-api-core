@@ -362,11 +362,6 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
         protocol = protocol or settings.protocol
 
-        # If IPv6 FF is disabled then the feature should not be toggled client side and
-        # should be disabled.
-        if not self._can_ipv6_be_toggled_client_side(settings):
-            settings.ipv6 = False
-
         feature_flags = self._session_holder.session.feature_flags
         use_certificate = feature_flags.get("CertificateBasedOpenVPN")
 
@@ -513,10 +508,6 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
     def _is_free_tier(self, user_tier: int) -> bool:
         return user_tier == 0
-
-    def _can_ipv6_be_toggled_client_side(self, settings: Settings) -> bool:
-        return settings.ipv6 and\
-            self._session_holder.session.feature_flags.get("IPv6Support")
 
     def subscribe_to_certificate_updates(self, refresher: VPNDataRefresher):
         """Subscribes to certificate updates."""
