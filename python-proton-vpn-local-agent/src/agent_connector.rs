@@ -30,6 +30,7 @@ impl AgentConnector {
     /// * `domain` - The name of the local agent server to connect to as a string.
     /// * `key` - The private key pks8 formatted in pem encoding as a string.
     /// * `cert` - The certificate in pem encoding as a string.
+    /// * `timeout` - Optional timeout used to stablish the connection.
     ///
     #[pyo3(signature = (domain, key, cert, timeout_in_seconds=DEFAULT_TIMEOUT_IN_SECONDS))]
     pub fn connect<'p>(
@@ -42,12 +43,12 @@ impl AgentConnector {
     ) -> PyResult<Bound<'p, PyAny>> {
         future(py, async move {
             Ok(AgentConnection::new(
-                la::AgentConnector::connect(
-                    &domain,
-                    &key,
-                    &cert,
+                la::AgentConnector::connect(la::ConnectParams {
+                    domain,
+                    key,
+                    cert,
                     timeout_in_seconds,
-                )
+                })
                 .await?,
             ))
         })

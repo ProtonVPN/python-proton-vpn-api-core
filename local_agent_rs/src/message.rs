@@ -100,3 +100,21 @@ pub struct Request {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status_get: Option<StatusGet>,
 }
+
+impl Request {
+    /// Creates a new Request with the given features set.
+    pub fn new_features_set(features_set: AgentFeatures) -> Self {
+        Self {
+            features_set: Some(features_set),
+            status_get: None,
+        }
+    }
+
+    /// Creates a new Request with the status get.
+    pub fn new_status_get() -> Self {
+        Self {
+            features_set: None,
+            status_get: Some(StatusGet {}),
+        }
+    }
+}

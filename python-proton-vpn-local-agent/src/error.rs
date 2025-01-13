@@ -18,6 +18,8 @@ use thiserror::Error;
 pub enum Error {
     #[error("Local agent error: {0}")]
     LocalAgent(#[from] la::Error),
+    #[error("IO error: {0}")]
+    IO(#[from] std::io::Error),
 }
 
 fn convert_error_message_string<T: std::fmt::Debug>(error: &T) -> String {
@@ -71,6 +73,7 @@ impl std::convert::From<Error> for PyErr {
                 APIError::new_err(error_message)
             }
             Error::LocalAgent(e) => convert_to_default_error(&e),
+            _ => convert_to_default_error(&err),
         }
     }
 }

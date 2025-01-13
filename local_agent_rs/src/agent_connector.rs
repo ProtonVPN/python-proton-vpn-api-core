@@ -56,6 +56,22 @@ A1gTTlpi7A==
 
 // -----------------------------------------------------------------------------
 
+/// Parameters for connecting to the local agent server.
+/// # Fields
+///
+/// * `domain` - The name of the local agent server to connect to.
+/// * `key` - The private key pks8 formatted in pem encoding.
+/// * `cert` - The certificate in pem encoding.
+/// * `timeout_in_seconds` - The timeout in seconds for the connection.
+///
+#[derive(Debug)]
+pub struct ConnectParams {
+    pub domain: String,
+    pub key: String,
+    pub cert: String,
+    pub timeout_in_seconds: u64,
+}
+
 /// Builds the root certificate store, fom the constant PROTON_VPN_ROOT_CA.
 fn build_root_cert_store() -> Result<RootCertStore> {
     let mut cursor = std::io::Cursor::new(PROTON_VPN_ROOT_CA);
@@ -96,24 +112,18 @@ impl AgentConnector {
     ///
     /// # Arguments
     ///
-    /// * `domain` - The name of the local agent server to connect to.
-    /// * `key` - The private key pks8 formatted in pem encoding.
-    /// * `cert` - The certificate in pem encoding.
-    /// * `timeout_in_seconds` - The timeout in seconds for the connection.
+    /// * `params` - The parameters to establish the agent connection.
     ///
     pub async fn connect(
-        domain: &str,
-        key: &str,
-        cert: &str,
-        timeout_in_seconds: u64,
+        params: ConnectParams
     ) -> Result<AgentConnection> {
         // Build the root certificate store
         let root_cert_store = build_root_cert_store()?;
 
-        let certs = parse_certificates(cert)?;
+        let certs = parse_certificates(&params.cert)?;
 
         // Key is in pks8 format
-        let key = rustls_pemfile::private_key(&mut std::io::Cursor::new(key))?
+        let key = rustls_pemfile::private_key(&mut std::io::Cursor::new(&params.key))?
             .ok_or(Error::NoPrivateKeyFound)?;
 
         // TLS 1.2 is forced because with 1.3 we were not getting any errors
@@ -125,10 +135,10 @@ impl AgentConnector {
 
         let connector = TlsConnector::from(Arc::new(config));
         let dnsname =
-            rustls_pki_types::ServerName::try_from(domain.to_string())?;
+            rustls_pki_types::ServerName::try_from(params.domain.clone())?;
 
         let timeout_duration =
-            std::time::Duration::from_secs(timeout_in_seconds);
+            std::time::Duration::from_secs(params.timeout_in_seconds);
 
         let tcp_stream = tokio::time::timeout(
             timeout_duration,

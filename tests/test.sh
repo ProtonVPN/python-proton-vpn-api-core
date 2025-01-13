@@ -1,8 +1,15 @@
 
-# Just a little utiliy script to build and run the test for connection.
+# Builds and runs the tests from this directory.
 set -e
-export CARGO_TARGET_DIR=../../target
-pushd ../python-proton-vpn-local-agent
+
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+
+pushd $SCRIPT_DIR/../python-proton-vpn-local-agent
 cargo build --release
-pushd
-python3 test_connection.py
+popd
+
+pushd $SCRIPT_DIR
+./test_connection.py
+./test_playback.py
+./test_listener.py
+popd

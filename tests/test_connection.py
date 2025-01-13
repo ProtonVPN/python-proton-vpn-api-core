@@ -1,54 +1,21 @@
+#!/usr/bin/env python3
 '''
 This tests that local_agent.AgentConnection() can be used to connect to a VPN
 server.
 If no exception are raised during the call to AgentConnection.connect(), then
 the test is successful.
 
-You need to copy your secretes from the keyring proton vpn entry you are using
-to log in, into a file called 'secrets.json'
-
-Then you need to add a 'server' key entry to that file, with the domain name
-of the server that will contain the local agent server.
-
-You can find the domain name by looking into the serverlist cache file.
+Check instructions on load_secrets.py on how to set thing up to be able to
+run this test.
 
 For this test to work it's required to be connected to be connected to a server,
 and passing a domain that matches that server to the `secrets.json` file.
 '''
-import os
 import asyncio
 import local_agent
-import json
-import base64
-import cryptography
-from cryptography.hazmat.primitives.serialization import Encoding, \
-                                                         PrivateFormat
-from cryptography.hazmat.primitives import serialization
+from load_secrets import load_secrets
 
-SECRETS_FILENAME = "secrets.json"
-path = os.path.abspath(__file__).split("/")
-path[-1] = SECRETS_FILENAME
-FILEPATH = "/".join(path)
-# Load the private key and certificate from secrets.json
-#
-# You need to make secrets.json yourself, buy copying the secrets from your
-# ProtonVPN keyring.
-with open(FILEPATH, "r", encoding="utf-8") as f:
-    secrets = json.load(f)
-
-# The certificate
-certificate = secrets["vpn"]["certificate"]["Certificate"]
-server = secrets["server"]
-
-# The private key
-private_key = base64.b64decode(secrets["vpn"]["secrets"]["ed25519_privatekey"])
-private_key = cryptography.hazmat.primitives.asymmetric\
-                .ed25519.Ed25519PrivateKey.from_private_bytes(private_key)
-
-private_key = private_key.private_bytes(
-            encoding=Encoding.PEM, format=PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()
-        ).decode("ascii")
+secrets = load_secrets()
 
 timeout = 1 # 1 second timeout
 
@@ -65,7 +32,7 @@ async def make_test_connection():
     print()
 
     agent_connection = await agent_connector.connect(
-        server, private_key, certificate, timeout)
+        secrets.server_domain, secrets.private_key, secrets.certificate, timeout)
 
     print("Local agent connection established")
 

@@ -10,6 +10,7 @@ mod connection_details;
 mod error;
 mod exception;
 mod future;
+mod listener;
 mod reason;
 mod state;
 mod status;
@@ -23,6 +24,7 @@ pub use agent_features::AgentFeatures;
 pub use connection_details::ConnectionDetails;
 pub use error::{Error, Result};
 pub use exception::*;
+pub use listener::Listener;
 pub use reason::{Reason, ReasonCode};
 pub use state::State;
 pub use status::Status;
@@ -49,6 +51,7 @@ fn local_agent(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Reason>()?;
     m.add_class::<Status>()?;
     m.add_class::<ConnectionDetails>()?;
+    m.add_class::<Listener>()?;
 
     Ok(())
 }
