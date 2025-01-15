@@ -19,30 +19,19 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from proton.vpn import logging
-
-logger = logging.getLogger(__name__)
-
-
-try:
-    from .external_local_agent import (
-        AgentConnector, AgentConnection, Status,
-        State, Reason, ReasonCode, AgentFeatures,
-        LocalAgentError, ExpiredCertificateError,
-        PolicyAPIError, SyntaxAPIError, APIError
-    )
-except ModuleNotFoundError:
-    from .fallback_local_agent import (
-        AgentConnector, AgentConnection, Status,
-        State, Reason, ReasonCode, AgentFeatures,
-        LocalAgentError, ExpiredCertificateError,
-        PolicyAPIError, SyntaxAPIError, APIError
-    )
-    logger.info("Fallback local agent was loaded.")
+from proton.vpn.local_agent import (  # pylint: disable=no-name-in-module, import-error
+    AgentConnector, AgentConnection, Status,
+    State, Reason, ReasonCode, AgentFeatures,
+    LocalAgentError, ExpiredCertificateError,
+    PolicyAPIError, SyntaxAPIError, APIError,
+    ConnectionDetails
+)
+from .listener import AgentListener
 
 __all__ = [
     "AgentConnector", "AgentConnection", "Status",
     "State", "Reason", "ReasonCode", "AgentFeatures",
     "LocalAgentError", "ExpiredCertificateError",
-    "PolicyAPIError", "SyntaxAPIError", "APIError"
+    "PolicyAPIError", "SyntaxAPIError", "APIError",
+    "ConnectionDetails", "AgentListener"
 ]

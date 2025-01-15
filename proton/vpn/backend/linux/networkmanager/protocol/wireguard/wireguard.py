@@ -39,11 +39,14 @@ from proton.vpn.connection import events, states
 from proton.vpn.connection.events import EventContext
 from proton.vpn.connection.interfaces import Settings, Features
 from proton.vpn.backend.linux.networkmanager.core import LinuxNetworkManager
-from proton.vpn.backend.linux.networkmanager.protocol.wireguard.local_agent \
-    import Status, State, ReasonCode, AgentFeatures, PolicyAPIError, SyntaxAPIError, APIError
-from proton.vpn.backend.linux.networkmanager.protocol.wireguard.local_agent.listener \
-    import AgentListener
-from proton.vpn.connection.exceptions import FeatureError, FeaturePolicyError, FeatureSyntaxError
+from proton.vpn.connection.exceptions \
+    import FeatureError, FeaturePolicyError, FeatureSyntaxError
+from proton.vpn.backend.linux.networkmanager.protocol.wireguard.local_agent import (
+    Status, State, ReasonCode, AgentFeatures,
+    PolicyAPIError, SyntaxAPIError, APIError, ExpiredCertificateError,
+    ConnectionDetails, AgentListener
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +109,7 @@ class Wireguard(LinuxNetworkManager):
         super().__init__(*args, **kwargs)
         self._connection_settings = None
         self._agent_listener = AgentListener(
-            on_status_change=self._on_local_agent_status,
+            on_status=self._on_local_agent_status,
             on_error=self._on_local_agent_error
         )
 
@@ -286,58 +289,76 @@ class Wireguard(LinuxNetworkManager):
     async def _start_local_agent_listener(self):
         if self._agent_listener.is_running:  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
             logger.info("Closing existing agent connection...")
-            self._agent_listener.stop()
+            await self._agent_listener.stop()
 
         logger.info("Waiting for agent status from %s...", self._vpnserver.domain)
-        self._agent_listener.start(
-            self._vpnserver.domain,
-            self._vpncredentials.pubkey_credentials,
-            self._get_agent_features(self._settings.features)
-        )
+        context = self._generate_context(forwarded_port=None)
 
-    async def _on_local_agent_status(self, status: Status):
+        if not await self._attempt_to_connect_to_listener(context):
+            return
+
+        await self._attempt_to_request_connection_features(context)
+        await self._attempt_to_listen(context)
+
+    async def _attempt_to_connect_to_listener(self, context: EventContext) -> bool:
+        try:
+            await self._agent_listener.connect(
+                self._vpnserver.domain, self._vpncredentials.pubkey_credentials
+            )
+        except ExpiredCertificateError:
+            self._notify_subscribers_threadsafe(events.ExpiredCertificate(context))
+            return
+        except TimeoutError:
+            self._notify_subscribers_threadsafe(events.Timeout(context))
+            return
+        except Exception:
+            self._notify_subscribers_threadsafe(events.UnexpectedError(context))
+            raise
+
+        return True
+
+    async def _attempt_to_request_connection_features(self, context: EventContext):
+        try:
+            await self._request_connection_features(self.settings.features)
+        except TimeoutError:
+            self._notify_subscribers_threadsafe(events.Timeout(context))
+        except Exception:
+            self._notify_subscribers_threadsafe(events.UnexpectedError(context))
+            raise
+
+    async def _attempt_to_listen(self, context: EventContext):
+        try:
+            await self._agent_listener.listen()
+        except TimeoutError:
+            self._notify_subscribers_threadsafe(events.Timeout(context))
+        except Exception:
+            self._notify_subscribers_threadsafe(events.UnexpectedError(context))
+            raise
+
+    def _on_local_agent_status(self, status: Status):
         """The local agent listener calls this method whenever a new status is
         read from the local agent connection."""
         logger.info("Agent status received: %s", status)
 
-        # Whenever we get an error we don't get the connection details.
-        connection_details = getattr(status, "connection_details", None)
+        context = self._generate_context(connection_details=status.connection_details)
 
-        context = EventContext(
-            connection=self,
-            connection_details=connection_details,
-            forwarded_port=0
-        )
         if status.state == State.CONNECTED:
-            self._notify_subscribers(events.Connected(context))
+            self._notify_subscribers_threadsafe(events.Connected(context))
         elif status.state == State.HARD_JAILED:
             self._handle_hard_jailed_state(status)
-        elif status.state == State.DISCONNECTED:
-            if status.reason and status.reason.code == ReasonCode.CERTIFICATE_EXPIRED:
-                self._notify_subscribers(
-                    events.ExpiredCertificate(context)
-                )
-            else:
-                self._notify_subscribers(
-                    events.Timeout(context)
-                )
-        else:
-            self._notify_subscribers(
-                events.UnexpectedError(context)
-            )
 
     def _handle_hard_jailed_state(self, status: Status):
         context = EventContext(connection=self, connection_details=status.connection_details)
         if status.reason.code == ReasonCode.CERTIFICATE_EXPIRED:
-            self._notify_subscribers(
+            self._notify_subscribers_threadsafe(
                 events.ExpiredCertificate(context)
             )
         elif self._has_reached_max_amount_of_concurrent_vpn_connections(status.reason.code):
-            self._notify_subscribers(
+            self._notify_subscribers_threadsafe(
                 events.MaximumSessionsReached(context)
             )
         else:
-            self._notify_subscribers(
+            self._notify_subscribers_threadsafe(
                 events.UnexpectedError(context)
             )
 
@@ -353,7 +374,7 @@ class Wireguard(LinuxNetworkManager):
             ReasonCode.MAX_SESSIONS_PRO
         )
 
-    async def _on_local_agent_error(self, error: Exception):
+    def _on_local_agent_error(self, error: Exception):
         """
         The local agent listener calls this method whenever a new error message
         read from the local agent connection.
@@ -361,7 +382,7 @@ class Wireguard(LinuxNetworkManager):
         :param error: The error received from the local agent.
         """
         event = self._get_event_from_error_message(error)
-        self._notify_subscribers(event)
+        self._notify_subscribers_threadsafe(event)
 
     def _get_event_from_error_message(self, error: Exception) -> events.Event:
         exception_message = str(error)
@@ -381,6 +402,14 @@ class Wireguard(LinuxNetworkManager):
         """This schedules a local agent listener in asyncio."""
         future = asyncio.run_coroutine_threadsafe(
             self._start_local_agent_listener(),
+            self._asyncio_loop
+        )
+        future.add_done_callback(lambda f: f.result())
+
+    def _async_stop_local_agent_listener(self):
+        """This schedules a local agent listener in asyncio."""
+        future = asyncio.run_coroutine_threadsafe(
+            self._agent_listener.stop(),
             self._asyncio_loop
         )
         future.add_done_callback(lambda f: f.result())
@@ -417,7 +446,7 @@ class Wireguard(LinuxNetworkManager):
         if state is NM.ActiveConnectionState.ACTIVATED:
             self._async_start_local_agent_listener()
         elif state == NM.ActiveConnectionState.DEACTIVATED:
-            self._agent_listener.stop()
+            self._async_stop_local_agent_listener()
             self._notify_subscribers_threadsafe(
                 events.Disconnected(EventContext(connection=self))
             )
@@ -433,6 +462,15 @@ class Wireguard(LinuxNetworkManager):
         if isinstance(state, states.Connected):
             self._async_start_local_agent_listener()
         return state
+
+    def _generate_context(
+        self, connection_details: ConnectionDetails = None, forwarded_port: int = 0
+    ) -> EventContext:
+        return EventContext(
+            connection=self,
+            connection_details=connection_details,
+            forwarded_port=forwarded_port
+        )
 
     @classmethod
     def _get_priority(cls):

@@ -1,3 +1,12 @@
+version: 0.11.0
+time: 2025/01/16 12:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- Update to use new LA interface (Alexandru Cheltuitor, Josep Llaneras).
+---
 version: 0.10.2
 time: 2024/12/12 13:00
 author: Alexandru Cheltuitor
