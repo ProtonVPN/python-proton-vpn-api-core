@@ -1,3 +1,12 @@
+version: 0.39.2
+time: 2025/01/17 16:20
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Fix sentry event username masking
+---
 version: 0.39.1
 time: 2024/12/31 15:00
 author: Alexandru Cheltuitor

@@ -30,7 +30,13 @@ SSL_CERT_FILE = "SSL_CERT_FILE"
 MACHINE_ID = "/etc/machine-id"
 PROTON_VPN = "protonvpn"
 
-HIDDEN_USERNAME = "<HIDDEN:$USER>"
+# We replace the username in the event with a generic value to avoid leaking
+# any personal information.
+#
+# If we need to add more replacements, we can add them here.
+USERNAME_REPLACEMENTS = {
+    '/home/{user}/': "/home/<HIDDEN>/",
+}
 
 log = logging.getLogger(__name__)
 
@@ -136,7 +142,9 @@ class UsageReporting:
                 for key, value in data.items():
                     data[key] = scrub_user(value)
             elif isinstance(data, str):
-                data = data.replace(user_name, HIDDEN_USERNAME)
+                for key, value in USERNAME_REPLACEMENTS.items():
+                    replace = key.format(user=user_name)
+                    data = data.replace(replace, value)
             return data
 
         return scrub_user(event)
