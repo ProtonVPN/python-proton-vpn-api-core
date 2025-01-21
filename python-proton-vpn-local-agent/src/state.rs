@@ -9,8 +9,7 @@ use pyo3::prelude::*;
 #[allow(non_camel_case_types)]
 pub enum State {
     CONNECTED,
-    HARD_JAILED,
-    DISCONNECTED,
+    HARD_JAILED
 }
 
 #[pymethods]
@@ -27,7 +26,6 @@ impl std::convert::From<la::State> for State {
         match state {
             la::State::Connected => State::CONNECTED,
             la::State::HardJailed => State::HARD_JAILED,
-            la::State::Disconnected => State::DISCONNECTED,
         }
     }
 }

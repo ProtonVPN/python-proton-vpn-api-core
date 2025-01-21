@@ -41,6 +41,7 @@ impl AgentFeatures {
     /// * `split_tcp` - Whether to enable split TCP.
     ///     Is the performance enhanced proxy enabled for this session ?
     /// * `port_forwarding` - Whether to enable port forwarding.
+    /// * `fowarded_port` - Port where traffic is being forwarded when port forwarding is enabled.
     /// * `jail` - Whether to enable jailed mode.
     ///     Jail the user (vpn tunnel established, but not communicating to the rest of internet)
     /// * `bouncing` - The bouncing level.
@@ -52,6 +53,7 @@ impl AgentFeatures {
         randomized_nat=None,
         split_tcp=None,
         port_forwarding=None,
+        forwarded_port=None,
         jail=None,
         bouncing=None,
     ))]
@@ -60,6 +62,7 @@ impl AgentFeatures {
         randomized_nat: Option<bool>,
         split_tcp: Option<bool>,
         port_forwarding: Option<bool>,
+        forwarded_port: Option<u16>,
         jail: Option<bool>,
         bouncing: Option<String>,
     ) -> PyResult<Self> {
@@ -69,6 +72,7 @@ impl AgentFeatures {
                 randomized_nat,
                 split_tcp,
                 port_forwarding,
+                forwarded_port,
                 jail,
                 bouncing,
             },
@@ -93,6 +97,11 @@ impl AgentFeatures {
     #[getter]
     fn port_forwarding(&self) -> PyResult<Option<bool>> {
         Ok(self.features.port_forwarding)
+    }
+
+    #[getter]
+    fn forwarded_port(&self) -> PyResult<Option<u16>> {
+        Ok(self.features.forwarded_port)
     }
 
     #[getter]

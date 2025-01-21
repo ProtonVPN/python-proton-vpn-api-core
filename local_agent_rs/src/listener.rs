@@ -1,10 +1,10 @@
 // use tokio::time::{sleep, timeout, Duration};
 use crate::{
-    AgentFeatures, ConnectParams, AgentConnector, AgentConnection,
-    Result, Error, StatusMessage
+    request_tcp_port_forwarding, AgentConnection, AgentConnector, AgentFeatures, ConnectParams, Error, Result, StatusMessage
 };
 
-const CLOSE_TIMEOUT_IN_SECONDS: u64 = 10;
+const DEFAULT_TIMEOUT_IN_SECONDS: u64 = 10;
+const MAX_PORT_FORWARDING_RETRIES: u32 = 2;
 
 
 #[derive(Clone)]
@@ -39,10 +39,21 @@ impl Listener {
         loop {
             let status = self.connection.read().await;
             match status {
-                Ok(status) => callback(Ok(status))?,
+                Ok(mut status) => {
+                    if let Some(AgentFeatures {
+                        port_forwarding: Some(true),
+                        forwarded_port,
+                        .. 
+                    }) = &mut status.features {
+                        *forwarded_port = Some(
+                            request_tcp_port_forwarding(DEFAULT_TIMEOUT_IN_SECONDS, MAX_PORT_FORWARDING_RETRIES).await?
+                        );
+                    }
+                    callback(Ok(status))?;
+                },
                 Err(Error::GetStatusError(error)) => callback(Err(Error::GetStatusError(error)))?,
                 Err(error) => {
-                    self.connection.close(CLOSE_TIMEOUT_IN_SECONDS).await?;
+                    self.connection.close(DEFAULT_TIMEOUT_IN_SECONDS).await?;
                     return Err(error)
                 },
             };
