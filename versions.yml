@@ -1,3 +1,12 @@
+version: 0.40.1
+time: 2025/01/21 17:54
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: low
+stability: unstable
+description:
+  - Notify subscribers when state context changes
+---
 version: 0.39.2
 time: 2025/01/17 16:20
 author: Luke Titley

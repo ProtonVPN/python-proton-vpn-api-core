@@ -268,6 +268,9 @@ class Connected(State):
             # event would've been received by the Disconnecting state.
             return Disconnected(StateContext(event=event, connection=event.context.connection))
 
+        if isinstance(event, events.Connected):
+            return Connected(StateContext(event=event, connection=event.context.connection))
+
         return self
 
     async def run_tasks(self):
