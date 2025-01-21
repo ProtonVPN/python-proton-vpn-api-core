@@ -44,7 +44,7 @@ from proton.vpn.connection.exceptions \
 from proton.vpn.backend.linux.networkmanager.protocol.wireguard.local_agent import (
     Status, State, ReasonCode, AgentFeatures,
     PolicyAPIError, SyntaxAPIError, APIError, ExpiredCertificateError,
-    ConnectionDetails, AgentListener
+    AgentListener
 )
 
 
@@ -292,7 +292,7 @@ class Wireguard(LinuxNetworkManager):
             await self._agent_listener.stop()
 
         logger.info("Waiting for agent status from %s...", self._vpnserver.domain)
-        context = self._generate_context(forwarded_port=None)
+        context = EventContext(connection=self)
 
         if not await self._attempt_to_connect_to_listener(context):
             return
@@ -340,10 +340,15 @@ class Wireguard(LinuxNetworkManager):
         read from the local agent connection."""
         logger.info("Agent status received: %s", status)
 
-        context = self._generate_context(connection_details=status.connection_details)
+        context = EventContext(
+            connection=self,
+            connection_details=status.connection_details,
+            forwarded_port=status.features.forwarded_port if status.features else None
+        )
 
         if status.state == State.CONNECTED:
             self._notify_subscribers_threadsafe(events.Connected(context))
+
         elif status.state == State.HARD_JAILED:
             self._handle_hard_jailed_state(status)
 
@@ -462,15 +467,6 @@ class Wireguard(LinuxNetworkManager):
         if isinstance(state, states.Connected):
             self._async_start_local_agent_listener()
         return state
-
-    def _generate_context(
-        self, connection_details: ConnectionDetails = None, forwarded_port: int = 0
-    ) -> EventContext:
-        return EventContext(
-            connection=self,
-            connection_details=connection_details,
-            forwarded_port=forwarded_port
-        )
 
     @classmethod
     def _get_priority(cls):

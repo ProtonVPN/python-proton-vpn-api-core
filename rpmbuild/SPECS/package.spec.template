@@ -24,8 +24,8 @@ BuildRequires: NetworkManager-openvpn-gnome
 BuildRequires: gobject-introspection
 BuildRequires: python3-setuptools
 BuildRequires: python3-proton-core
-BuildRequires: python3-proton-vpn-api-core >= 0.39.0
-BuildRequires: python3-proton-vpn-local-agent >= 1.3.0
+BuildRequires: python3-proton-vpn-api-core >= 0.40.1
+BuildRequires: python3-proton-vpn-local-agent >= 1.4.0
 
 Requires: python3-gobject
 Requires: NetworkManager
@@ -34,8 +34,8 @@ Requires: NetworkManager-openvpn-gnome
 Requires: gobject-introspection
 Requires: python3-setuptools
 Requires: python3-proton-core
-Requires: python3-proton-vpn-api-core >= 0.39.0
-Requires: python3-proton-vpn-local-agent >= 1.3.0
+Requires: python3-proton-vpn-api-core >= 0.40.1
+Requires: python3-proton-vpn-local-agent >= 1.4.0
 
 Conflicts: python3-proton-vpn-network-manager-openvpn < 0.1.1
 Conflicts: python3-proton-vpn-network-manager-wireguard < 0.4.7

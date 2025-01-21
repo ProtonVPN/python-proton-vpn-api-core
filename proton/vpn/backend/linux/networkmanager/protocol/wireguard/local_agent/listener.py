@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class AgentListener:
     """Listens for local agent messages asynchronously."""
 
-    def __init__(self, on_status: Callable[[Status], None], on_error: Callable[[Status], None]):
+    def __init__(self, on_status: Callable[[Status], None], on_error: Callable[[Exception], None]):
         self._listener = None
         self._future = None
         self._on_status_callback = on_status
