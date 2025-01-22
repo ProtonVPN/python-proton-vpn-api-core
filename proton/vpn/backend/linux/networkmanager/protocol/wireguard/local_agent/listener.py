@@ -19,9 +19,11 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 import asyncio
 from collections.abc import Callable
 from proton.vpn.local_agent import (  # pylint: disable=no-name-in-module, import-error
-    Listener, AgentFeatures, Status
+    Listener, AgentFeatures, Status, ExpiredCertificateError
 )
 from proton.vpn.session.credentials import VPNPubkeyCredentials
+from proton.vpn.session.exceptions import VPNCertificateExpiredError
+
 from proton.vpn import logging
 
 logger = logging.getLogger(__name__)
@@ -45,7 +47,15 @@ class AgentListener:
         :raises TimeoutError: when the connection to LA server times out.
         :raises Exception: any other exceptions.
         """
-        certificate = credentials.certificate_pem
+        try:
+            # A VPNCertificateExpiredError is raised when accessing certificate_pem
+            # if the certificate expired.
+            certificate = credentials.certificate_pem
+        except VPNCertificateExpiredError as exc:
+            # Convert VPNCertificateExpiredError to ExpiredCertificateError so that it's the
+            # same exception type as local agent.
+            raise ExpiredCertificateError("Certificate expired") from exc
+
         private_key = credentials.get_ed25519_sk_pem()
         self._listener = await Listener.connect(domain, private_key, certificate)
 

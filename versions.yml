@@ -1,3 +1,12 @@
+version: 0.12.1
+time: 2025/01/22 12:19
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: low
+stability: unstable
+description:
+- Fix certificate expired error handling
+---
 version: 0.12.0
 time: 2025/01/22 09:43
 author: Josep Llaneras
