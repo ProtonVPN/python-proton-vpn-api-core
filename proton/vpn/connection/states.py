@@ -95,6 +95,11 @@ class State(ABC):
     """
     type = None
 
+    # Indicates whether this state should be notified early (i.e. before running
+    # the tasks associated to the state) or not (i.e. after running the tasks
+    # associated to the state)
+    notify_early = False
+
     def __init__(self, context: StateContext = None):
         self.context = context or StateContext()
 
@@ -191,7 +196,9 @@ class Connecting(State):
     Connecting is the state reached when a VPN connection is requested.
     """
     type = ConnectionStateEnum.CONNECTING
-    _counter = 0
+    # Connection state subscribers will be notified of the Connecting state before running
+    # the tasks associated to this state.
+    notify_early = True
 
     def _on_event(self, event: events.Event):
         if isinstance(event, events.Connected):
@@ -292,6 +299,9 @@ class Disconnecting(State):
     Disconnecting is state reached when VPN disconnection is requested.
     """
     type = ConnectionStateEnum.DISCONNECTING
+    # Connection state subscribers will be notified of the Disconnecting state before running
+    # the tasks associated to this state.
+    notify_early = True
 
     def _on_event(self, event: events.Event):
         if isinstance(event, (events.Disconnected, events.Error)):

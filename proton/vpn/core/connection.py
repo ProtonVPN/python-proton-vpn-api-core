@@ -358,6 +358,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
         # Sets the settings to be applied when establishing the next connection.
         settings = await self.get_settings()
+        # FIXME: this adds a big delay before creating the connection  # pylint: disable=fixme
         self._set_ks_setting(settings)
 
         protocol = protocol or settings.protocol
@@ -472,8 +473,12 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             # Unregister from connection event updates once the connection ended.
             self._current_state.context.connection.unregister(self._on_connection_event)
 
-        new_event = await self._current_state.run_tasks()
-        self._publisher.notify(new_state)
+        if self._current_state.notify_early:
+            self._publisher.notify(new_state)
+            new_event = await self._current_state.run_tasks()
+        else:
+            new_event = await self._current_state.run_tasks()
+            self._publisher.notify(new_state)
 
         if (
             not self._current_state.context.reconnection

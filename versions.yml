@@ -1,3 +1,12 @@
+version: 0.40.2
+time: 2025/01/23 15:13
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: low
+stability: unstable
+description:
+- Notify connecting/disconnecting state early
+---
 version: 0.40.1
 time: 2025/01/21 17:54
 author: Josep Llaneras
