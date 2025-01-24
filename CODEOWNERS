@@ -1,0 +1,8 @@
+# ownership: loose
+*	@ProtonVPN/groups/linux-developers 
+/debian/	@ProtonVPN/groups/linux-developers 
+/docs/	@ProtonVPN/groups/linux-developers 
+/proton/	@ProtonVPN/groups/linux-developers 
+/rpmbuild/	@ProtonVPN/groups/linux-developers 
+/scripts/	@ProtonVPN/groups/linux-developers 
+/tests/	@ProtonVPN/groups/linux-developers 
