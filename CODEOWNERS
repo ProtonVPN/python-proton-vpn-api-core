@@ -1,0 +1,5 @@
+# ownership: loose
+*	@ProtonVPN/groups/linux-developers 
+/local_agent_rs/	@ProtonVPN/groups/linux-developers 
+/python-proton-vpn-local-agent/	@ProtonVPN/groups/linux-developers 
+/tests/	@ProtonVPN/groups/linux-developers 
