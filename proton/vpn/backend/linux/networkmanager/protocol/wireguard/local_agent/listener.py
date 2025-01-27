@@ -16,10 +16,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+import os
 import asyncio
 from collections.abc import Callable
 from proton.vpn.local_agent import (  # pylint: disable=no-name-in-module, import-error
-    Listener, AgentFeatures, Status, ExpiredCertificateError
+    Listener, AgentFeatures, Status, ExpiredCertificateError, init
 )
 from proton.vpn.session.credentials import VPNPubkeyCredentials
 from proton.vpn.session.exceptions import VPNCertificateExpiredError
@@ -37,6 +38,9 @@ class AgentListener:
         self._future = None
         self._on_status_callback = on_status
         self._on_error_callback = on_error
+        env_variable = os.environ.get("DisplayRustLogs", "False").lower()
+        if env_variable in ("true", "1", "t"):
+            init()
 
     async def connect(self, domain: str, credentials: VPNPubkeyCredentials):
         """Establishes a connection to local agent server.
