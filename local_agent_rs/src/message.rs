@@ -5,14 +5,14 @@ use crate::agent_features::*;
 use serde::{Deserialize, Serialize};
 
 /// Represents the state of the connection to the local agent client.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum State {
     Connected,
-    HardJailed
+    HardJailed,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct Reason {
     pub code: i32,
@@ -21,7 +21,7 @@ pub struct Reason {
     pub description: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct ConnectionDetails {
     pub device_ip: Option<String>,
@@ -31,7 +31,7 @@ pub struct ConnectionDetails {
 }
 
 /// Represents the status message from the local agent server.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct StatusMessage {
     pub state: State,

@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 // -----------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct AgentFeatures {
     #[serde(skip_serializing_if = "Option::is_none")]

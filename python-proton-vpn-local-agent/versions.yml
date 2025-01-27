@@ -1,3 +1,12 @@
+version: 1.4.1
+time: 2025/01/27 12:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- Handle PF refresh and errors (Alexandru Cheltuitor, Josep Llaneras).
+---
 version: 1.4.0
 time: 2025/01/21 14:44
 author: Josep Llaneras
