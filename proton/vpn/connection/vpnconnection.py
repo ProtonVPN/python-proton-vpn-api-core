@@ -74,8 +74,6 @@ class VPNConnection(ABC):
             persistence implementation will be used instead.
         :param publisher: Publisher implementation. This parameter is optional. Pass it
             only if you know what you are doing.
-        :param use_certificate: whether to use a certificate for authentication,
-            as opposed to username and password.
         """
         self._vpnserver = server
         self._vpncredentials = credentials
@@ -119,6 +117,13 @@ class VPNConnection(ABC):
     @abstractmethod
     async def stop(self):
         """Stops the VPN connection."""
+
+    @property
+    def use_certificate(self) -> bool:
+        """
+        Returns True if the connection uses a certificate, and False
+        otherwise."""
+        return self._use_certificate
 
     @property
     def are_feature_updates_applied_when_active(self) -> bool:
@@ -182,9 +187,6 @@ class VPNConnection(ABC):
         :param protocol: protocol to connect with. If None, the default protocol will be used.
         :param backend: Name of the class implementing the VPNConnection interface.
             If None, the default implementation will be used.
-        :param use_certificate: whether to use a certificate for authentication,
-            as opposed to username and password.
-
         """
         backend = Loader.get("backend", class_name=backend)
         protocol = protocol.lower() if protocol else None

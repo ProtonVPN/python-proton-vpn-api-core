@@ -22,16 +22,14 @@ BuildRequires: python3-setuptools
 BuildRequires: python3-distro
 BuildRequires: python3-sentry-sdk
 BuildRequires: python3-pynacl
-BuildRequires: python3-jinja2
 
 Requires: python3-proton-core
 Requires: python3-distro
 Requires: python3-sentry-sdk
 Requires: python3-pynacl
-Requires: python3-jinja2
 
 Conflicts: proton-vpn-gtk-app < 4.8.2~rc3
-Conflicts: python3-proton-vpn-network-manager < 0.10.2
+Conflicts: python3-proton-vpn-network-manager < 0.12.4
 
 Obsoletes: python3-proton-vpn-session
 Obsoletes: python3-proton-vpn-connection

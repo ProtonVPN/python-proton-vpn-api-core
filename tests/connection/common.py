@@ -58,6 +58,9 @@ class MockVPNPubkeyCredentials(VPNPubkeyCredentials):
     def openvpn_private_key(self):
         return "ovpn-private-key"
 
+    def get_ed25519_sk_pem(self, password=None):
+        return "encrypted-ovpn-private-key"
+
 
 class MockVPNUserPassCredentials(VPNUserPassCredentials):
     @property

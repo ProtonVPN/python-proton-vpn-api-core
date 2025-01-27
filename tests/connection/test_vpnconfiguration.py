@@ -21,11 +21,7 @@ import os
 import pytest
 
 from proton.vpn.connection import VPNServer, ProtocolPorts
-from proton.vpn.connection.vpnconfiguration import (OpenVPNTCPConfig,
-                                                    OpenVPNUDPConfig,
-                                                    OVPNConfig,
-                                                    VPNConfiguration,
-                                                    WireguardConfig)
+from proton.vpn.connection.vpnconfiguration import VPNConfiguration
 
 from .common import (CWD, MockSettings, MockVpnCredentials)
 import shutil
@@ -137,55 +133,3 @@ def test_valid_ips(ipv4, vpn_server):
 def test_not_valid_ips(ipv4, vpn_server):
     cfg = MockVpnConfiguration(vpn_server, MockVpnCredentials(), MockSettings())
     cfg.is_valid_ipv4(ipv4)
-
-
-@pytest.mark.parametrize("protocol", ["udp", "tcp"])
-def test_ovpnconfig_with_settings(protocol, modified_exec_env, vpn_server):
-    ovpn_cfg = OVPNConfig(vpn_server, MockVpnCredentials(), MockSettings())
-    ovpn_cfg._protocol = protocol
-    output = ovpn_cfg.generate()
-    assert ovpn_cfg._vpnserver.server_ip in output
-
-
-@pytest.mark.parametrize("protocol", ["udp", "tcp"])
-def test_ovpnconfig_with_certificate(protocol, modified_exec_env, vpn_server):
-    credentials = MockVpnCredentials()
-    ovpn_cfg = OVPNConfig(vpn_server, MockVpnCredentials(), MockSettings(),
-                          use_certificate=True)
-    ovpn_cfg._protocol = protocol
-    output = ovpn_cfg.generate()
-
-    assert credentials.pubkey_credentials.certificate_pem in output
-    assert credentials.pubkey_credentials.openvpn_private_key in output
-    assert "auth-user-pass" not in output
-
-
-def test_wireguard_config_content_generation(modified_exec_env, vpn_server):
-    credentials = MockVpnCredentials()
-    settings = MockSettings()
-    wg_cfg = WireguardConfig(vpn_server, credentials, settings, True)
-    generated_cfg = wg_cfg.generate()
-    assert credentials.pubkey_credentials.wg_private_key in generated_cfg
-    assert vpn_server.x25519pk in generated_cfg
-    assert vpn_server.server_ip in generated_cfg
-
-
-def test_wireguard_with_non_certificate(modified_exec_env, vpn_server):
-    wg_cfg = WireguardConfig(vpn_server, MockVpnCredentials(), MockSettings())
-    with pytest.raises(RuntimeError):
-        wg_cfg.generate()
-
-
-@pytest.mark.parametrize(
-    "protocol, expected_class", [
-        ("openvpn-tcp", OpenVPNTCPConfig),
-        ("openvpn-udp", OpenVPNUDPConfig),
-        ("wireguard", WireguardConfig),
-    ]
-)
-def test_get_expected_config_from_factory(protocol, expected_class, vpn_server):
-    config = VPNConfiguration.from_factory(protocol)
-    assert isinstance(
-        config(vpn_server, MockVpnCredentials(), MockSettings()),
-        expected_class
-    )
