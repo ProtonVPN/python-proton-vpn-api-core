@@ -1,3 +1,12 @@
+version: 0.12.4
+time: 2025/01/28 15:04
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Encrypt openvpn certificate private key
+---
 version: 0.12.3
 time: 2025/01/28 13:53
 author: Josep Llaneras

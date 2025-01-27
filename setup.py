@@ -22,7 +22,7 @@ setup(
         "proton.vpn.backend.linux.networkmanager.killswitch.wireguard*",
     ]),
     include_package_data=True,
-    install_requires=["proton-core", "proton-vpn-api-core", "pygobject", "pycairo", "packaging"],
+    install_requires=["proton-core", "proton-vpn-api-core", "pygobject", "pycairo", "packaging", "jinja2"],
     extras_require={
         "development": ["wheel", "pytest", "pytest-cov", "pytest-asyncio", "flake8", "pylint", "PyYAML"]
     },
