@@ -29,16 +29,13 @@ pub use reason::{Reason, ReasonCode};
 pub use state::State;
 pub use status::Status;
 
-#[pyfunction]
-fn init() {
+fn init_logger() {
     env_logger::init();
 }
 
 #[pymodule]
 /// This is the entry point for the python module.
 fn local_agent(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(init, m)?)?;
-
     // Register the exceptions
     exception::register(m)?;
 
@@ -52,6 +49,9 @@ fn local_agent(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Status>()?;
     m.add_class::<ConnectionDetails>()?;
     m.add_class::<Listener>()?;
+
+    // Start the logger when the module is returned.
+    init_logger();
 
     Ok(())
 }
