@@ -73,7 +73,7 @@ class AgentListener:
 
     async def stop(self):
         """Stops reading incoming messages from LA."""
-        if not self._future:
+        if not self._future or self._future.done():
             return
 
         self._future.cancel()
