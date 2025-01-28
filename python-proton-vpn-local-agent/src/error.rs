@@ -48,7 +48,7 @@ impl std::convert::From<Error> for PyErr {
             }
 
             Error::LocalAgent(la::Error::Tokio(e))
-                if e.kind() == ErrorKind::TimedOut =>
+                if e.kind() == ErrorKind::TimedOut || e.kind() == ErrorKind::BrokenPipe =>
             {
                 PyTimeoutError::new_err(convert_error_message_string(&e))
             }

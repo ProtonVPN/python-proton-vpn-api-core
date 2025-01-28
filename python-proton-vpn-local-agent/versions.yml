@@ -1,3 +1,12 @@
+version: 1.4.3
+time: 2025/01/28 13:55
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: low
+stability: unstable
+description:
+- Handle socket disconnection as a timeout error
+---
 version: 1.4.2
 time: 2025/01/28 13:00
 author: Alexandru Cheltuitor
