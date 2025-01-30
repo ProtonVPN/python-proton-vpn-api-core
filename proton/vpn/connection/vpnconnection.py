@@ -34,6 +34,7 @@ from proton.vpn.connection.interfaces import VPNServer, Settings, VPNCredentials
 from proton.vpn.connection.persistence import ConnectionPersistence, ConnectionParameters
 from proton.vpn.connection.publisher import Publisher
 from proton.vpn.connection import states, events
+from proton.vpn.connection.port_forward_file_handler import PortForwardFileHandler
 
 
 # pylint: disable=too-many-instance-attributes
@@ -58,6 +59,7 @@ class VPNConnection(ABC):
         connection_persistence: ConnectionPersistence = None,
         publisher: Publisher = None,
         use_certificate: bool = False,
+        port_forward_file_handler: PortForwardFileHandler = None
     ):
         """Initialize a VPNConnection object.
 
@@ -82,6 +84,7 @@ class VPNConnection(ABC):
         self._connection_persistence = connection_persistence or ConnectionPersistence()
         self._publisher = publisher or Publisher()
         self._use_certificate = use_certificate
+        self._port_forward_file_handler = port_forward_file_handler or PortForwardFileHandler()
 
         if connection_id:
             self._unique_id = connection_id
@@ -265,7 +268,7 @@ class VPNConnection(ABC):
         :return: `True` if the implementation is valid or `False` otherwise.
         """
 
-    async def add_persistence(self):
+    async def add_persistence(self, forwarded_port: int = None):
         """
         Stores the connection parameters to disk.
 
@@ -281,6 +284,14 @@ class VPNConnection(ABC):
         )
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._connection_persistence.save, params)
+        if forwarded_port:
+            await loop.run_in_executor(
+                None, self._port_forward_file_handler.write_port_to_file, forwarded_port
+            )
+        else:
+            await loop.run_in_executor(
+                None, self._port_forward_file_handler.remove_port_from_file
+            )
 
     async def remove_persistence(self):
         """
@@ -290,6 +301,7 @@ class VPNConnection(ABC):
         """
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._connection_persistence.remove)
+        await loop.run_in_executor(None, self._port_forward_file_handler.remove_port_from_file)
 
     def _get_user_pass(self, apply_feature_flags=False):
         """*For developers*

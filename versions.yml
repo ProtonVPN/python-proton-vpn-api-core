@@ -1,3 +1,12 @@
+version: 0.41.2
+time: 2025/01/29 13:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- Manage file containing forwarded port.
+---
 version: 0.41.0
 time: 2025/01/27 20:11
 author: Luke Titley

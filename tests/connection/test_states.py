@@ -328,6 +328,7 @@ async def test_connected_run_tasks(kill_switch_setting):
     enable kill switch if it's set to be enabled."""
     context = AsyncMock()
     context.kill_switch_setting = kill_switch_setting
+    context.event.context.forwarded_port = None
 
     connected = states.Connected(context)
 
@@ -336,18 +337,18 @@ async def test_connected_run_tasks(kill_switch_setting):
     if kill_switch_setting == KillSwitchSetting.ON:
         assert context.method_calls == [
             call.kill_switch.enable(permanent=False),
-            call.connection.add_persistence()
+            call.connection.add_persistence(None)
         ]
     elif kill_switch_setting == KillSwitchSetting.PERMANENT:
         assert context.method_calls == [
             call.kill_switch.enable(permanent=True),
-            call.connection.add_persistence()
+            call.connection.add_persistence(None)
         ]
     else:  # Kill switch OFF.
         assert context.method_calls == [
             call.kill_switch.enable_ipv6_leak_protection(),
             call.kill_switch.disable(),
-            call.connection.add_persistence()
+            call.connection.add_persistence(None)
         ]
 
 

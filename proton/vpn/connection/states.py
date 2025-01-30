@@ -25,6 +25,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional, ClassVar
 
+
 from proton.vpn import logging
 from proton.vpn.connection import events
 from proton.vpn.connection.enum import ConnectionStateEnum, KillSwitchSetting
@@ -291,7 +292,7 @@ class Connected(State):
                 permanent=(self.context.kill_switch_setting == KillSwitchSetting.PERMANENT)
             )
 
-        await self.context.connection.add_persistence()
+        await self.context.connection.add_persistence(self.forwarded_port)
 
 
 class Disconnecting(State):
@@ -368,6 +369,7 @@ class Error(State):
         return self
 
     async def run_tasks(self):
+
         logger.warning(
             "Reached connection error state: %s (%s)",
             type(self.context.event).__name__,

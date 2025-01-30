@@ -135,7 +135,6 @@ async def test_add_persistence(vpn_server, vpn_credentials, settings, connection
         connection_persistence=connection_persistence_mock,
     )
     vpnconn._unique_id = "add-persistence"
-
     await vpnconn.add_persistence()
 
     connection_persistence_mock.save.assert_called_once()

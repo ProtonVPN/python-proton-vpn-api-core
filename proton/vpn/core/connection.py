@@ -451,14 +451,6 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         if new_state is self.current_state:
             return None
 
-        if type(new_state) is type(self.current_state):  # noqa: E721
-            # Even though the state machine didn't change of state type
-            # (e.g. Connected -> Connected), we still notify subscribers since
-            # the state instance/context has changed (e.g. due to a new port
-            # forwarding lease and the UI might need to be updated).
-            self._publisher.notify(new_state)
-            return None
-
         old_state = self._current_state
         self._current_state = new_state
 
