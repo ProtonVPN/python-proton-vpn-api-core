@@ -18,8 +18,11 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from unittest.mock import Mock, AsyncMock, call
 import pytest
+from ipaddress import ip_network, collapse_addresses
 
 from proton.vpn.backend.linux.networkmanager.killswitch.default import NMKillSwitch
+from proton.vpn.backend.linux.networkmanager.killswitch.default.killswitch_connection_handler \
+    import build_routes_list, LOCAL_AGENT_SERVER_ADDR
 
 
 @pytest.fixture
@@ -101,3 +104,15 @@ async def test_disable_ipv6_leak_protection_removes_ipv6_ks():
         call.remove_ipv6_leak_protection()
     ]
 
+
+def test_build_routes_list():
+    vpn_server = "192.168.2.1"
+
+    allowed_routes = [
+        ip_network(LOCAL_AGENT_SERVER_ADDR),
+        ip_network(vpn_server)
+    ]
+    forbidden_routes = list(build_routes_list(vpn_server))
+    all_routes = list(collapse_addresses(allowed_routes + forbidden_routes))
+
+    assert all_routes == [ip_network('0.0.0.0/0')]

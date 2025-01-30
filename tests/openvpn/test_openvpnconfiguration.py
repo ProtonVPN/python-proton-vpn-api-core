@@ -32,53 +32,7 @@ from proton.vpn.connection.interfaces import (Settings, VPNCredentials,
                                               VPNUserPassCredentials, Features)
 from proton.vpn.connection import VPNServer, ProtocolPorts
 
-
-class MockVPNPubkeyCredentials(VPNPubkeyCredentials):
-    @property
-    def certificate_pem(self):
-        return "pem-cert"
-
-    @property
-    def wg_private_key(self):
-        return "wg-private-key"
-
-    @property
-    def openvpn_private_key(self):
-        return "ovpn-private-key"
-
-    def get_ed25519_sk_pem(self, password=None):
-        return "encrypted-ovpn-private-key"
-
-
-class MockVPNUserPassCredentials(VPNUserPassCredentials):
-    @property
-    def username(self):
-        return "test-username"
-
-    @property
-    def password(self):
-        return "test-password"
-
-
-class MockVpnCredentials(VPNCredentials):
-    @property
-    def pubkey_credentials(self):
-        return MockVPNPubkeyCredentials()
-
-    @property
-    def userpass_credentials(self):
-        return MockVPNUserPassCredentials()
-
-
-class MockSettings(Settings):
-    @property
-    def dns_custom_ips(self):
-        return ["1.1.1.1", "10.10.10.10"]
-
-    @property
-    def features(self):
-        return Mock()
-
+from boilerplate import (MockVpnCredentials, MockSettings, vpn_server)
 
 CWD = str(pathlib.Path(__file__).parent.absolute())
 VPNCONFIG_DIR = os.path.join(CWD, "vpnconfig")
@@ -99,22 +53,6 @@ def modified_exec_env():
     ExecutionEnvironment.path_runtime = VPNCONFIG_DIR
     yield ExecutionEnvironment().path_runtime
     ExecutionEnvironment.path_runtime = m
-
-
-@pytest.fixture
-def vpn_server():
-    return VPNServer(
-        server_ip="10.10.1.1",
-        domain="com.test-domain.www",
-        x25519pk="wg_public_key",
-        openvpn_ports=ProtocolPorts(tcp=[80, 1194], udp=[445, 5995]),
-        wireguard_ports=ProtocolPorts(tcp=[443, 88], udp=[445]),
-        server_name="TestServer#10",
-        server_id="OYB-3pMQQA2Z2Qnp5s5nIvTVO2...lRjxhx9DCAUM9uXfM2ZUFjzPXw==",
-        has_ipv6_support=False,
-        label="0"
-
-    )
 
 @pytest.mark.parametrize("protocol", ["udp", "tcp"])
 def test_ovpnconfig_with_settings(protocol, modified_exec_env, vpn_server):

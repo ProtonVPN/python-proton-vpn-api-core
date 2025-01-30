@@ -1,3 +1,12 @@
+version: 0.12.6
+time: 2025/02/04 19:47
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Added local agent to OpenVPN
+---
 version: 0.12.5
 time: 2025/01/31 13:47
 author: Josep Llaneras

@@ -25,19 +25,27 @@ import os
 import secrets
 from getpass import getuser
 from ipaddress import IPv4Address, IPv6Address
+import logging
 
 from jinja2 import Environment, BaseLoader
 
 from gi.repository import NM
 import gi
-from proton.vpn.backend.linux.networkmanager.core import LinuxNetworkManager
+from proton.vpn.backend.linux.networkmanager.core import (LinuxNetworkManager,
+                                                          LocalAgentMixin)
 from proton.vpn.connection.vpnconfiguration import VPNConfiguration
 from proton.vpn.connection.constants import CA_CERT
+from proton.vpn.connection import events, states
+from proton.vpn.connection.events import EventContext
+from proton.vpn.connection.interfaces import Settings
 
 gi.require_version("NM", "1.0")
 
-SECRET_PASSWORD = "password"
-SECRET_CERT_PASS = "cert-pass"
+logger = logging.getLogger(__name__)
+
+SECRET_PASSWORD_FIELD = "password"    # pylint: disable=line-too-long # noqa: E501 # nosec B105 # nosemgrep: generic.secrets.gitleaks.hashicorp-tf-password.hashicorp-tf-password
+SECRET_CERT_PASS_FIELD = "cert-pass"  # pylint: disable=line-too-long # noqa: E501 # nosec B105 # nosemgrep: generic.secrets.gitleaks.hashicorp-tf-password.hashicorp-tf-password
+
 PASSPHRASE_SECRET_LENGTH = 16
 OPENVPN_V2_TEMPLATE = """
 # ==============================================================================
@@ -194,7 +202,7 @@ PROTOCOLS = {
 }
 
 
-class OpenVPN(LinuxNetworkManager):
+class OpenVPN(LinuxNetworkManager, LocalAgentMixin):
     """Base class for the backends implementing the OpenVPN protocols."""
     DNS_PRIORITY = -1500
     VIRTUAL_DEVICE_NAME = "proton0"
@@ -202,6 +210,7 @@ class OpenVPN(LinuxNetworkManager):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        LocalAgentMixin.__init__(self)
         self._vpn_settings = None
         self._connection_settings = None
 
@@ -241,6 +250,11 @@ class OpenVPN(LinuxNetworkManager):
             self._set_vpn_credentials()
 
         self.connection.add_setting(self._connection_settings)
+
+    async def update_credentials(self, credentials):
+        await super().update_credentials(credentials)
+        if self._use_certificate:
+            await self._start_local_agent_listener()
 
     def _set_custom_connection_id(self):
         self._connection_settings.set_property(NM.SETTING_CONNECTION_ID, self._get_servername())
@@ -297,13 +311,142 @@ class OpenVPN(LinuxNetworkManager):
         # => Allow headless testing
         if os.getuid() == 0:
             self._vpn_settings.add_data_item("password-flags", "0")
-        self._vpn_settings.add_secret(SECRET_PASSWORD, password)
+        self._vpn_settings.add_secret(SECRET_PASSWORD_FIELD, password)
 
     def _set_vpn_cert_credentials(self, private_key_passphrase: str):
         """
         Add passphrase to decrypt the private key.
         """
-        self._vpn_settings.add_secret(SECRET_CERT_PASS, private_key_passphrase)
+        self._vpn_settings.add_secret(SECRET_CERT_PASS_FIELD,
+                                      private_key_passphrase)
+
+    # pylint: disable=unused-argument
+    def _on_state_changed(
+            self, vpn_connection: NM.VpnConnection, state: int, reason: int
+    ):
+        """
+            When the vpn state changes, NM emits a signal with the state and
+            reason for the change. This callback will receive these updates
+            and translate for them accordingly for the state machine,
+            as the state machine is backend agnostic.
+
+            Note this method is called from the thread running the GLib main loop.
+            Interactions between code in this method and the asyncio loop must
+            be done in a thread-safe manner.
+
+            :param state: connection state update
+            :type state: int
+            :param reason: the reason for the state update
+            :type reason: int
+        """
+        try:
+            state = NM.VpnConnectionState(state)
+        except ValueError:
+            logger.warning("Unexpected VPN connection state: %s", state)
+            state = NM.VpnConnectionState.UNKNOWN
+
+        try:
+            reason = NM.VpnConnectionStateReason(reason)
+        except ValueError:
+            logger.warning("Unexpected VPN connection state reason: %s", reason)
+            reason = NM.VpnConnectionStateReason.UNKNOWN
+
+        logger.debug(
+            "VPN connection state changed: state=%s, reason=%s",
+            state.value_name, reason.value_name
+        )
+
+        def start_local_agent():
+            if self._use_certificate:
+                self._async_start_local_agent_listener()
+
+        def stop_local_agent():
+            if self._use_certificate:
+                self._async_stop_local_agent_listener()
+
+        if state is NM.VpnConnectionState.ACTIVATED:
+            start_local_agent()
+            self._notify_subscribers_threadsafe(
+                events.Connected(EventContext(connection=self))
+            )
+        elif state is NM.VpnConnectionState.FAILED:
+            if reason in [
+                NM.VpnConnectionStateReason.CONNECT_TIMEOUT,
+                NM.VpnConnectionStateReason.SERVICE_START_TIMEOUT
+            ]:
+                self._notify_subscribers_threadsafe(
+                    events.Timeout(EventContext(connection=self, reason=reason))
+                )
+            elif reason in [
+                NM.VpnConnectionStateReason.NO_SECRETS,
+                NM.VpnConnectionStateReason.LOGIN_FAILED
+            ]:
+                # NO_SECRETS is passed when the user cancels the NM popup
+                # to introduce the OpenVPN password. If we switch auth to
+                # certificates, we should treat NO_SECRETS as an
+                # UnexpectedDisconnection event.
+                self._notify_subscribers_threadsafe(
+                    events.AuthDenied(EventContext(connection=self, reason=reason))
+                )
+            else:
+                # reason in [
+                #     NM.VpnConnectionStateReason.UNKNOWN,
+                #     NM.VpnConnectionStateReason.NONE,
+                #     NM.VpnConnectionStateReason.USER_DISCONNECTED,
+                #     NM.VpnConnectionStateReason.DEVICE_DISCONNECTED,
+                #     NM.VpnConnectionStateReason.SERVICE_STOPPED,
+                #     NM.VpnConnectionStateReason.IP_CONFIG_INVALID,
+                #     NM.VpnConnectionStateReason.SERVICE_START_FAILED,
+                #     NM.VpnConnectionStateReason.CONNECTION_REMOVED,
+                # ]
+                self._notify_subscribers_threadsafe(
+                    events.UnexpectedError(EventContext(connection=self, reason=reason))
+                )
+        elif state == NM.VpnConnectionState.DISCONNECTED:
+            if reason in [NM.VpnConnectionStateReason.USER_DISCONNECTED]:
+                stop_local_agent()
+                self._notify_subscribers_threadsafe(
+                    events.Disconnected(EventContext(connection=self, reason=reason))
+                )
+            elif reason is NM.VpnConnectionStateReason.DEVICE_DISCONNECTED:
+                stop_local_agent()
+                self._notify_subscribers_threadsafe(
+                    events.DeviceDisconnected(EventContext(connection=self, reason=reason))
+                )
+            else:
+                # reason in [
+                #     NM.VpnConnectionStateReason.UNKNOWN,
+                #     NM.VpnConnectionStateReason.NONE,
+                #     NM.VpnConnectionStateReason.SERVICE_STOPPED,
+                #     NM.VpnConnectionStateReason.IP_CONFIG_INVALID,
+                #     NM.VpnConnectionStateReason.CONNECT_TIMEOUT,
+                #     NM.VpnConnectionStateReason.SERVICE_START_TIMEOUT,
+                #     NM.VpnConnectionStateReason.SERVICE_START_FAILED,
+                #     NM.VpnConnectionStateReason.NO_SECRETS,
+                #     NM.VpnConnectionStateReason.LOGIN_FAILED,
+                #     NM.VpnConnectionStateReason.CONNECTION_REMOVED,
+                # ]
+                self._notify_subscribers_threadsafe(
+                    events.UnexpectedError(EventContext(connection=self, reason=reason))
+                )
+        else:
+            logger.debug("Ignoring VPN state change: %s", state.value_name)
+
+    def _initialize_persisted_connection(
+            self, connection_id: str
+    ) -> states.State:
+        state = super()._initialize_persisted_connection(connection_id)
+
+        if isinstance(state, states.Connected):
+            if self._use_certificate:
+                self._async_start_local_agent_listener()
+        return state
+
+    async def update_settings(self, settings: Settings):
+        """Update features on the active agent connection."""
+        await super().update_settings(settings)
+        if self._use_certificate and self._agent_listener.is_running:  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
+            await self._request_connection_features(settings.features)
 
 
 class OpenVPNTCP(OpenVPN):

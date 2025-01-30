@@ -29,9 +29,11 @@ import pytest
 
 from tests.unit.core.boilerplate import VPNServer, VPNCredentials, Settings
 from proton.vpn.backend.linux.networkmanager.core import LinuxNetworkManager
+from proton.vpn.connection.events import EventContext
 from proton.vpn.connection import states
 from proton.vpn.connection import events
 from collections import namedtuple
+
 OpenVPNPorts = namedtuple("OpenVPNPorts", "udp tcp")
 
 
@@ -43,7 +45,8 @@ class LinuxNetworkManagerProtocol(LinuxNetworkManager):
         # Make sure we don't trigger connection persistence nor the kill switch.
         connection_persistence = connection_persistence or Mock()
 
-        super().__init__(*args, connection_persistence=connection_persistence, **kwargs)
+        super().__init__(*args, connection_persistence=connection_persistence,
+                         **kwargs)
 
     def setup(self):
         # to be mocked in tests
@@ -193,93 +196,6 @@ async def test_stop_connection_removes_connection(nm_client_mock):
         await nm_protocol.stop(connection)
 
         nm_protocol.remove_connection.assert_called_once_with(connection)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "state, reason, expected_event",
-    [
-        (
-                NM.VpnConnectionState.ACTIVATED,
-                NM.VpnConnectionStateReason.NONE,
-                events.Connected
-        ),
-        (
-                NM.VpnConnectionState.FAILED,
-                NM.VpnConnectionStateReason.CONNECT_TIMEOUT,
-                events.Timeout
-        ),
-        (
-                NM.VpnConnectionState.FAILED,
-                NM.VpnConnectionStateReason.SERVICE_START_TIMEOUT,
-                events.Timeout
-        ),
-        (
-                NM.VpnConnectionState.FAILED,
-                NM.VpnConnectionStateReason.NO_SECRETS,
-                events.AuthDenied
-        ),
-        (
-                NM.VpnConnectionState.FAILED,
-                NM.VpnConnectionStateReason.LOGIN_FAILED,
-                events.AuthDenied
-        ),
-        (
-                NM.VpnConnectionState.FAILED,
-                NM.VpnConnectionStateReason.IP_CONFIG_INVALID,
-                events.UnexpectedError
-        ),
-        (
-                NM.VpnConnectionState.FAILED,
-                NM.VpnConnectionStateReason.SERVICE_STOPPED,
-                events.UnexpectedError
-        ),
-        (
-                NM.VpnConnectionState.FAILED,
-                NM.VpnConnectionStateReason.CONNECTION_REMOVED,
-                events.UnexpectedError
-        ),
-        (
-                NM.VpnConnectionState.FAILED,
-                NM.VpnConnectionStateReason.SERVICE_START_FAILED,
-                events.UnexpectedError
-        ),
-        (
-                NM.VpnConnectionState.FAILED,
-                NM.VpnConnectionStateReason.UNKNOWN,
-                events.UnexpectedError
-        ),
-        (
-                NM.VpnConnectionState.FAILED,
-                NM.VpnConnectionStateReason.NONE,
-                events.UnexpectedError
-        ),
-        (
-                NM.VpnConnectionState.DISCONNECTED,
-                NM.VpnConnectionStateReason.DEVICE_DISCONNECTED,
-                events.DeviceDisconnected
-        ),
-        (
-                NM.VpnConnectionState.DISCONNECTED,
-                NM.VpnConnectionStateReason.USER_DISCONNECTED,
-                events.Disconnected
-        ),
-        (
-                NM.VpnConnectionState.DISCONNECTED,
-                NM.VpnConnectionStateReason.NONE,
-                events.UnexpectedError
-        ),
-    ]
-)
-@patch("proton.vpn.backend.linux.networkmanager.core.LinuxNetworkManager._notify_subscribers_threadsafe")
-async def test_on_state_changed(_notify_subscribers_threadsafe, nm_client_mock, state, reason, expected_event):
-    _notify_subscribers_threadsafe.return_value = None
-    nm_protocol = create_nm_protocol(nm_client_mock)
-    nm_protocol._on_state_changed(None, state, reason)
-
-    # assert that the LinuxNetworkManager._notify_subscribers method was called with the expected event
-    _notify_subscribers_threadsafe.assert_called_once()
-    assert isinstance(_notify_subscribers_threadsafe.call_args.args[0], expected_event)
 
 
 @pytest.mark.asyncio

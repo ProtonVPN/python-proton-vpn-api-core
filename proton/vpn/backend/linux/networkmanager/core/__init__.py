@@ -19,5 +19,6 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from .networkmanager import LinuxNetworkManager
+from .localagent_mixin import LocalAgentMixin
 
-__all__ = ["LinuxNetworkManager"]
+__all__ = ["LinuxNetworkManager", "LocalAgentMixin"]

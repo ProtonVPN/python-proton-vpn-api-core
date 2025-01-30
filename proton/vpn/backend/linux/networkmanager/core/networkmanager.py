@@ -30,7 +30,8 @@ from proton.vpn.connection.events import EventContext, Event
 from proton.vpn.connection.vpnconfiguration import VPNConfiguration
 from proton.vpn.connection.states import StateContext
 
-from proton.vpn.backend.linux.networkmanager.core.nmclient import NM, NMClient, GLib
+
+from proton.vpn.backend.linux.networkmanager.core.nmclient import (NM, NMClient, GLib)
 from proton.vpn.backend.linux.networkmanager.core import tcpcheck
 
 logger = logging.getLogger(__name__)
@@ -198,107 +199,6 @@ class LinuxNetworkManager(VPNConnection):
         await super().remove_persistence()
         await self.remove_connection()
 
-    # pylint: disable=unused-argument
-    def _on_state_changed(
-            self, vpn_connection: NM.VpnConnection, state: int, reason: int
-    ):
-        """
-            When the vpn state changes, NM emits a signal with the state and
-            reason for the change. This callback will receive these updates
-            and translate for them accordingly for the state machine,
-            as the state machine is backend agnostic.
-
-            Note this method is called from the thread running the GLib main loop.
-            Interactions between code in this method and the asyncio loop must
-            be done in a thread-safe manner.
-
-            :param state: connection state update
-            :type state: int
-            :param reason: the reason for the state update
-            :type reason: int
-        """
-        try:
-            state = NM.VpnConnectionState(state)
-        except ValueError:
-            logger.warning("Unexpected VPN connection state: %s", state)
-            state = NM.VpnConnectionState.UNKNOWN
-
-        try:
-            reason = NM.VpnConnectionStateReason(reason)
-        except ValueError:
-            logger.warning("Unexpected VPN connection state reason: %s", reason)
-            reason = NM.VpnConnectionStateReason.UNKNOWN
-
-        logger.debug(
-            "VPN connection state changed: state=%s, reason=%s",
-            state.value_name, reason.value_name
-        )
-
-        if state is NM.VpnConnectionState.ACTIVATED:
-            self._notify_subscribers_threadsafe(
-                events.Connected(EventContext(connection=self))
-            )
-        elif state is NM.VpnConnectionState.FAILED:
-            if reason in [
-                NM.VpnConnectionStateReason.CONNECT_TIMEOUT,
-                NM.VpnConnectionStateReason.SERVICE_START_TIMEOUT
-            ]:
-                self._notify_subscribers_threadsafe(
-                    events.Timeout(EventContext(connection=self, reason=reason))
-                )
-            elif reason in [
-                NM.VpnConnectionStateReason.NO_SECRETS,
-                NM.VpnConnectionStateReason.LOGIN_FAILED
-            ]:
-                # NO_SECRETS is passed when the user cancels the NM popup
-                # to introduce the OpenVPN password. If we switch auth to
-                # certificates, we should treat NO_SECRETS as an
-                # UnexpectedDisconnection event.
-                self._notify_subscribers_threadsafe(
-                    events.AuthDenied(EventContext(connection=self, reason=reason))
-                )
-            else:
-                # reason in [
-                #     NM.VpnConnectionStateReason.UNKNOWN,
-                #     NM.VpnConnectionStateReason.NONE,
-                #     NM.VpnConnectionStateReason.USER_DISCONNECTED,
-                #     NM.VpnConnectionStateReason.DEVICE_DISCONNECTED,
-                #     NM.VpnConnectionStateReason.SERVICE_STOPPED,
-                #     NM.VpnConnectionStateReason.IP_CONFIG_INVALID,
-                #     NM.VpnConnectionStateReason.SERVICE_START_FAILED,
-                #     NM.VpnConnectionStateReason.CONNECTION_REMOVED,
-                # ]
-                self._notify_subscribers_threadsafe(
-                    events.UnexpectedError(EventContext(connection=self, reason=reason))
-                )
-        elif state == NM.VpnConnectionState.DISCONNECTED:
-            if reason in [NM.VpnConnectionStateReason.USER_DISCONNECTED]:
-                self._notify_subscribers_threadsafe(
-                    events.Disconnected(EventContext(connection=self, reason=reason))
-                )
-            elif reason is NM.VpnConnectionStateReason.DEVICE_DISCONNECTED:
-                self._notify_subscribers_threadsafe(
-                    events.DeviceDisconnected(EventContext(connection=self, reason=reason))
-                )
-            else:
-                # reason in [
-                #     NM.VpnConnectionStateReason.UNKNOWN,
-                #     NM.VpnConnectionStateReason.NONE,
-                #     NM.VpnConnectionStateReason.SERVICE_STOPPED,
-                #     NM.VpnConnectionStateReason.IP_CONFIG_INVALID,
-                #     NM.VpnConnectionStateReason.CONNECT_TIMEOUT,
-                #     NM.VpnConnectionStateReason.SERVICE_START_TIMEOUT,
-                #     NM.VpnConnectionStateReason.SERVICE_START_FAILED,
-                #     NM.VpnConnectionStateReason.NO_SECRETS,
-                #     NM.VpnConnectionStateReason.LOGIN_FAILED,
-                #     NM.VpnConnectionStateReason.CONNECTION_REMOVED,
-                # ]
-                self._notify_subscribers_threadsafe(
-                    events.UnexpectedError(EventContext(connection=self, reason=reason))
-                )
-        else:
-            logger.debug("Ignoring VPN state change: %s", state.value_name)
-
     def _notify_subscribers_threadsafe(self, event: Event):
         """
         When notifying subscribers from different thread than then one running the
@@ -333,6 +233,15 @@ class LinuxNetworkManager(VPNConnection):
             return states.Error(context)
 
         return states.Disconnected(context)
+
+    def _on_state_changed(
+            self, vpn_connection: NM.VpnConnection, state: int, reason: int
+    ):
+        """
+        Use to respond to state changes in the VPN connection, must be
+        implemented by the derived class.
+        """
+        raise NotImplementedError
 
     def _get_servername(self) -> "str":
         server_name = self._vpnserver.server_name or "Connection"

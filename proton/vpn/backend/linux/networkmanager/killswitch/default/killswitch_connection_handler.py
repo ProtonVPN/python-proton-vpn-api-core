@@ -31,6 +31,8 @@ from proton.vpn.backend.linux.networkmanager.killswitch.default.killswitch_conne
 
 logger = logging.getLogger(__name__)
 
+LOCAL_AGENT_SERVER_ADDR = "10.2.0.1"  # 10.2.0.1:65432
+
 
 def _get_connection_id(prefix: str, permanent: bool, ipv6: bool = False, routed: bool = False):
     if ipv6:
@@ -54,6 +56,23 @@ async def _wrap_future(future: concurrent.futures.Future, timeout=5):
     )
 
 
+def build_routes_list(server_ip: str):
+    """
+    Builds a list of routes to block all traffic except the server IP and
+    the local agent server IP.
+    """
+    local_agent_network = ip_network(LOCAL_AGENT_SERVER_ADDR)
+    most_networks = ip_network('0.0.0.0/0').address_exclude(
+        ip_network(server_ip))
+
+    for network_a in most_networks:
+        if local_agent_network.overlaps(network_a):
+            for network_b in network_a.address_exclude(local_agent_network):
+                yield network_b
+        else:
+            yield network_a
+
+
 class KillSwitchConnectionHandler:
     """Kill switch connection management."""
 
@@ -73,7 +92,7 @@ class KillSwitchConnectionHandler:
     def _get_ipv4_ks_settings(server_ip: str = None):
         if server_ip:
             # accept/block all routes except the server IP route.
-            routes = list(ip_network('0.0.0.0/0').address_exclude(ip_network(server_ip)))
+            routes = list(build_routes_list(server_ip))
             gateway = None
         else:
             routes = []  # accept/block all routes.
