@@ -1,3 +1,12 @@
+version: 0.12.5
+time: 2025/01/31 13:47
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: low
+stability: unstable
+description:
+- Ignore interfaces without a gateway configured
+---
 version: 0.12.4
 time: 2025/01/28 15:04
 author: Luke Titley

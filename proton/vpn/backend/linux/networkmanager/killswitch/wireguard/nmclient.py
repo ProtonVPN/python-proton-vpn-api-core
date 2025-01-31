@@ -36,6 +36,11 @@ from proton.vpn import logging  # noqa: E402 pylint: disable=wrong-import-positi
 logger = logging.getLogger(__name__)
 
 
+class GatewayNotFoundError(Exception):
+    """Error raised when trying to obtain the gateway from a device that
+    doesn't have one set."""
+
+
 def _create_future():
     """Creates a future and sets its internal state as running."""
     future = Future()
@@ -370,6 +375,12 @@ class NMClient:
                 cls._remove_ipv4_routes(active_connection, new_server_ip)
 
                 gateway = active_connection.get_ip4_config().get_gateway()
+                if not gateway:
+                    raise GatewayNotFoundError(
+                        "Gateway not found on interface "
+                        f"'{device.get_iface()}'"
+                    )
+
                 cls._add_ipv4_route(active_connection, new_server_ip, gateway)
 
                 cls._apply_connection_async(active_connection, route_added_future)

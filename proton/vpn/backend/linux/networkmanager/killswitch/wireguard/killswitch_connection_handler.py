@@ -27,7 +27,9 @@ import asyncio
 import concurrent.futures
 
 from proton.vpn import logging
-from proton.vpn.backend.linux.networkmanager.killswitch.wireguard.nmclient import NMClient
+from proton.vpn.backend.linux.networkmanager.killswitch.wireguard.nmclient import (
+    NMClient, GatewayNotFoundError
+)
 from proton.vpn.backend.linux.networkmanager.killswitch.wireguard.killswitch_connection import (
     KillSwitchConnection, KillSwitchGeneralConfig, KillSwitchIPConfig
 )
@@ -147,12 +149,19 @@ class KillSwitchConnectionHandler:
 
         devices = self.nm_client.get_physical_devices()
         for device in devices:
-            await _wrap_future(
-                self.nm_client.add_route_to_device(
-                    device, new_server_ip=server_ip,
-                    old_server_ip=self._server_ip
+            try:
+                await _wrap_future(
+                    self.nm_client.add_route_to_device(
+                        device, new_server_ip=server_ip,
+                        old_server_ip=self._server_ip
+                    )
                 )
-            )
+            except GatewayNotFoundError as error:
+                logger.warning(
+                    "Wireguard connection cannot use interface "
+                    f"'{device.get_iface()}: {error}'")
+                continue
+
             # The new route doesn't seem to be available straight away.
             # For this reason, the routing table is polled until the route has been added.
             await self._wait_for_vpn_server_route(
