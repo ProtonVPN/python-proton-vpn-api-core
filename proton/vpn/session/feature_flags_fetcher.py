@@ -33,6 +33,15 @@ REFRESH_INTERVAL = 2 * 60 * 60  # 2 hours
 DEFAULT = {
     "toggles": [
         {
+            "name": "CertificateBasedOpenVPNWithLocalAgent",
+            "enabled": False,
+            "impressionData": False,
+            "variant": {
+                "name": "disabled",
+                "enabled": False
+            }
+        },
+        {
             "name": "CertificateBasedOpenVPN",
             "enabled": False,
             "impressionData": False,

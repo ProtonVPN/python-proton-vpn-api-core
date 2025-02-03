@@ -206,6 +206,13 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         else:
             raise RuntimeError(f"Unexpected kill switch setting: {kill_switch_setting}")
 
+    def get_certificate_based_openvpn(self):
+        """
+        Returns whether the certificate based OpenVPN should be used or not.
+        """
+        feature_flags = self._session_holder.session.feature_flags
+        return feature_flags.get("CertificateBasedOpenVPNWithLocalAgent")
+
     async def _get_current_connection(self) -> Optional[VPNConnection]:
         """
         :return: the current VPN connection or None if there isn't one.
@@ -226,11 +233,15 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         settings = await self.get_settings()
         for protocol in all_protocols:
             if protocol.cls.protocol == persisted_parameters.protocol:
+
+                use_certificate = self.get_certificate_based_openvpn()
+
                 vpn_connection = protocol.cls(
                     server=persisted_parameters.server,
                     credentials=self.credentials,
                     settings=settings,
-                    connection_id=persisted_parameters.connection_id
+                    connection_id=persisted_parameters.connection_id,
+                    use_certificate=use_certificate
                 )
                 if not isinstance(vpn_connection.initial_state, states.Disconnected):
                     return vpn_connection
@@ -363,8 +374,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
         protocol = protocol or settings.protocol
 
-        feature_flags = self._session_holder.session.feature_flags
-        use_certificate = feature_flags.get("CertificateBasedOpenVPN")
+        use_certificate = self.get_certificate_based_openvpn()
 
         logger.info("Using certificate based authentication"
                     f" for openvpn: {use_certificate}")
