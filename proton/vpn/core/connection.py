@@ -250,10 +250,15 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
     async def _get_initial_state(self):
         """Determines the initial state of the state machine."""
-        current_connection = await self._get_current_connection()
 
-        if current_connection:
-            return current_connection.initial_state
+        # It's possible that the user is not logged in but that there is
+        # a persisted connection, in this case we need to ignore the persisted
+        # connection and return the disconnected state.
+        if self._session_holder.session.logged_in:
+            current_connection = await self._get_current_connection()
+
+            if current_connection:
+                return current_connection.initial_state
 
         return states.Disconnected(
             StateContext(event=events.Initialized(events.EventContext(connection=None)))
