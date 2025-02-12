@@ -24,8 +24,7 @@ import random
 from typing import Optional
 from proton.vpn.session.certificates import Certificate
 from proton.vpn.session.dataclasses import VPNCertificate
-from proton.vpn.session.exceptions import (VPNCertificateExpiredError,
-                                           VPNCertificateFingerprintError)
+from proton.vpn.session.exceptions import VPNCertificateFingerprintError
 from proton.vpn.session.key_mgr import KeyHandler
 from proton.vpn import logging
 
@@ -143,12 +142,8 @@ class VPNPubkeyCredentials:
 
             :raises VPNCertificateNotAvailableError: : certificate cannot be found
                 :class:`VPNSession` must be populated with :meth:`VPNSession.refresh`.
-            :raises VPNCertificateExpiredError: : certificate is expired.
             :return: :class:`api_data.VPNCertificate.Certificate`
         """
-        if not self._certificate_obj.has_valid_date:
-            raise VPNCertificateExpiredError
-
         self._log_if_certificate_requires_to_be_refreshed_but_is_not_expired()
         return self._certificate_obj.get_as_pem()
 

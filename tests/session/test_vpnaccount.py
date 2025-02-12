@@ -163,12 +163,3 @@ class TestPubkeyCredentials:
         )
 
         assert(pubkey_credentials.certificate_duration == 86401.0)
-
-    def test_expired_certificate(self):
-        with pytest.raises(VPNCertificateExpiredError):
-            pubkey_credentials = VPNPubkeyCredentials(
-                api_certificate=VPNCertificate.from_dict(VPN_CERTIFICATE_API_RESPONSE),
-                # A new keypair is generated: its fingerprint won't match the one returned by /vpn/v1/certificate.
-                secrets=VPNSecrets.from_dict(VPN_SECRETS_DICT),
-            )
-            pubkey_credentials.certificate_pem()

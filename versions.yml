@@ -1,3 +1,12 @@
+version: 0.42.0
+time: 2025/02/14 16:17
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Fix Certificate Expired error when requesting certificate in pem format.
+---
 version: 0.41.5
 time: 2025/02/07 14:46
 author: Luke Titley
