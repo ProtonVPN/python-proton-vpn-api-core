@@ -1,3 +1,12 @@
+version: 0.12.7
+time: 2025/02/13 17:07
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- Revert introduced workarounds for kill switch with newer versions of netplan (1.1.1-1). Users are now able to use kill switch while having IPv6 disable at grub/kernel level.
+---
 version: 0.12.6
 time: 2025/02/04 19:47
 author: Luke Titley

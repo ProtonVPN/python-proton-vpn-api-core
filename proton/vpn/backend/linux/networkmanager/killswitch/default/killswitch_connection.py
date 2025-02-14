@@ -114,9 +114,8 @@ class KillSwitchConnection:  # pylint: disable=too-few-public-methods
             s_ip4.set_property(NM.SETTING_IP_CONFIG_METHOD, NM.SETTING_IP4_CONFIG_METHOD_DISABLED)
             return s_ip4
 
-        # NM.SETTING_IP4_CONFIG_METHOD_MANUAL stopped working on Ubuntu 24.04.
-        # The route metric was not taken into account.
-        s_ip4.set_property(NM.SETTING_IP_CONFIG_METHOD, NM.SETTING_IP4_CONFIG_METHOD_AUTO)
+        # inform NM that the IP configuration is manual
+        s_ip4.set_property(NM.SETTING_IP_CONFIG_METHOD, NM.SETTING_IP4_CONFIG_METHOD_MANUAL)
 
         # Add addresses
         for address in self._ipv4_settings.addresses:

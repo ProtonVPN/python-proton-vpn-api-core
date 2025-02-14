@@ -28,7 +28,6 @@ import subprocess  # nosec B404:blacklist # nosemgrep: gitlab.bandit.B404
 from proton.vpn.killswitch.interface import KillSwitch
 from proton.vpn.backend.linux.networkmanager.killswitch.default.killswitch_connection_handler\
     import KillSwitchConnectionHandler
-from proton.vpn.backend.linux.networkmanager.killswitch.default.util import is_ipv6_disabled
 from proton.vpn import logging
 
 if TYPE_CHECKING:
@@ -96,10 +95,8 @@ class NMKillSwitch(KillSwitch):
 
     @staticmethod
     def _validate():
-        is_libnetplan1_installed = False
-
         try:
-            KillSwitchConnectionHandler().is_network_manager_running  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
+            KillSwitchConnectionHandler().is_network_manager_running  # noqa pylint: disable=expression-not-assigned disable=line-too-long # nosemgrep: python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
         except (ModuleNotFoundError, ImportError):
             logger.error("NetworkManager is not running.")
             return False
@@ -108,24 +105,21 @@ class NMKillSwitch(KillSwitch):
         # the package name changes to libnetplan1, and it's not compatible with this kill
         # switch implementation when IPv6 is disabled via the ipv6.disabled kernel option.
         try:
-            subprocess.run(
+            result = subprocess.run(
                 ["/usr/bin/apt", "show", "libnetplan1"],
                 capture_output=True,
                 check=True, shell=False
             )  # nosec B603:subprocess_without_shell_equals_true
-            is_libnetplan1_installed = True
         except (FileNotFoundError, subprocess.CalledProcessError):
-            # if the apt command or the libnetplan1 package are not available then it's fine.
             pass
-
-        # if libnetplan1 is installed (most probably ubuntu 24)
-        # and IPv6 is disabled then the KS backend won't work and we log it.
-        # Note: should be fixed once https://github.com/canonical/netplan/pull/495
-        # is merged and pushed to Ubuntu repos.
-        if is_libnetplan1_installed and is_ipv6_disabled():
-            logger.error(
-                "Kill switch does not work with libnetplan1 "
-                "while IPv6 is disabled via the ipv6.disabled=1 kernel parameter."
-            )
+        else:
+            stdout_decoded = result.stdout.decode("utf8").split("\n")
+            for package_info_line in stdout_decoded:
+                if package_info_line.startswith("Version: 1.0.0"):
+                    logger.warning(
+                        "Kill switch is not compatible with libnetplan1 v1.0.0. "
+                        "Please upgrade libnetplan1 package to v1.1.1"
+                    )
+                    break
 
         return True

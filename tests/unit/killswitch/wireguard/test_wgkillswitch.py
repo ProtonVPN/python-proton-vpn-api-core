@@ -108,7 +108,5 @@ def monkey_patch_connection_handler():
     ({"protocol": "wireguard"}, True)
 ])
 @patch("proton.vpn.backend.linux.networkmanager.killswitch.wireguard.wgkillswitch.subprocess")
-@patch("proton.vpn.backend.linux.networkmanager.killswitch.wireguard.wgkillswitch.is_ipv6_disabled")
-def test_backend_validate(mock_is_ipv6_disabled, mock_subprocess, validate_params_dict, assert_bool, monkey_patch_connection_handler):
-    mock_is_ipv6_disabled.return_value = False
+def test_backend_validate(mock_subprocess, validate_params_dict, assert_bool, monkey_patch_connection_handler):
     assert WGKillSwitch._validate(validate_params_dict) == assert_bool
