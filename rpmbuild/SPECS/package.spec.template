@@ -29,7 +29,7 @@ Requires: python3-sentry-sdk
 Requires: python3-pynacl
 
 Conflicts: proton-vpn-gtk-app < 4.8.2~rc3
-Conflicts: python3-proton-vpn-network-manager < 0.12.8
+Conflicts: python3-proton-vpn-network-manager < 0.12.10
 
 Obsoletes: python3-proton-vpn-session
 Obsoletes: python3-proton-vpn-connection
