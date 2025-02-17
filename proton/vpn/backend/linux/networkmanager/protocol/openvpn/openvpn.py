@@ -174,8 +174,7 @@ class OVPNConfig(VPNConfiguration):
 
         if self.use_certificate:
             j2_values["cert"] =\
-                self._vpncredentials.pubkey_credentials\
-                    .get_certificate_pem(allow_expired=True)
+                self._vpncredentials.pubkey_credentials.certificate_pem
             password = self._private_key_passphrase.encode()
             j2_values["priv_key"] = self._vpncredentials.pubkey_credentials.\
                 get_ed25519_sk_pem(password=password)

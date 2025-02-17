@@ -1,3 +1,12 @@
+version: 0.12.9
+time: 2025/02/17 08:28
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Fix for old call to this non existant method
+---
 version: 0.12.8
 time: 2025/02/14 16:22
 author: Luke Titley
