@@ -1,3 +1,12 @@
+version: 0.12.10
+time: 2025/02/17 14:57
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Bump the minimum required version of vpn-api-core module
+---
 version: 0.12.9
 time: 2025/02/17 08:28
 author: Luke Titley
