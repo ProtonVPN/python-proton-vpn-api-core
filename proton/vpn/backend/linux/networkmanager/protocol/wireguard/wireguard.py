@@ -208,7 +208,12 @@ class Wireguard(LinuxNetworkManager, LocalAgentMixin):
         )
         nm_setting.set_property(NM.SETTING_IP_CONFIG_IGNORE_AUTO_DNS, True)
 
-        if not self._settings.custom_dns.enabled:
+        if not self._settings.custom_dns.enabled or (
+            self._settings.custom_dns.enabled and (
+                not self._settings.custom_dns.get_enabled_ipv4_ips()
+                or not self._settings.custom_dns.get_enabled_ipv6_ips()
+            )
+        ):
             nm_setting.add_dns(wg_config.get_dns_ip_for_protocol_version(ip_version))
             nm_setting.add_dns_search(wg_config.get_dns_search_for_protocol_version(ip_version))
 
