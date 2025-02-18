@@ -3,6 +3,11 @@
 import asyncio
 import local_agent
 import json
+import logging
+
+logger = local_agent.init_logger(logging.getLogger)
+logging.basicConfig()
+logger.setLevel(logging.DEBUG)
 
 responses = [
    [
@@ -32,10 +37,12 @@ responses = [
 async def make_test_connection():
     agent_connection = await local_agent.AgentConnector().playback(json.dumps(responses))
 
-    print(await agent_connection.read())
-    print(await agent_connection.read())
+    await agent_connection.read()
+    await agent_connection.read()
 
     await agent_connection.close()
 
 # execute the coroutine
 asyncio.run(make_test_connection())
+
+logger.info("Done")

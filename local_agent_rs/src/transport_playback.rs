@@ -25,6 +25,8 @@ impl TransportPlayback {
         let mut responses: Responses = serde_json::from_str(responses_str)?;
         responses.reverse();
 
+        log::info!("TransportPlayback::new");
+
         Ok(Self {
             responses: Mutex::new(responses),
         })
@@ -35,7 +37,8 @@ impl TransportPlayback {
 impl Transport for TransportPlayback {
     /// Implements send method, but this implementation does nothing,
     /// it just drops the request.
-    async fn send(&self, _request: Request) -> Result<()> {
+    async fn send(&self, request: Request) -> Result<()> {
+        log::info!("TransportPlayback:send( {request:?} )");
         Ok(())
     }
 
@@ -52,11 +55,14 @@ impl Transport for TransportPlayback {
         // First we wait a bit before we return the response
         std::thread::sleep(std::time::Duration::from_secs(seconds));
 
+        log::info!("TransportPlayback:recv() -> {response:?}");
+
         // Return the response
         Ok(response)
     }
 
     async fn close(&self) -> Result<()> {
+        log::info!("TransportPlayback:close()");
         Ok(())
     }
 }

@@ -7,19 +7,24 @@ and create the secrets.json file as documented in load_secrets.py.
 """
 
 import asyncio
+import logging
 
 from load_secrets import load_secrets
 
 
 from local_agent import Listener, AgentFeatures, ExpiredCertificateError
+import local_agent
 
+logger = local_agent.init_logger(logging.getLogger)
+logging.basicConfig()
+logger.setLevel(logging.DEBUG)
 
 def error_callback(error):
-    print("\nError callback: ", error)
+    logger.info(f"\nError callback: {error}")
 
 
 def status_callback(status):
-    print("\nStatus callback: ", status)
+    logger.info(f"\nStatus callback: {status}")
 
 
 async def main():
@@ -28,13 +33,13 @@ async def main():
     try:
         listener = await Listener.connect(secrets.server_domain, secrets.private_key, secrets.certificate)
     except ExpiredCertificateError:
-        print("\nExpired certificate error")
+        logger.info("\nExpired certificate error")
         raise
     except TimeoutError:
-        print("\nTimeout error")
+        logger.info("\nTimeout error")
         raise
     except Exception:
-        print("\nGeneral error")
+        logger.info("\nGeneral error")
         raise
 
     future = listener.listen(status_callback, error_callback)
@@ -45,7 +50,7 @@ async def main():
     try:
         await future
     except asyncio.CancelledError:
-        print("Listener was stopped.")
+        logger.info("Listener was stopped.")
 
 
 

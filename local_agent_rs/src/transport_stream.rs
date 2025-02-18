@@ -66,8 +66,6 @@ where
 
     async fn recv(&self) -> Result<Response> {
         if let Some(read) = self.read.lock().await.as_mut() {
-            log::info!("Receiving...");
-
             // Read the payload length from the server.
             let response_length: usize = read.read_u32().await?.try_into()?;
 
@@ -79,7 +77,7 @@ where
 
             let response: Response = serde_json::from_slice(&buf)?;
 
-            log::info!("    {:?}", &response);
+            log::info!("Receiving: {:?}", &response);
 
             // Deserialize the response from the JSON string.
             Ok(response)
@@ -91,14 +89,19 @@ where
     }
 
     async fn close(&self) -> Result<()> {
+        log::info!("TransportStream::close");
+
         // Only call shutdown if the stream has not already been closed down
         if let Some(mut write) = self.write.lock().await.take() {
+            log::info!("TransportStream::close:send shutdown");
+
             // First explicitly signal the stream shutdown by sending
             // null character.
             write.shutdown().await?;
         }
 
         // Drop the read stream
+        log::info!("TransportStream::close:drop read stream");
         self.read.lock().await.take();
 
         Ok(())

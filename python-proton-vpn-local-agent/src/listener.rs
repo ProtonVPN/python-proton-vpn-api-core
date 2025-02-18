@@ -1,4 +1,7 @@
-use crate::{AgentFeatures, future::future, DEFAULT_TIMEOUT_IN_SECONDS, Status, error::Error};
+use crate::{
+    error::Error, future::future, AgentFeatures, Status,
+    DEFAULT_TIMEOUT_IN_SECONDS,
+};
 use local_agent_rs as la;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
@@ -10,9 +13,8 @@ pub struct Listener {
 
 #[pymethods]
 impl Listener {
-
     /// Starts the local agent listener.
-    /// 
+    ///
     /// This is an async function, and will return a future that will resolve
     /// to a Listener.
     ///
@@ -27,7 +29,7 @@ impl Listener {
     #[pyo3(signature = (domain, key, cert, timeout_in_seconds=DEFAULT_TIMEOUT_IN_SECONDS))]
     pub fn connect<'p>(
         _cls: &Bound<'_, PyType>,
-        py:  Python<'p>,
+        py: Python<'p>,
         domain: String,
         key: String,
         cert: String,
@@ -40,7 +42,9 @@ impl Listener {
                 cert,
                 timeout_in_seconds,
             };
-            Ok(Listener { listener: la::Listener::connect(connection_params).await? })
+            Ok(Listener {
+                listener: la::Listener::connect(connection_params).await?,
+            })
         })
     }
 
@@ -58,27 +62,28 @@ impl Listener {
     ) -> PyResult<Bound<'p, PyAny>> {
         let listener = self.listener.clone();
         let callback = move |result: la::Result<la::StatusMessage>| {
-            let py_result: PyResult<Status> = result.map(Status::from).map_err(|error| Error::LocalAgent(error).into());
+            let py_result: PyResult<Status> = result
+                .map(Status::from)
+                .map_err(|error| Error::LocalAgent(error).into());
 
-            Python::with_gil(
-                |py| {
-                    let cb_result = match py_result {
-                        Ok(response) => status_callback.call1(py, (response,)),
-                        Err(error) => error_callback.call1(py, (error,)),
-                    };
-                    if let Err(error) = cb_result {
-                        log::error!("Error calling callback: {:?}", error.value_bound(py).to_string());
-                    }
+            Python::with_gil(|py| {
+                let cb_result = match py_result {
+                    Ok(response) => status_callback.call1(py, (response,)),
+                    Err(error) => error_callback.call1(py, (error,)),
+                };
+                if let Err(error) = cb_result {
+                    log::error!(
+                        "Error calling callback: {:?}",
+                        error.value_bound(py).to_string()
+                    );
                 }
-            );
+            });
 
             Ok(())
         };
 
         future(py, async move {
-            listener
-                .listen(callback)
-                .await?;
+            listener.listen(callback).await?;
             Ok(())
         })
     }
@@ -93,7 +98,7 @@ impl Listener {
     /// # Arguments
     ///
     /// * `features`: The requested features.
-    /// * `timeout`: Amount of seconds before the request times out. 
+    /// * `timeout`: Amount of seconds before the request times out.
     #[pyo3(signature = (features, timeout_in_seconds=DEFAULT_TIMEOUT_IN_SECONDS))]
     pub fn request_features<'p>(
         &self,

@@ -9,7 +9,7 @@ use pyo3::prelude::*;
 #[allow(non_camel_case_types)]
 pub enum State {
     CONNECTED,
-    HARD_JAILED
+    HARD_JAILED,
 }
 
 #[pymethods]

@@ -1,3 +1,12 @@
+version: 1.4.4
+time: 2025/02/18 17:15
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Forward the rust log to python log.
+---
 version: 1.4.3
 time: 2025/01/28 13:55
 author: Josep Llaneras

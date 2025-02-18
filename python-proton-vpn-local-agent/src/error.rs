@@ -20,6 +20,10 @@ pub enum Error {
     LocalAgent(#[from] la::Error),
     #[error("IO error: {0}")]
     IO(#[from] std::io::Error),
+    #[error("Set logger error: {0}")]
+    SetLoggerError(#[from] log::SetLoggerError),
+    #[error("Python error: {0}")]
+    PythonError(#[from] PyErr),
 }
 
 fn convert_error_message_string<T: std::fmt::Debug>(error: &T) -> String {
@@ -48,7 +52,8 @@ impl std::convert::From<Error> for PyErr {
             }
 
             Error::LocalAgent(la::Error::Tokio(e))
-                if e.kind() == ErrorKind::TimedOut || e.kind() == ErrorKind::BrokenPipe =>
+                if e.kind() == ErrorKind::TimedOut
+                    || e.kind() == ErrorKind::BrokenPipe =>
             {
                 PyTimeoutError::new_err(convert_error_message_string(&e))
             }

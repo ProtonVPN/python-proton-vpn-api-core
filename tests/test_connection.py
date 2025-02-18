@@ -14,6 +14,11 @@ and passing a domain that matches that server to the `secrets.json` file.
 import asyncio
 import local_agent
 from load_secrets import load_secrets
+import logging
+
+logging.basicConfig()
+logger = local_agent.init_logger(logging.getLogger)
+logger.setLevel(logging.DEBUG)
 
 secrets = load_secrets()
 
@@ -26,10 +31,8 @@ async def do_read(connection):
 
 # Connect to the VPN server
 async def make_test_connection():
-    local_agent.init()
 
     agent_connector = local_agent.AgentConnector()
-    print()
 
     agent_connection = await agent_connector.connect(
         secrets.server_domain, secrets.private_key, secrets.certificate, timeout)
@@ -37,17 +40,14 @@ async def make_test_connection():
     print("Local agent connection established")
 
     # First connection we get a status straight away
-    print("Read status")
-    print(await agent_connection.read())
+    await agent_connection.read()
 
     # Now request another status
-    print("Request a new status")
     await agent_connection.request_status(timeout)
-    print(await agent_connection.read())
+    await agent_connection.read()
 
     wait_for_read = asyncio.create_task(do_read(agent_connection))
 
-    print("Requesting features")
     await asyncio.sleep(1)
 
     agent_connection.request_features( local_agent.AgentFeatures(netshield_level = 3) )
@@ -55,8 +55,6 @@ async def make_test_connection():
     # Now get the latest status back.
     # We should have features in it.
     status = await wait_for_read
-
-    print(status)
 
     # Now try to read the netshield level directly
     print(status.features.netshield_level)
