@@ -196,41 +196,43 @@ class Wireguard(LinuxNetworkManager, LocalAgentMixin):
         self.connection.add_setting(ipv4_config)
         self.connection.add_setting(ipv6_config)
 
-    def configure_dns(
+    def _set_dns(self):
+        ipv4_config = self.connection.get_setting_ip4_config()
+        ipv6_config = self.connection.get_setting_ip6_config()
+
+        self._configure_dns(nm_setting=ipv4_config, ip_version=IPv4Address)
+        if self.enable_ipv6_support:
+            self._configure_dns(nm_setting=ipv6_config, ip_version=IPv6Address)
+
+        self.connection.add_setting(ipv4_config)
+        self.connection.add_setting(ipv6_config)
+
+    def _configure_dns(
         self,
         nm_setting: Union[NM.SettingIP4Config, NM.SettingIP6Config],
         ip_version: Union[IPv4Address, IPv6Address],
         dns_priority: int = -1500,
     ):
-        """Re-implements configure_dns methods from LinuxNetworkManager."""
-        super().configure_dns(
-            nm_setting=nm_setting, ip_version=ip_version, dns_priority=dns_priority
-        )
+        """Sets DNS."""
+        if ip_version not in [IPv4Address, IPv6Address]:
+            raise ValueError(f"Unknown IP version: {ip_version}")
+
+        nm_setting.set_property(NM.SETTING_IP_CONFIG_DNS_PRIORITY, dns_priority)
         nm_setting.set_property(NM.SETTING_IP_CONFIG_IGNORE_AUTO_DNS, True)
 
-        if not self._settings.custom_dns.enabled or (
-            self._settings.custom_dns.enabled and (
-                not self._settings.custom_dns.get_enabled_ipv4_ips()
-                or not self._settings.custom_dns.get_enabled_ipv6_ips()
-            )
-        ):
+        # pylint: disable=duplicate-code
+        custom_dns_ips = self._settings.custom_dns\
+            .get_enabled_dns_list_based_on_ip_version(ip_version)
+        ip_addresses = [dns.exploded for dns in custom_dns_ips]
+
+        # If custom DNS is disabled or there are no IP addresses then
+        # we need to set anyway the DNS because WG does not handle it automatically
+        # like OpenVPN does.
+        if self._settings.custom_dns.enabled and ip_addresses:
+            nm_setting.set_property(NM.SETTING_IP_CONFIG_DNS, ip_addresses)
+        else:
             nm_setting.add_dns(wg_config.get_dns_ip_for_protocol_version(ip_version))
             nm_setting.add_dns_search(wg_config.get_dns_search_for_protocol_version(ip_version))
-
-    def _set_dns(self):
-        ipv4_config = self.connection.get_setting_ip4_config()
-        ipv6_config = self.connection.get_setting_ip6_config()
-
-        self.configure_dns(nm_setting=ipv4_config, ip_version=IPv4Address)
-
-        if self.enable_ipv6_support:
-            self.configure_dns(nm_setting=ipv6_config, ip_version=IPv6Address)
-        else:
-            ipv6_config.set_property(NM.SETTING_IP_CONFIG_DNS_PRIORITY, wg_config.ipv6.dns_priority)
-            ipv6_config.set_property(NM.SETTING_IP_CONFIG_IGNORE_AUTO_DNS, True)
-
-        self.connection.add_setting(ipv4_config)
-        self.connection.add_setting(ipv6_config)
 
     def _set_wireguard_properties(self):
         peer = NM.WireGuardPeer.new()

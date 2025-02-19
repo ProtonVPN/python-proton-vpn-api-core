@@ -25,6 +25,7 @@ import os
 import secrets
 from getpass import getuser
 from ipaddress import IPv4Address, IPv6Address
+from typing import Union
 import logging
 
 from jinja2 import Environment, BaseLoader
@@ -204,7 +205,6 @@ PROTOCOLS = {
 
 class OpenVPN(LinuxNetworkManager, LocalAgentMixin):
     """Base class for the backends implementing the OpenVPN protocols."""
-    DNS_PRIORITY = -1500
     VIRTUAL_DEVICE_NAME = "proton0"
     connection = None
 
@@ -281,16 +281,33 @@ class OpenVPN(LinuxNetworkManager, LocalAgentMixin):
         ipv4_config = self.connection.get_setting_ip4_config()
         ipv6_config = self.connection.get_setting_ip6_config()
 
-        self.configure_dns(nm_setting=ipv4_config, ip_version=IPv4Address)
-
+        self._configure_dns(nm_setting=ipv4_config, ip_version=IPv4Address)
         if self.enable_ipv6_support:
-            self.configure_dns(nm_setting=ipv6_config, ip_version=IPv6Address)
-        else:
-            ipv6_config.set_property(NM.SETTING_IP_CONFIG_DNS_PRIORITY, self.DNS_PRIORITY)
-            ipv6_config.set_property(NM.SETTING_IP_CONFIG_IGNORE_AUTO_DNS, True)
+            self._configure_dns(nm_setting=ipv6_config, ip_version=IPv6Address)
 
         self.connection.add_setting(ipv4_config)
         self.connection.add_setting(ipv6_config)
+
+    def _configure_dns(
+        self,
+        nm_setting: Union[NM.SettingIP4Config, NM.SettingIP6Config],
+        ip_version: Union[IPv4Address, IPv6Address],
+        dns_priority: int = -1500,
+    ):
+        """Sets DNS."""
+        if ip_version not in [IPv4Address, IPv6Address]:
+            raise ValueError(f"Unknown IP version: {ip_version}")
+
+        nm_setting.set_property(NM.SETTING_IP_CONFIG_DNS_PRIORITY, dns_priority)
+
+        custom_dns_ips = self._settings.custom_dns\
+            .get_enabled_dns_list_based_on_ip_version(ip_version)
+        ip_addresses = [dns.exploded for dns in custom_dns_ips]
+
+        # OpenVPN sets DNS automatically if nothing is passed.
+        if self._settings.custom_dns.enabled and ip_addresses:
+            nm_setting.set_property(NM.SETTING_IP_CONFIG_DNS, ip_addresses)
+            nm_setting.set_property(NM.SETTING_IP_CONFIG_IGNORE_AUTO_DNS, True)
 
     def _set_vpn_credentials(self):
         """Add OpenVPN credentials to ProtonVPN connection.

@@ -19,10 +19,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from ipaddress import IPv4Address, IPv6Address
 import asyncio
 import logging
-from typing import Optional, Union
+from typing import Optional
 
 from proton.loader import Loader
 from proton.vpn.connection import VPNConnection, events, states
@@ -68,31 +67,6 @@ class LinuxNetworkManager(VPNConnection):
         """Returns the VPN connection implementation class
          for the specified protocol."""
         return Loader.get(LinuxNetworkManager.backend, class_name=protocol)
-
-    def configure_dns(
-        self,
-        nm_setting: Union[NM.SettingIP4Config, NM.SettingIP6Config],
-        ip_version: Union[IPv4Address, IPv6Address],
-        dns_priority: int = -1500,
-    ):
-        """Sets the DNS values"""
-        nm_setting.set_property(NM.SETTING_IP_CONFIG_DNS_PRIORITY, dns_priority)
-
-        if not self._settings.custom_dns.enabled:
-            return
-
-        if ip_version == IPv4Address:
-            custom_dns_ips = self._settings.custom_dns.get_enabled_ipv4_ips()
-        elif ip_version == IPv6Address:
-            custom_dns_ips = self._settings.custom_dns.get_enabled_ipv6_ips()
-        else:
-            raise ValueError(f"Unknown IP version: {ip_version}")
-
-        ip_addresses = [dns.exploded for dns in custom_dns_ips]
-
-        if ip_addresses:
-            nm_setting.set_property(NM.SETTING_IP_CONFIG_IGNORE_AUTO_DNS, True)
-            nm_setting.set_property(NM.SETTING_IP_CONFIG_DNS, ip_addresses)
 
     async def start(self):
         """
