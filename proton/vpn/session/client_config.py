@@ -28,6 +28,10 @@ from proton.vpn.core.cache_handler import CacheHandler
 from proton.vpn.session.exceptions import ClientConfigDecodeError
 from proton.vpn.session.utils import rest_api_request
 from proton.vpn.session.dataclasses.client_config import ProtocolPorts
+from proton.vpn import logging
+
+logger = logging.getLogger(__name__)
+
 
 if TYPE_CHECKING:
     from proton.vpn.session import VPNSession
@@ -196,9 +200,21 @@ class ClientConfigFetcher:
         """
         Loads the client configuration from persistence.
         :returns: the persisted client configuration. If no persistence
-            was found then the default client configuration is returned.
+            was found, or it's invalid then the default client configuration is returned.
 
         """
         cache = self._cache_file.load()
-        self._client_config = ClientConfig.from_dict(cache) if cache else ClientConfig.default()
+
+        if cache:
+            try:
+                self._client_config = ClientConfig.from_dict(cache)
+            except ClientConfigDecodeError:
+                logger.warning(
+                    "Client config could not be deserialized. Using defaults.",
+                    exc_info=True
+                )
+                self._client_config = ClientConfig.default()
+        else:
+            self._client_config = ClientConfig.default()
+
         return self._client_config

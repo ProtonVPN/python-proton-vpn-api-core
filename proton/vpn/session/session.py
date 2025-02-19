@@ -28,6 +28,7 @@ from proton.vpn.session.fetcher import VPNSessionFetcher
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.session.credentials import VPNSecrets
 from proton.vpn.session.dataclasses import LoginResult, BugReportForm, VPNCertificate, VPNLocation
+from proton.vpn.session.exceptions import VPNAccountDecodeError, ServerListDecodeError
 from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.feature_flags_fetcher import FeatureFlags
 
@@ -79,21 +80,28 @@ class VPNSession(Session):
     @property
     def loaded(self) -> bool:
         """:returns: whether the VPN session data was already loaded or not."""
-        return self._vpn_account and self._server_list and self._client_config
+        return self._vpn_account \
+            and self._server_list \
+            and self._client_config \
+            and self._feature_flags
 
     def __setstate__(self, data):
-        """This method is called when deserializing the session from the keyring."""
-        try:
-            if 'vpn' in data:
-                self._vpn_account = VPNAccount.from_dict(data['vpn'])
+        """This method is called when deserializing the session."""
+        # It might be useful to load feature flags cache/defaults, even in logged out state.
+        self._feature_flags = self._fetcher.load_feature_flags_from_cache()
 
-                # Some session data like the server list is not deserialized from the keyring data,
-                # but from plain json file due to its size.
+        if 'vpn' in data:
+            try:
+                self._vpn_account = VPNAccount.from_dict(data['vpn'])
+            except VPNAccountDecodeError:
+                logger.warning("VPN account could not be deserialized", exc_info=True)
+
+            try:
                 self._server_list = self._fetcher.load_server_list_from_cache()
-                self._client_config = self._fetcher.load_client_config_from_cache()
-                self._feature_flags = self._fetcher.load_feature_flags_from_cache()
-        except ValueError:
-            logger.warning("VPN session could not be deserialized.", exc_info=True)
+            except ServerListDecodeError:
+                logger.warning("Server list could not be deserialized", exc_info=True)
+
+            self._client_config = self._fetcher.load_client_config_from_cache()
 
         super().__setstate__(data)
 

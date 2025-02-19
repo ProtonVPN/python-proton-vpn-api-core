@@ -46,7 +46,10 @@ class CacheHandler:
             json.dump(newdata, f, indent=4)  # pylint: disable=C0103
 
     def load(self):
-        """Load data from cache file, if it exists."""
+        """
+        Load data from cache file, if it exists.
+        If it exists, but content is not valid json, None is returned instead.
+        """
         if not self.exists:
             return None
 
