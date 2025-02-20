@@ -25,7 +25,7 @@ BuildRequires: gobject-introspection
 BuildRequires: python3-setuptools
 BuildRequires: python3-proton-core
 BuildRequires: python3-proton-vpn-api-core >= 0.42.3
-BuildRequires: python3-proton-vpn-local-agent >= 1.4.2
+BuildRequires: python3-proton-vpn-local-agent >= 1.4.4
 BuildRequires: python3-jinja2
 
 Requires: python3-gobject
@@ -36,7 +36,7 @@ Requires: gobject-introspection
 Requires: python3-setuptools
 Requires: python3-proton-core
 Requires: python3-proton-vpn-api-core >= 0.42.3
-Requires: python3-proton-vpn-local-agent >= 1.4.2
+Requires: python3-proton-vpn-local-agent >= 1.4.4
 Requires: python3-jinja2
 
 Conflicts: python3-proton-vpn-network-manager-openvpn < 0.1.1
