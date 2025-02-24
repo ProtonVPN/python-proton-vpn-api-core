@@ -1,3 +1,12 @@
+version: 0.42.3
+time: 2025/02/24 12:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- Expose method to get DNS IPs based on provided IP version.
+---
 version: 0.42.2
 time: 2025/02/20 10:41
 author: Pep Llaneras

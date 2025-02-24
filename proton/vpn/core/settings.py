@@ -185,13 +185,14 @@ class CustomDNS:
 
     def get_enabled_ipv4_ips(self) -> List[IPv4Address]:
         """Returns a list of IPv4 custom DNSs that are enabled."""
-        return self._get_dns_list_based_on_ip_version(IPv4Address)
+        return self.get_enabled_dns_list_based_on_ip_version(IPv4Address)
 
     def get_enabled_ipv6_ips(self) -> List[IPv6Address]:
         """Returns a list of IPv6 custom DNSs that are enabled."""
-        return self._get_dns_list_based_on_ip_version(IPv6Address)
+        return self.get_enabled_dns_list_based_on_ip_version(IPv6Address)
 
-    def _get_dns_list_based_on_ip_version(self, version: Union[IPv4Address, IPv6Address]):
+    def get_enabled_dns_list_based_on_ip_version(self, version: Union[IPv4Address, IPv6Address]):
+        """Returns a list of IPs based on provided IP version."""
         dns_list = []
         for dns in self.ip_list:
             if isinstance(dns.ip, version) and dns.enabled:
