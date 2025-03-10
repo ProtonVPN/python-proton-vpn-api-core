@@ -4,8 +4,8 @@
 pub use local_agent_rs as la;
 use pyo3::prelude::*;
 
-#[pyclass]
-#[derive(Clone, Debug)]
+#[pyclass(eq, eq_int)]
+#[derive(Clone, Debug, PartialEq)]
 #[allow(non_camel_case_types)]
 pub enum State {
     CONNECTED,

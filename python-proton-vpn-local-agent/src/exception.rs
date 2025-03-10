@@ -43,15 +43,21 @@ create_exception!(
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add(
         "LocalAgentError",
-        m.py().get_type_bound::<LocalAgentError>(),
+        m.py().get_type::<LocalAgentError>(),
+//        m.py().get_type_bound::<LocalAgentError>(),
     )?;
     m.add(
         "ExpiredCertificateError",
-        m.py().get_type_bound::<ExpiredCertificateError>(),
+        m.py().get_type::<ExpiredCertificateError>(),
+
+//        m.py().get_type_bound::<ExpiredCertificateError>(),
     )?;
-    m.add("APIError", m.py().get_type_bound::<APIError>())?;
-    m.add("SyntaxAPIError", m.py().get_type_bound::<SyntaxAPIError>())?;
-    m.add("PolicyAPIError", m.py().get_type_bound::<PolicyAPIError>())?;
+    m.add("APIError", m.py().get_type::<APIError>())?;
+//    m.add("APIError", m.py().get_type_bound::<APIError>())?;
+    m.add("SyntaxAPIError", m.py().get_type::<SyntaxAPIError>())?;
+//    m.add("SyntaxAPIError", m.py().get_type_bound::<SyntaxAPIError>())?;
+    m.add("PolicyAPIError", m.py().get_type::<PolicyAPIError>())?;
+//    m.add("PolicyAPIError", m.py().get_type_bound::<PolicyAPIError>())?;
 
     Ok(())
 }

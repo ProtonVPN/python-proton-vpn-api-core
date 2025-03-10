@@ -62,7 +62,7 @@ impl AgentConnector {
     ///
     /// # Arguments
     ///
-    /// * `responses` - A string of json containing reponses.
+    /// * `responses` - A string of json containing responses.
     ///
     #[pyo3(signature = (responses))]
     pub fn playback<'p>(
