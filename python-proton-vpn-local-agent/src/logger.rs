@@ -14,7 +14,7 @@ pub const LOGGER: &str = "logger";
 
 fn create_new_py_logger() -> String {
     format!(
-r#"
+        r#"
 import logging
 
 class LocalAgentLogger(logging.Logger):
@@ -63,10 +63,11 @@ impl Logger {
     /// Creates a new Logger instance.
     pub fn new(py: Python, get_py_logger: PyObject) -> PyResult<Self> {
         // Add  the getLogger function to the locals
-        let locals = PyDict::new_bound(py);
+        let locals = PyDict::new(py);
         locals.set_item(GET_LOGGER, get_py_logger)?;
 
-        py.run_bound(&create_new_py_logger(), Some(&locals), None)?;
+        let c_string = std::ffi::CString::new(create_new_py_logger().as_str())?;
+        py.run(&c_string, Some(&locals), None)?;
 
         let py_logger = locals.get_item(LOGGER)?.ok_or(PyErr::new::<
             pyo3::exceptions::PyException,
@@ -111,12 +112,11 @@ impl log::Log for Logger {
 
         // Call the Python logger method
         let result = Python::with_gil(|py| -> PyResult<()> {
-            let rust_info = pyo3::types::PyDict::new_bound(py);
+            let rust_info = pyo3::types::PyDict::new(py);
 
             // Add the file and line number if available
             if let Some(file_path) = record.file() {
-                if let Some(file) =
-                    std::path::Path::new(file_path).file_name()
+                if let Some(file) = std::path::Path::new(file_path).file_name()
                 {
                     if let Some(filename) = file.to_str() {
                         let filename = filename.to_string();
@@ -131,7 +131,7 @@ impl log::Log for Logger {
                 rust_info.set_item("lineno", line)?;
             }
 
-            let extras = pyo3::types::PyDict::new_bound(py);
+            let extras = pyo3::types::PyDict::new(py);
             extras.set_item("rust_info", rust_info)?;
 
             if let Ok(log) = self
@@ -139,7 +139,7 @@ impl log::Log for Logger {
                 .bind(py)
                 .getattr(Logger::get_level(record.level()))
             {
-                let kwargs = pyo3::types::PyDict::new_bound(py);
+                let kwargs = pyo3::types::PyDict::new(py);
 
                 kwargs.set_item("extra", extras)?;
 

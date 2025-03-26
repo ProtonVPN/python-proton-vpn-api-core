@@ -74,7 +74,7 @@ impl Listener {
                 if let Err(error) = cb_result {
                     log::error!(
                         "Error calling callback: {:?}",
-                        error.value_bound(py).to_string()
+                        error.value(py).to_string()
                     );
                 }
             });

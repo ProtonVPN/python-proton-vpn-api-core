@@ -2,8 +2,6 @@
 // Copyright (c) 2024 Proton AG
 // -----------------------------------------------------------------------------
 use crate::Result;
-use pyo3::IntoPyObject;
-use pyo3_async_runtimes::tokio;
 
 /// Converts a rust future into a python future, making sure to convert errors
 /// into Python exceptions.
@@ -16,10 +14,9 @@ pub fn future<W, R>(
 ) -> pyo3::PyResult<pyo3::Bound<pyo3::PyAny>>
 where
     W: std::future::Future<Output = Result<R>> + Send + 'static,
-    R: for<'a> IntoPyObject<'a>,
-//    R: IntoPyObject,
+    R: for<'py> pyo3::IntoPyObject<'py>,
 {
-    tokio::future_into_py(py, async move {
+    pyo3_async_runtimes::tokio::future_into_py(py, async move {
         work.await.map_err(pyo3::PyErr::from)
     })
 }
