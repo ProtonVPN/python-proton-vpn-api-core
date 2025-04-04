@@ -21,6 +21,7 @@ from typing import Callable, Optional
 
 from proton.session.exceptions import (
     ProtonAPINotReachable, ProtonAPINotAvailable,
+    ProtonAPIError
 )
 
 from proton.vpn import logging
@@ -62,6 +63,12 @@ class ServerListRefresher:
                 next_refresh_delay = server_list.seconds_until_expiration
             else:
                 next_refresh_delay = self._session.server_list.seconds_until_expiration
+        except ProtonAPIError as error:
+            if error.http_code != 429:
+                raise
+
+            logger.warning(f"Server list refresh failed: {error}")
+            next_refresh_delay = ServerList.get_loads_refresh_interval_in_seconds()
         except (ProtonAPINotReachable, ProtonAPINotAvailable) as error:
             logger.warning(f"Server list refresh failed: {error}")
             next_refresh_delay = ServerList.get_loads_refresh_interval_in_seconds()

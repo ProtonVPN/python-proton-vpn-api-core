@@ -1,3 +1,12 @@
+version: 0.42.4
+time: 2025/04/04 13:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- Swallow and re-schedule server refresh when we receive HTTP code 429.
+---
 version: 0.42.3
 time: 2025/02/24 12:00
 author: Alexandru Cheltuitor

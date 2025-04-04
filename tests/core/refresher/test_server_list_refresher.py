@@ -16,12 +16,15 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock, AsyncMock, patch
 
 import pytest
 
 from proton.vpn.core.refresher.scheduler import RunAgain
 from proton.vpn.core.refresher.server_list_refresher import ServerListRefresher
+
+from proton.session.exceptions import ProtonAPIError
+
 
 
 @pytest.mark.asyncio
@@ -107,3 +110,28 @@ async def test_refresh_schedules_next_refresh_if_server_list_is_not_expired():
     # And the next refresh should've been scheduled when the current
     # server list expires.
     assert next_refresh_delay == RunAgain.after_seconds(session.server_list.seconds_until_expiration)
+
+
+@pytest.mark.asyncio
+@patch("proton.vpn.core.refresher.server_list_refresher.ServerList.get_loads_refresh_interval_in_seconds")
+async def test_refresh_schedules_next_refresh_if_server_list_is_expired_and_api_error_exception_is_raised(mock_get_loads_refresh_interval_in_seconds):
+    get_loads_refresh_interval_in_seconds = 10
+    mock_get_loads_refresh_interval_in_seconds.return_value = get_loads_refresh_interval_in_seconds
+    session_holder = Mock()
+    session = session_holder.session
+
+    # The current server list is expired.
+    session.server_list.expired = True
+
+    # Mock a 429 response from the server
+    session.fetch_server_list = AsyncMock(side_effect=ProtonAPIError(
+        http_code=429,
+        http_headers={},
+        json_data={"Code": 429, "Error": "Error message"}
+    ))
+
+    refresher = ServerListRefresher(session_holder=session_holder)
+    refresher.server_list_updated_callback = Mock()
+
+    # No error message should be raised since it's been swallowed
+    next_refresh_delay = await refresher.refresh()
