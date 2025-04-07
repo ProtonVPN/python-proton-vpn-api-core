@@ -25,6 +25,7 @@ from proton.vpn.session.client_config import ClientConfig
 from proton.vpn import logging
 from proton.session.exceptions import (
     ProtonAPINotReachable, ProtonAPINotAvailable,
+    ProtonAPIError
 )
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,12 @@ class ClientConfigRefresher:
         try:
             new_client_config = await self._session.fetch_client_config()
             next_refresh_delay = new_client_config.seconds_until_expiration
+        except ProtonAPIError as error:
+            if error.http_code != 429:
+                raise
+
+            logger.warning(f"Client config refresh failed: {error}")
+            next_refresh_delay = ClientConfig.get_refresh_interval_in_seconds()
         except (ProtonAPINotReachable, ProtonAPINotAvailable) as error:
             logger.warning(f"Client config refresh failed: {error}")
             next_refresh_delay = ClientConfig.get_refresh_interval_in_seconds()

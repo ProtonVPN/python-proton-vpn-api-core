@@ -22,6 +22,7 @@ import pytest
 
 from proton.vpn.core.refresher.client_config_refresher import ClientConfigRefresher
 from proton.vpn.core.refresher.scheduler import RunAgain
+from proton.session.exceptions import ProtonAPIError
 
 
 @pytest.mark.asyncio
@@ -40,3 +41,20 @@ async def refresh_fetches_client_config_if_expired_and_returns_next_refresh_dela
     session.fetch_client_config.assert_called_once()
 
     assert next_refresh_delay == RunAgain.after_seconds(new_client_config.seconds_until_expiration)
+
+
+@pytest.mark.asyncio
+async def test_refresh_schedules_next_refresh_if_client_config_is_expired_and_api_error_exception_is_raised():
+    session_holder = Mock()
+    session = session_holder.session
+    refresher = ClientConfigRefresher(session_holder=session_holder)
+
+    new_client_config = Mock()
+    new_client_config.seconds_until_expiration = 60
+    session.fetch_client_config = AsyncMock(side_effect=ProtonAPIError(
+        http_code=429,
+        http_headers={},
+        json_data={"Code": 429, "Error": "Error message"}
+    ))
+
+    next_refresh_delay = await refresher.refresh()

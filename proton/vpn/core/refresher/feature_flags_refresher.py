@@ -25,6 +25,7 @@ from proton.vpn.session import FeatureFlags
 from proton.vpn import logging
 from proton.session.exceptions import (
     ProtonAPINotReachable, ProtonAPINotAvailable,
+    ProtonAPIError
 )
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,12 @@ class FeatureFlagsRefresher:
         try:
             feature_flags = await self._session.fetch_feature_flags()
             next_refresh_delay = feature_flags.seconds_until_expiration
+        except ProtonAPIError as error:
+            if error.http_code != 429:
+                raise
+
+            logger.warning(f"Feature flag refresh failed {error}")
+            next_refresh_delay = FeatureFlags.get_refresh_interval_in_seconds()
         except (ProtonAPINotReachable, ProtonAPINotAvailable) as error:
             logger.warning(f"Feature flag refresh failed: {error}")
             next_refresh_delay = FeatureFlags.get_refresh_interval_in_seconds()

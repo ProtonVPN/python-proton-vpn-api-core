@@ -22,6 +22,25 @@ import pytest
 
 from proton.vpn.core.refresher.certificate_refresher import CertificateRefresher, generate_backoff_value
 from proton.vpn.core.refresher.scheduler import RunAgain
+from proton.session.exceptions import ProtonAPIError
+
+
+@pytest.mark.asyncio
+async def test_refresh_schedules_next_refresh_if_certificate_is_expired_and_api_error_exception_is_raised():
+    session_holder = Mock()
+    session = session_holder.session
+
+    refresher = CertificateRefresher(session_holder=session_holder)
+
+    session.fetch_certificate = AsyncMock(side_effect=ProtonAPIError(
+        http_code=429,
+        http_headers={},
+        json_data={"Code": 429, "Error": "Error message"}
+    ))
+    new_certificate = Mock()
+    new_certificate.remaining_time_to_next_refresh = 600
+
+    next_refresh_delay = await refresher.refresh()
 
 
 @pytest.mark.asyncio

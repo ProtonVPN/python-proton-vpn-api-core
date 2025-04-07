@@ -27,6 +27,7 @@ from proton.vpn.core.session_holder import SessionHolder
 from proton.vpn.session.credentials import VPNPubkeyCredentials
 from proton.session.exceptions import (
     ProtonAPINotReachable, ProtonAPINotAvailable,
+    ProtonAPIError
 )
 
 logger = logging.getLogger(__name__)
@@ -64,6 +65,13 @@ class CertificateRefresher:
             next_refresh_delay = certificate.remaining_time_to_next_refresh
             self._number_of_failed_refresh_attempts = 0
             await self._notify()
+        except ProtonAPIError as error:
+            if error.http_code != 429:
+                raise
+
+            logger.warning(f"Certificate refresh failed {error}")
+            next_refresh_delay = self._get_next_refresh_delay()
+            self._number_of_failed_refresh_attempts += 1
         except (ProtonAPINotReachable, ProtonAPINotAvailable) as error:
             logger.warning(f"Certificate refresh failed: {error}")
             next_refresh_delay = self._get_next_refresh_delay()
