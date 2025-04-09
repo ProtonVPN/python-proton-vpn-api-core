@@ -14,7 +14,7 @@ pub const LOGGER: &str = "logger";
 
 fn create_new_py_logger() -> String {
     format!(
-        r#"
+r#"
 import logging
 
 class LocalAgentLogger(logging.Logger):
