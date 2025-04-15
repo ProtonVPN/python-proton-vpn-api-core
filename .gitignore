@@ -1,0 +1,8 @@
+target
+.idea
+**/*.deb
+**/*.changes
+**/*.buildinfo
+*.pyc
+**/venv
+tests/*.json

@@ -1,0 +1,8 @@
+version: 0.1.0
+time: 2024/04/15 11:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Initial release of stub proton-vpn-base.

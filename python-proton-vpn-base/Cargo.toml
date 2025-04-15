@@ -1,0 +1,20 @@
+[package]
+name = "python-proton-vpn-base"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type   = ["cdylib"]
+
+[profile.release]
+# Strip debug symbols in release builds
+strip = true
+
+[dependencies]
+proton-vpn-base-rs = { path = "../proton_vpn_base_rs" }
+pyo3 = {version="0.21.2", features = ["extension-module", "abi3-py38"]}
+pyo3-asyncio-0-21 = {version="0.21.0", features = ["attributes", "tokio-runtime"]}
+tokio = { version = "1.38.0", features = ["full"] }
+thiserror = "1.0.60"
+log = "0.4.22"
+env_logger = "0.11.5"
