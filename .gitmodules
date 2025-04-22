@@ -1,9 +1,9 @@
 [submodule "python-proton-vpn-base/scripts/devtools"]
 	path = python-proton-vpn-lib/scripts/devtools
-	url = git@gitlab.protontech.ch:ProtonVPN/linux/integration/devtools.git
+	url = ../integration/devtools.git
 [submodule "ci-libraries-rust"]
 	path = ci-libraries-rust
-	url = git@gitlab.protontech.ch:ProtonVPN/linux/integration/ci-libraries-rust.git
+	url = ../integration/ci-libraries-rust.git
 [submodule "procure"]
 	path = procure
-	url = git@gitlab.protontech.ch:ltitley/procure.git
+	url = ../../../ltitley/procure.git
