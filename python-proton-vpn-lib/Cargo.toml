@@ -1,5 +1,5 @@
 [package]
-name = "python-proton-vpn-base"
+name = "python-proton-vpn-lib"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,7 +11,7 @@ crate-type   = ["cdylib"]
 strip = true
 
 [dependencies]
-proton-vpn-base-rs = { path = "../proton_vpn_base_rs" }
+proton-vpn-lib-rs = { path = "../proton_vpn_lib_rs" }
 pyo3 = {version="0.21.2", features = ["extension-module", "abi3-py38"]}
 pyo3-asyncio-0-21 = {version="0.21.0", features = ["attributes", "tokio-runtime"]}
 tokio = { version = "1.38.0", features = ["full"] }

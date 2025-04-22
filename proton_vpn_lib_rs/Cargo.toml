@@ -1,5 +1,5 @@
 [package]
-name = "proton-vpn-base-rs"
+name = "proton-vpn-lib-rs"
 version = "0.1.0"
 edition = "2021"
 
