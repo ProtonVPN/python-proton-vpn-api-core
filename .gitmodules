@@ -4,3 +4,6 @@
 [submodule "ci-libraries-rust"]
 	path = ci-libraries-rust
 	url = git@gitlab.protontech.ch:ProtonVPN/linux/integration/ci-libraries-rust.git
+[submodule "pro-cure"]
+	path = pro-cure
+	url = git@gitlab.protontech.ch:ltitley/pro-cure.git
