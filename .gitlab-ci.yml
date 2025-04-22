@@ -1,3 +1,6 @@
+variables:
+ PROJECT_NAME: "proton-vpn-local-agent"
+ RUST_PROJECT_NAME: "local_agent_rs"
 include:
  - project: 'ProtonVPN/Linux/integration/ci-libraries-rust'
    ref: develop
