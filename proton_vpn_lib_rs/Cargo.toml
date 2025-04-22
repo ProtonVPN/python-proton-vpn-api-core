@@ -10,4 +10,4 @@ thiserror = "1.0.60"
 log = "0.4.22"
 env_logger = "0.11.5"
 static_assertions = "1.1.0"
-pro_cure = { path = "../pro-cure" }
+procure = { path = "../procure" }
