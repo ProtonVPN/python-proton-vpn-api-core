@@ -395,15 +395,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da544ee218f0d287a911e9c99a39a8c9bc8fcad3cb8db5959940044ecfc67265"
 
 [[package]]
-name = "pro_cure"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "thiserror 2.0.12",
-]
-
-[[package]]
 name = "proc-macro2"
 version = "1.0.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -413,12 +404,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "procure"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "proton-vpn-lib-rs"
 version = "0.1.0"
 dependencies = [
  "env_logger",
  "log",
- "pro_cure",
+ "procure",
  "static_assertions",
  "thiserror 1.0.63",
 ]
