@@ -1,0 +1,16 @@
+Name:           {PACKAGE_NAME}
+Release:        1%{{?dist}}
+Summary:        The core rust component of the proton vpn linux client
+License:        GPLv3
+Version:        {VERSION}
+URL: https://github.com/ProtonVPN/python-proton-vpn-lib
+
+Requires: python3 >= {CPYTHON_VERSION}
+
+%description
+A core rust component of the proton vpn linux client
+
+%files
+/{install_path}
+
+%changelog

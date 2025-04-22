@@ -1,0 +1,13 @@
+#!/usr/bin/make -f
+
+clean:
+	@# Do nothing
+
+build:
+	@# Do nothing
+
+binary:
+	mkdir -p debian/python3-proton-vpn-lib/usr/lib/python3/dist-packages/proton/vpn
+	cp {{rust_triplet}}/release/libpython_proton_vpn_lib.so debian/python3-proton-vpn-lib/usr/lib/python3/dist-packages/proton/vpn/lib.abi3.so
+	dh_gencontrol
+	dh_builddeb
