@@ -3,5 +3,5 @@ variables:
  RUST_PROJECT_NAME: "proton_vpn_lib_rs"
 include:
  - project: 'ProtonVPN/Linux/integration/ci-libraries-rust'
-   ref: procure
+   ref: VPNLINUX-1257-Procure
    file: 'develop-pipeline.yml'
