@@ -17,6 +17,7 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
+import os
 from typing import TYPE_CHECKING
 from pathlib import Path
 
@@ -29,6 +30,7 @@ if TYPE_CHECKING:
 
 
 REFRESH_INTERVAL = 2 * 60 * 60  # 2 hours
+FF_ENV_VAR = "PROTON_VPN_FEATURE_FLAG_{flag}"
 
 DEFAULT = {
     "toggles": [
@@ -77,6 +79,15 @@ DEFAULT = {
                 "enabled": False
             }
         },
+        {
+            "name": "LogicalsV2",
+            "enabled": False,
+            "impressionData": False,
+            "variant": {
+                "name": "disabled",
+                "enabled": False
+            }
+        },
     ],
     "ExpirationTime": 0
 }
@@ -97,9 +108,19 @@ class FeatureFlags:  # pylint: disable=too-few-public-methods
         """Get a feature flag by its name.
         Always returns `False` if the feature flag is not found.
         """
+
+        # Allow environment variable override for feature flags
+        # this makes it easy to enable a feature flag for testing purposes
+        if self._search_for_env_var(feature_flag_name):
+            return True
+
         return self._search_for_feature_flag(feature_flag_name)
 
-    def _search_for_feature_flag(self, feature_name: str) -> dict:
+    def _search_for_env_var(self, feature_name: str) -> bool:
+        env_var = FF_ENV_VAR.format(flag=feature_name)
+        return env_var in os.environ
+
+    def _search_for_feature_flag(self, feature_name: str) -> bool:
         feature_flag_dict = {}
 
         for feature in self._api_data.get("toggles", {}):

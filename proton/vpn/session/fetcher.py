@@ -27,7 +27,8 @@ from proton.vpn.session.dataclasses import (
     VPNCertificate, VPNSessions, VPNSettings,
     VPNLocation
 )
-from proton.vpn.session.servers.fetcher import ServerListFetcher
+from proton.vpn.session.servers.server_list_fetcher import ServerListFetcher
+from proton.vpn.session.servers.server_list_fetcher import EndpointVersion
 from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.utils import rest_api_request
 from proton.vpn.session.feature_flags_fetcher import FeatureFlagsFetcher, FeatureFlags
@@ -112,9 +113,10 @@ class VPNSessionFetcher:
         """
         return self._server_list_fetcher.load_from_cache()
 
-    async def fetch_server_list(self) -> ServerList:
+    async def fetch_server_list(
+            self, endpoint_version: EndpointVersion) -> ServerList:
         """Fetches the list of VPN servers."""
-        return await self._server_list_fetcher.fetch()
+        return await self._server_list_fetcher.fetch(endpoint_version)
 
     async def update_server_loads(self) -> ServerList:
         """Fetches new server loads and updates the current server list with them."""

@@ -508,7 +508,9 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         vpnlocation = VPNLocation(
             IP=connection_details.device_ip,
             Country=connection_details.device_country,
-            ISP=current_location.ISP
+            ISP=current_location.ISP,
+            Long=current_location.Long,
+            Lat=current_location.Lat
         )
         self._session_holder.session.set_location(vpnlocation)
 

@@ -29,6 +29,8 @@ class VPNLocation(Serializable):
     IP: str
     Country: str
     ISP: str
+    Long: float
+    Lat: float
 
     @staticmethod
     def _deserialize(dict_data: dict) -> VPNLocation:
@@ -39,5 +41,7 @@ class VPNLocation(Serializable):
         return VPNLocation(
             IP=dict_data["IP"],
             Country=dict_data["Country"],
-            ISP=dict_data["ISP"]
+            ISP=dict_data["ISP"],
+            Long=dict_data["Long"],
+            Lat=dict_data["Lat"],
         )

@@ -27,6 +27,8 @@ def vpnlocation_data():
         "IP": "192.168.0.1",
         "Country": "Switzerland",
         "ISP": "SwissRandomProvider",
+        "Long": 7.4474,
+        "Lat": 46.9480
     }
 
 

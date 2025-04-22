@@ -37,14 +37,15 @@ UNIX_EPOCH = "Thu, 01 Jan 1970 00:00:00 GMT"
 
 class PersistenceKeys(Enum):
     """JSON Keys used to persist the ServerList to disk."""
-    LOGICALS = "LogicalServers"
+    LOGICALS = "LogicalServers"  # pylint: disable=R0902
     EXPIRATION_TIME = "ExpirationTime"
     LOADS_EXPIRATION_TIME = "LoadsExpirationTime"
     LAST_MODIFIED_TIME = "LastModifiedTime"
     USER_TIER = "MaxTier"
+    STATUS_TOKEN = "StatusToken"
 
 
-class ServerList:  # pylint: disable=too-many-public-methods
+class ServerList:  # pylint: disable=R0902, R0904
     """
     Server list model class.
     """
@@ -63,7 +64,8 @@ class ServerList:  # pylint: disable=too-many-public-methods
             expiration_time: Optional[int] = None,
             loads_expiration_time: Optional[int] = None,
             index_servers: bool = True,
-            last_modified_time: Optional[str] = None
+            last_modified_time: Optional[str] = None,
+            status_token: Optional[str] = None
     ):  # pylint: disable=too-many-arguments
         self._user_tier = user_tier
         self._logicals = logicals or []
@@ -78,6 +80,8 @@ class ServerList:  # pylint: disable=too-many-public-methods
         else:
             self._logicals_by_id = None
             self._logicals_by_name = None
+
+        self._status_token = status_token
 
     @staticmethod
     def _build_indexes(logicals):
@@ -130,6 +134,11 @@ class ServerList:  # pylint: disable=too-many-public-methods
     def last_modified_time(self) -> str:
         """The time at which the server list was fetched."""
         return self._last_modified_time
+
+    @property
+    def status_token(self) -> Optional[str]:
+        """The token used to recover the status endpoint"""
+        return self._status_token
 
     def update(self, server_loads: List[ServerLoad]):
         """Updates the server list with new server loads."""
@@ -302,12 +311,15 @@ class ServerList:  # pylint: disable=too-many-public-methods
         last_modified_time = data.get(PersistenceKeys.LAST_MODIFIED_TIME.value,
                                       ServerList.get_epoch_time())
 
+        status_token = data.get(PersistenceKeys.STATUS_TOKEN.value, None)
+
         return ServerList(
             user_tier=user_tier,
             logicals=logicals,
             expiration_time=expiration_time,
             loads_expiration_time=loads_expiration_time,
-            last_modified_time=last_modified_time
+            last_modified_time=last_modified_time,
+            status_token=status_token
         )
 
     def to_dict(self) -> dict:
@@ -317,7 +329,8 @@ class ServerList:  # pylint: disable=too-many-public-methods
             PersistenceKeys.EXPIRATION_TIME.value: self.expiration_time,
             PersistenceKeys.LOADS_EXPIRATION_TIME.value: self.loads_expiration_time,
             PersistenceKeys.LAST_MODIFIED_TIME.value: self.last_modified_time,
-            PersistenceKeys.USER_TIER.value: self._user_tier
+            PersistenceKeys.USER_TIER.value: self._user_tier,
+            PersistenceKeys.STATUS_TOKEN.value: self._status_token
         }
 
     def __len__(self):

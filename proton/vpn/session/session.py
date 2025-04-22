@@ -24,7 +24,7 @@ from proton.session import Session, FormData, FormField
 
 from proton.vpn import logging
 from proton.vpn.session.account import VPNAccount
-from proton.vpn.session.fetcher import VPNSessionFetcher
+from proton.vpn.session.fetcher import (VPNSessionFetcher, EndpointVersion)
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.session.credentials import VPNSecrets
 from proton.vpn.session.dataclasses import LoginResult, BugReportForm, VPNCertificate, VPNLocation
@@ -33,6 +33,8 @@ from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.feature_flags_fetcher import FeatureFlags
 
 logger = logging.getLogger(__name__)
+
+LOGICALS_V2 = "LogicalsV2"
 
 
 class VPNSession(Session):
@@ -232,7 +234,7 @@ class VPNSession(Session):
             # has been created, since it requires the location, and it should
             # be retrieved after the feature flags have been fetched, since it
             # depends in them for chosing the fetch method.
-            self._server_list = await self._fetcher.fetch_server_list()
+            await self.fetch_server_list()
 
         finally:
             # IMPORTANT: apart from releasing the lock, _requests_unlock triggers the
@@ -280,7 +282,11 @@ class VPNSession(Session):
         """
         Fetches the server list from the REST API.
         """
-        self._server_list = await self._fetcher.fetch_server_list()
+        self._server_list = await self._fetcher.fetch_server_list(
+            EndpointVersion.V2
+            if self._feature_flags.get(LOGICALS_V2)
+            else EndpointVersion.V1
+        )
         return self._server_list
 
     @property
