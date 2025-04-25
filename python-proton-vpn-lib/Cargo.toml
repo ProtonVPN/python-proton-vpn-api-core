@@ -12,9 +12,10 @@ strip = true
 
 [dependencies]
 proton-vpn-lib-rs = { path = "../proton_vpn_lib_rs" }
-pyo3 = {version="0.21.2", features = ["extension-module", "abi3-py38"]}
-pyo3-asyncio-0-21 = {version="0.21.0", features = ["attributes", "tokio-runtime"]}
+pyo3 = {version="0.24.2", features = ["extension-module", "abi3-py38", "serde"]}
+pyo3-async-runtimes = {version="0.24.0", features = ["attributes", "tokio-runtime"]}
 tokio = { version = "1.38.0", features = ["full"] }
 thiserror = "1.0.60"
 log = "0.4.22"
 env_logger = "0.11.5"
+pythonize = "0.24.0"
