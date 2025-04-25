@@ -3,9 +3,7 @@
 // -----------------------------------------------------------------------------
 mod error;
 // -----------------------------------------------------------------------------
-use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList, PyString};
 // -----------------------------------------------------------------------------
 use error::Result;
 
@@ -22,7 +20,7 @@ struct ServerStatus(proton_vpn_lib_rs::ServerStatus);
 #[pymethods]
 impl ServerStatus {
     #[new]
-    pub fn new<'py>(response: &Bound<'py, PyAny>) -> Result<Self> {
+    pub fn new(response: &Bound<PyAny>) -> Result<Self> {
         Ok(Self(proton_vpn_lib_rs::ServerStatus::new(
             response.get_item(STATUS)?.extract()?,
             pythonize::depythonize(&(response.get_item(LOGICAL_SERVERS)?))?,
