@@ -20,6 +20,7 @@ import logging
 import os
 import hashlib
 import getpass
+import re
 
 from proton.vpn.core.session_holder import (
     ClientTypeMetadata, DISTRIBUTION_VERSION, DISTRIBUTION_ID)
@@ -30,15 +31,46 @@ SSL_CERT_FILE = "SSL_CERT_FILE"
 MACHINE_ID = "/etc/machine-id"
 PROTON_VPN = "protonvpn"
 
-# We replace the username in the event with a generic value to avoid leaking
-# any personal information.
+# This is how we anonymise the data sent to us in sentry messages.
 #
-# If we need to add more replacements, we can add them here.
-USERNAME_REPLACEMENTS = {
-    '/home/{user}/': "/home/<HIDDEN>/",
-}
+# The regular expressions will be matched against lower and upper case matches
+# so the regular expression doesn't needs to include casing.
+#
+# {user} is a special key that will be replaced with the username of the
+# current user. It makes for a more accurant regex match.
+PRIVACY_REPLACEMENTS = [
+    # Username in home directory
+    (r'\/home\/{user}\/', r"/home/<HIDDEN>/"),
+    # Email addresses
+    (r'[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{{2,}}', r"<HIDDEN>"),
+    # GPG ID addresses
+    (r'gpg: encrypted with.*', r"<HIDDEN>"),
+]
 
 log = logging.getLogger(__name__)
+
+
+def scrub_private_data(data, keys):
+    """
+    Recursively scrub private data from any values in the event.
+
+    :param data: The value that needs to be scrubbed.
+    :param keys: A dictionary of values to substitute before evaluating the
+        regex replacement.
+    :returns: The contents of data with any discovered personal information
+        replaced by <HIDDEN>.
+    """
+    if isinstance(data, (tuple, list)):
+        for index, value in enumerate(data):
+            data[index] = scrub_private_data(value, keys)
+    elif isinstance(data, dict):
+        for key, value in data.items():
+            data[key] = scrub_private_data(value, keys)
+    elif isinstance(data, str):
+        for expression, replacement in PRIVACY_REPLACEMENTS:
+            pattern = expression.format(**keys)
+            data = re.sub(pattern, replacement, data, flags=re.IGNORECASE)
+    return data
 
 
 class UsageReporting:
@@ -123,7 +155,6 @@ class UsageReporting:
     def _sanitize_event(event, _hint, user_name=getpass.getuser()):
         """
         Sanitize the event before sending it to sentry.
-        This involves removing the user's name from everywhere in the event.
 
         :param event: A dictionary representing the event to sanitize.
         :param _hint: Unused but required by the sentry SDK.
@@ -131,23 +162,12 @@ class UsageReporting:
             current user, but can be set for testing purposes.
         """
 
-        def scrub_user(data):
-            """
-            Recursively scrub the username from any values in the event.
-            """
-            if isinstance(data, (tuple, list)):
-                for index, value in enumerate(data):
-                    data[index] = scrub_user(value)
-            elif isinstance(data, dict):
-                for key, value in data.items():
-                    data[key] = scrub_user(value)
-            elif isinstance(data, str):
-                for key, value in USERNAME_REPLACEMENTS.items():
-                    replace = key.format(user=user_name)
-                    data = data.replace(replace, value)
-            return data
-
-        return scrub_user(event)
+        return scrub_private_data(
+            event,
+            {
+                "user": user_name
+            }
+        )
 
     def _add_scope_metadata(self):
         """

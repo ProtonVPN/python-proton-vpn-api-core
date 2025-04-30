@@ -31,8 +31,10 @@ SECRET_PATH = os.path.join("/home/wozniak/5nkfiudfmk/.cache", SECRET_FILE)
 MACHINE_ID = "bg77t2rmpjhgt9zim5gkz4t78jfur39f"
 SENTRY_USER_ID = "70cf75689cecae78ec588316320d76477c71031f7fd172dd5577ac95934d4499"
 USERNAME = "tester"
+EMAIL = "toby.tubface@bucketworld.com"
+GPG_KEY_ID = "D212342HE93E32P8"
 
-EVENT_TO_SEND = {
+EVENT_WITH_USERNAME = {
     "frames": [
         {
             "filename": "/home/tester/src/quick_connect_widget.py",
@@ -87,6 +89,28 @@ EVENT_TO_SEND = {
     ]
 }
 
+EVENT_WITH_GPG_ID = {
+    "exception": {
+        "values": [
+            {
+                "type": "DBusErrorResponse",
+                "value": "[me.grimsteel.PassSecretService.GPGError] ('gpg: encrypted with cv25519 key, ID D212342HE93E32P8, created 2025-02-03\\n      \"Toby (pass & proton) <toby.tubface@bucketworld.com>\"\\ngpg: [don\\'t know]: invalid packet (ctb=6c)\\ngpg: packet(5) with unknown version 18\\n',)",
+            }
+        ]
+    }
+}
+
+EVENT_WITH_EMAIL = {
+    "exception": {
+        "values": [
+            {
+                "type": "DBusErrorResponse",
+                "value": "Some error that includes an email address: toby.tubface@bucketworld.com',)",
+            }
+        ]
+    }
+}
+
 @pytest.mark.parametrize("enabled", [True, False])
 def test_usage_report_enabled(enabled):
     report_error = SimpleNamespace(invoked=False)
@@ -105,16 +129,6 @@ def test_usage_report_enabled(enabled):
     assert report_error.invoked == enabled, "UsageReporting enable state does not match the error reporting"
 
 
-def test_sanitize_event():
-
-    event = copy.deepcopy(EVENT_TO_SEND)
-
-    UsageReporting._sanitize_event(event, None, "tester")
-
-    assert USERNAME in json.dumps(EVENT_TO_SEND), "Username should be in the event"
-    assert USERNAME not in json.dumps(event), "Username should not be in the event"
-
-
 def test_userid_calaculation():
     with tempfile.NamedTemporaryFile() as file:
         file.write(MACHINE_ID.encode('utf-8'))
@@ -123,3 +137,35 @@ def test_userid_calaculation():
         assert UsageReporting._get_user_id(
             machine_id_filepath=file.name,
             user_name=USERNAME) == SENTRY_USER_ID, "Error hashing does not match the expected value"
+
+
+def test_sanitize_event_for_username():
+
+    event = copy.deepcopy(EVENT_WITH_USERNAME)
+
+    UsageReporting._sanitize_event(event, None, USERNAME)
+
+    assert USERNAME in json.dumps(EVENT_WITH_USERNAME), "Username should be in the event"
+    assert USERNAME not in json.dumps(event), "Username should not be in the event"
+
+
+def test_sanitize_event_for_email():
+
+    event = copy.deepcopy(EVENT_WITH_EMAIL)
+
+    UsageReporting._sanitize_event(event, None, USERNAME)
+
+    assert EMAIL in json.dumps(EVENT_WITH_EMAIL), "Email should be in the event"
+    assert EMAIL not in json.dumps(event), "Email should not be in the event"
+
+
+def test_sanitize_event_for_gpg_id():
+
+    event = copy.deepcopy(EVENT_WITH_GPG_ID)
+
+    UsageReporting._sanitize_event(event, None, USERNAME)
+
+    assert GPG_KEY_ID in json.dumps(EVENT_WITH_GPG_ID), "GPG ID should be in the event"
+    assert GPG_KEY_ID not in json.dumps(event), "GPG ID should not be in the event"
+
+
