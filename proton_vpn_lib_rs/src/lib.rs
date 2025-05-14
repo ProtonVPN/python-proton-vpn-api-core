@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 // Copyright (c) 2024 Proton AG
 // -----------------------------------------------------------------------------
-pub use procure::{Load, Server};
+pub use procure::{Load, Server, UserLocation};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -14,19 +14,16 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub struct ServerStatus {
     status_id: String,
     servers: Vec<Server>,
-    user_position: [f32; 2],
-    user_country: String,
+    user_location: UserLocation,
 }
 
 impl ServerStatus {
     pub fn new(status_id: &str,
                servers: Vec<Server>,
-               user_position : [f32; 2],
-               user_country: &str) -> Self {
+               user_location : UserLocation) -> Self {
         Self { status_id : status_id.to_string(),
                servers,
-               user_position,
-               user_country: user_country.to_string()
+               user_location,
             }
     }
 
@@ -42,8 +39,7 @@ impl ServerStatus {
         loads.resize(self.servers.len(), Load::default());
 
         procure::compute_loads(
-            &self.user_position,
-            &self.user_country,
+            &self.user_location,
             &mut loads,
             &self.servers,
             status_file,

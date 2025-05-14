@@ -20,18 +20,19 @@ struct ServerStatus(proton_vpn_lib_rs::ServerStatus);
 #[pymethods]
 impl ServerStatus {
     #[new]
-    pub fn new(response: &Bound<PyAny>,
-               user_position: [f32; 2],
-               user_country: String) -> Result<Self> {
-        let status : String = response.get_item(STATUS)?.extract()?;
-        Ok(Self(
-            proton_vpn_lib_rs::ServerStatus::new(
-                &status,
-                pythonize::depythonize(&(response.get_item(LOGICAL_SERVERS)?))?,
-                user_position,
-                &user_country
+    pub fn new(logicals: &Bound<PyAny>,
+               location: &Bound<PyAny>) -> Result<Self>
+    {
+        let status : String = logicals.get_item(STATUS)?.extract()?;
+        Ok(
+            Self(
+                proton_vpn_lib_rs::ServerStatus::new(
+                    &status,
+                    pythonize::depythonize(&(logicals.get_item(LOGICAL_SERVERS)?))?,
+                    pythonize::depythonize(&location)?,
+                )
             )
-        ))
+        )
     }
 
     pub fn status_id(&self) -> &str {
@@ -43,12 +44,12 @@ impl ServerStatus {
         py: Python<'py>,
         status_file: &[u8],
     ) -> Result<Bound<'py, PyAny>> {
-        Ok(pythonize::pythonize(
-            py,
-            &self
-                .0
-                .compute_loads(&status_file)?,
-        )?)
+        Ok(
+            pythonize::pythonize(
+                py,
+                &self.0.compute_loads(&status_file)?,
+            )?
+        )
     }
 }
 
