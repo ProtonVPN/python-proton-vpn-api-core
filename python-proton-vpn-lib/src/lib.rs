@@ -28,7 +28,7 @@ impl ServerStatus {
         Ok(Self(proton_vpn_lib_rs::ServerStatus::new(
             &status,
             pythonize::depythonize(&(logicals.get_item(LOGICAL_SERVERS)?))?,
-            pythonize::depythonize(&location)?,
+            pythonize::depythonize(location)?,
         )))
     }
 
@@ -43,7 +43,7 @@ impl ServerStatus {
     ) -> Result<Bound<'py, PyAny>> {
         Ok(pythonize::pythonize(
             py,
-            &self.0.compute_loads(&status_file)?,
+            &self.0.compute_loads(status_file)?,
         )?)
     }
 
@@ -54,7 +54,7 @@ impl ServerStatus {
     ) -> Result<Bound<'py, PyAny>> {
         Ok(pythonize::pythonize(
             py,
-            &proton_vpn_lib_rs::ServerStatus::read_status(&status_file)?,
+            &proton_vpn_lib_rs::ServerStatus::read_status(status_file)?,
         )?)
     }
 }
