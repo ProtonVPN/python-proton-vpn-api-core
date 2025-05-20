@@ -52,7 +52,7 @@ def get_lib_path(triplet: str):
     """
 
     return os.path.join(
-        PROJECT_DIR, MODULE_NAME, "target", triplet, 'debug', f'lib{MODULE_NAME.replace("-", "_")}.so'
+        PROJECT_DIR, MODULE_NAME, "target", triplet, 'release', f'lib{MODULE_NAME.replace("-", "_")}.so'
     )
 
 
