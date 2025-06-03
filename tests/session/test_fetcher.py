@@ -19,7 +19,8 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 
 import proton.vpn.session.fetcher as fetcher
 from proton.vpn.session.fetcher import VPNSessionFetcher
-from proton.vpn.core.settings import Features
+from proton.vpn.core.settings import SplitTunnelingConfig
+from proton.vpn.core.settings.features import Features
 
 
 def test_extract_features():
@@ -30,6 +31,7 @@ def test_extract_features():
             moderate_nat=False,
             vpn_accelerator=False,
             port_forwarding=True,
+            split_tunneling=SplitTunnelingConfig.default()
         )
     )
 

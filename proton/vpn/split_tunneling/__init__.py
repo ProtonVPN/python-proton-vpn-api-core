@@ -19,23 +19,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from __future__ import annotations
+from proton.vpn.split_tunneling.interface import SplitTunneling
 
-from proton.session.exceptions import ProtonError
-
-
-class ProtonVPNError(ProtonError):
-    """Base exception for Proton VPN errors."""
-
-
-class ServerNotFound(ProtonVPNError):
-    """A VPN server was expected but was not found."""
-
-
-class VPNDaemonError(Exception):
-    """Base class for Proton API specific exceptions"""
-
-    def __init__(self, message, additional_context=None):
-        self.message = message
-        self.additional_context = additional_context
-        super().__init__(self.message)
+__all__ = ["SplitTunneling"]

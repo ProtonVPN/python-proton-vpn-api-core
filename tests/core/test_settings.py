@@ -19,7 +19,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 from unittest.mock import Mock
 import pytest
 import itertools
-from proton.vpn.core.settings import Settings, SettingsPersistence, NetShield
+from proton.vpn.core.settings import Settings, SettingsPersistence, NetShield, SplitTunnelingMode
 from proton.vpn.killswitch.interface import KillSwitchState
 
 FREE_TIER = 0
@@ -42,6 +42,11 @@ def default_free_settings_dict():
             "moderate_nat": False,
             "vpn_accelerator": True,
             "port_forwarding": False,
+            "split_tunneling": {
+                "mode": SplitTunnelingMode.EXCLUDE.value,
+                "app_paths": [],
+                "ip_ranges": []
+            },
         }
     }
 

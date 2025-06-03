@@ -1,5 +1,5 @@
 """
-List of exceptions raised in this package.
+This module manages the Proton VPN general settings.
 
 
 Copyright (c) 2023 Proton AG
@@ -19,23 +19,12 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from __future__ import annotations
+from proton.vpn.core.settings.settings import Settings, SettingsPersistence
+from proton.vpn.core.settings.split_tunneling import SplitTunnelingConfig, SplitTunnelingMode
+from proton.vpn.core.settings.features import NetShield
+from proton.vpn.core.settings.custom_dns import CustomDNSEntry
 
-from proton.session.exceptions import ProtonError
-
-
-class ProtonVPNError(ProtonError):
-    """Base exception for Proton VPN errors."""
-
-
-class ServerNotFound(ProtonVPNError):
-    """A VPN server was expected but was not found."""
-
-
-class VPNDaemonError(Exception):
-    """Base class for Proton API specific exceptions"""
-
-    def __init__(self, message, additional_context=None):
-        self.message = message
-        self.additional_context = additional_context
-        super().__init__(self.message)
+__all__ = [
+    "Settings", "SettingsPersistence", "NetShield",
+    "CustomDNSEntry", "SplitTunnelingConfig", "SplitTunnelingMode"
+]

@@ -23,7 +23,7 @@ setup(
     packages=find_namespace_packages(include=[
         "proton.vpn.core*", "proton.vpn.connection*",
         "proton.vpn.killswitch.interface*", "proton.vpn.session*",
-        "proton.vpn.logging*"
+        "proton.vpn.logging*", "proton.vpn.split_tunneling*"
     ]),
     python_requires=">=3.9",
     license="GPLv3",

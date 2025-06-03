@@ -1,3 +1,12 @@
+version: 0.44.0
+time: 2025/06/08 10:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- Expose split tunneling API.
+---
 version: 0.43.0
 time: 2025/06/11 16:17
 author: Luke Titley

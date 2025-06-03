@@ -33,7 +33,7 @@ from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.utils import rest_api_request
 from proton.vpn.session.feature_flags_fetcher import FeatureFlagsFetcher, FeatureFlags
 
-from proton.vpn.core.settings import Features
+from proton.vpn.core.settings.features import Features
 
 if TYPE_CHECKING:
     from proton.vpn.session import VPNSession

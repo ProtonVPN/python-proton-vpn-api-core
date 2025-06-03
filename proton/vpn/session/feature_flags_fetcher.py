@@ -88,6 +88,15 @@ DEFAULT = {
                 "enabled": False
             }
         },
+        {
+            "name": "DisplaySplitTunneling",
+            "enabled": False,
+            "impressionData": False,
+            "variant": {
+                "name": "disabled",
+                "enabled": False
+            }
+        },
     ],
     "ExpirationTime": 0
 }
