@@ -1,5 +1,9 @@
 Source: python3-proton-vpn-lib
 Maintainer: Proton AG <opensource@proton.me>
+Build-Depends: debhelper (>= 9), dh-python, python3-setuptools,
+    python3-distro, python3-all
+
+# python3-nacl, python3-all
 
 Package: python3-proton-vpn-lib
 Architecture: {{architecture}}
@@ -7,4 +11,4 @@ Depends: python3 (>= 3.9), libc6 (>= 2.31), libgcc-s1 (>= 4.2)
 Section: utils
 Priority: optional
 Description: Proton VPN linux client Module
- A python module which will will contain the heart of the rust component of the linux client.
+ A python module which will contain the heart of the rust component of the linux client.

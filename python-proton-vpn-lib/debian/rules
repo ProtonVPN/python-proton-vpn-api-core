@@ -1,13 +1,10 @@
 #!/usr/bin/make -f
 
-clean:
-	@# Do nothing
+export PYBUILD_NAME=python-proton-vpn-lib
+#export PYBUILD_SYSTEM=pyproject
+#export PYBUILD_SYSTEM=setuptools
 
-build:
-	@# Do nothing
-
-binary:
-	mkdir -p debian/python3-proton-vpn-lib/usr/lib/python3/dist-packages/proton/vpn
-	cp {{rust_triplet}}/release/libpython_proton_vpn_lib.so debian/python3-proton-vpn-lib/usr/lib/python3/dist-packages/proton/vpn/lib.abi3.so
-	dh_gencontrol
-	dh_builddeb
+%:
+	mkdir -p proton/vpn
+	cp {{rust_triplet}}/release/libpython_proton_vpn_lib.so proton/vpn/lib.abi3.so
+	dh $@ --with python3 --buildsystem=pybuild
