@@ -15,8 +15,12 @@ import subprocess  # nosemgrep
 import devtools.versions
 from package_info import (get_versions, get_lib_path, MODULE_PATH,
                           PACKAGE_NAME, PROTON_VPN_NAMESPACE,
-                          PYTHON_EXTENSION_NAME, CPYTHON_VERSION, HOME,
+                          NAME, CPYTHON_VERSION, HOME,
                           VERSION, TIME)
+import tarfile
+
+
+ROOT = f"{PROTON_VPN_NAMESPACE}-{NAME}-{VERSION}"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("fedora_version")
@@ -59,12 +63,21 @@ devtools.versions.build_rpm(
     }
 )
 
-lib_path = get_lib_path(RUST_TRIPLET)
-shutil.copyfile(lib_path, os.path.join(module_path, PYTHON_EXTENSION_NAME))
+os.makedirs(f"{HOME}/rpmbuild/SOURCES", exist_ok=True)
+with tarfile.open(name=f"{HOME}/rpmbuild/SOURCES/{ROOT}.tar.gz",
+                  mode='w:gz',
+                  fileobj=None,
+                  bufsize=10240) as archive:
+    archive.add("setup.py", arcname=f"{ROOT}/setup.py")
+    archive.add("proton", arcname=f"{ROOT}/proton")
+    archive.add("versions.yml", arcname=f"{ROOT}/versions.yml")
+    archive.add(f"target/{RUST_TRIPLET}/release/libpython_proton_vpn_lib.so",
+                arcname=f"{ROOT}/proton/vpn/lib/lib.abi3.so")
 
 subprocess.check_output(["rpmbuild", "--quiet", "-bb",
                          "--buildroot", BUILDROOT,
-                         "--target", RPM_ARCH, "package.spec"],
-                        cwd=f"target/rpmbuild/{PACKAGE_NAME}/SPECS/")
+                         "--target", RPM_ARCH,
+                         f"rpmbuild/{PACKAGE_NAME}/SPECS/package.spec"],
+                        cwd="target")
 
 print(TIME)

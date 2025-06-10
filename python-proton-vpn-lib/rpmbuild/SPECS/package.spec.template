@@ -1,16 +1,41 @@
-Name:           {PACKAGE_NAME}
-Release:        1%{{?dist}}
-Summary:        The core rust component of the proton vpn linux client
-License:        GPLv3
-Version:        {VERSION}
-URL: https://github.com/ProtonVPN/python-proton-vpn-lib
+%define unmangled_name proton-vpn-lib
+%define version {version}
+%define release 1
+
+Prefix: %{{_prefix}}
+
+Name: python3-%{{unmangled_name}}
+Version: %{{version}}
+Release: %{{release}}%{{?dist}}
+Summary: %{{unmangled_name}} library
+
+Group: ProtonVPN
+License: GPLv3
+Vendor: Proton AG <opensource@proton.me>
+URL: https://github.com/ProtonVPN/%{{unmangled_name}}
+Source0: %{{unmangled_name}}-%{{version}}.tar.gz
+
+%define debug_package %{{nil}}
+
+BuildRequires: python3-setuptools
+BuildRequires: python3-distro
 
 Requires: python3 >= {CPYTHON_VERSION}
 
 %description
-A core rust component of the proton vpn linux client
+Package %{{unmangled_name}} library.
 
-%files
-/{install_path}
+%prep
+%setup -n %{{unmangled_name}}-%{{version}} -n %{{unmangled_name}}-%{{version}}
+
+%build
+python3 setup.py build
+
+%install
+python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
+
+
+%files -f INSTALLED_FILES
+%defattr(-,root,root)
 
 %changelog

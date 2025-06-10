@@ -11,6 +11,8 @@ setup(
     version=VERSION,
     packages=find_namespace_packages(include=["proton.vpn.*"]),
     package_dir={'': '.'},
+    package_data={'proton.vpn.lib': ['lib.abi3.so']},
+    include_package_data=True,
     python_requires=">=3.9",
     license="GPLv3",
     platforms="Linux",
