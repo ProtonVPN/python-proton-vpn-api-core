@@ -9,11 +9,10 @@ an .rpm file.
 # ------------------------------------------------------------------------------
 import argparse
 import os
-import shutil
 import subprocess  # nosemgrep
 # ------------------------------------------------------------------------------
 import devtools.versions
-from package_info import (get_versions, get_lib_path, MODULE_PATH,
+from package_info import (get_versions, MODULE_PATH,
                           PACKAGE_NAME, PROTON_VPN_NAMESPACE,
                           NAME, CPYTHON_VERSION, HOME,
                           VERSION, TIME)
