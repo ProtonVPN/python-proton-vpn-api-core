@@ -1,3 +1,12 @@
+version: 0.43.0
+time: 2025/06/11 16:17
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Integration of v2/status endpoint
+---
 version: 0.42.5
 time: 2025/04/30 14:16
 author: Luke Titley
