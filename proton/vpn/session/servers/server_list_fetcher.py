@@ -65,7 +65,7 @@ class MixinEndpointV1:  # pylint: disable=R0903
 
         response = await rest_api_request(
             self._session,
-            self.ROUTE_LOADS,
+            self.LOADS,
             additional_headers=self._build_additional_headers(),
         )
 
@@ -102,7 +102,11 @@ class MixinEndpointV2:  # pylint: disable=R0903
 
         # Splice the loads into the servers
         servers = logicals["LogicalServers"]
-        assert len(loads) == len(servers)
+        if len(loads) != len(servers):
+            raise RuntimeError(
+                "Loads computation produced a different number of servers "
+                "than the logicals list. This is unexpected."
+            )
 
         for server, load in zip(servers, loads):
             server.update(load)
@@ -212,9 +216,9 @@ class ServerListFetcher(MixinEndpointV1, MixinEndpointV2):
         Queries the REST API for the latest server loads and updates
         the current server list with them, return the updated server list.
         """
-        status = self._server_list.status
-        if status:
-            server_list = await self._v2_update_loads(status)
+        status_token = self._server_list.status_token
+        if status_token:
+            server_list = await self._v2_update_loads(status_token)
         else:
             server_list = await self._v1_update_loads()
 

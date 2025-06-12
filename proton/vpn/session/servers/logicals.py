@@ -42,7 +42,7 @@ class PersistenceKeys(Enum):
     LOADS_EXPIRATION_TIME = "LoadsExpirationTime"
     LAST_MODIFIED_TIME = "LastModifiedTime"
     USER_TIER = "MaxTier"
-    STATUS_TOKEN = "StatusToken"
+    STATUS_TOKEN = "StatusToken"  # nosec B105
 
 
 class ServerList:  # pylint: disable=R0902, R0904
