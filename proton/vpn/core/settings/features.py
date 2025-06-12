@@ -23,7 +23,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import IntEnum
 
-from proton.vpn.core.settings.split_tunneling import SplitTunnelingConfig
+from proton.vpn.core.settings.split_tunneling import SplitTunneling
 
 from proton.vpn import logging
 
@@ -44,15 +44,15 @@ class Features:
     moderate_nat: bool
     vpn_accelerator: bool
     port_forwarding: bool
-    split_tunneling: SplitTunnelingConfig
+    split_tunneling: SplitTunneling
 
     @staticmethod
     def from_dict(data: dict, user_tier: int) -> Features:
         """Creates and returns `Features` from the provided dict."""
         default = Features.default(user_tier)
         split_tunneling = data.get("split_tunneling")
-        split_tunneling = SplitTunnelingConfig.from_dict(split_tunneling) \
-            if split_tunneling else SplitTunnelingConfig.default()
+        split_tunneling = SplitTunneling.from_dict(split_tunneling) \
+            if split_tunneling else SplitTunneling.default()
 
         return Features(
             netshield=data.get("netshield", default.netshield),
@@ -86,7 +86,7 @@ class Features:
             moderate_nat=False,
             vpn_accelerator=True,
             port_forwarding=False,
-            split_tunneling=SplitTunnelingConfig.default()
+            split_tunneling=SplitTunneling.default()
         )
 
     def is_default(self, user_tier: int) -> bool:

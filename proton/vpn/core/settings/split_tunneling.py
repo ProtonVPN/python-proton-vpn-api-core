@@ -33,14 +33,14 @@ class SplitTunnelingMode(Enum):
 
 @dataclass
 class SplitTunnelingConfig:
-    """Config that is used for split tunneling
+    """Contains split tunneling data.
     """
     mode: SplitTunnelingMode
     app_paths: List[str]
     ip_ranges: List[str]
 
     @staticmethod
-    def from_dict(data: dict) -> SplitTunnelingConfig:
+    def from_dict(data: dict):
         """Generates `SplitTunnelingConfig` from regular python dict.
 
         Args:
@@ -55,7 +55,7 @@ class SplitTunnelingConfig:
             ip_ranges=data["ip_ranges"]
         )
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict:
         """Converts actual object to dict.
 
         Returns:
@@ -74,4 +74,61 @@ class SplitTunnelingConfig:
         Returns:
             SplitTunnelingConfig: new empty object.
         """
-        return SplitTunnelingConfig(SplitTunnelingMode.EXCLUDE, [], [])
+        return SplitTunnelingConfig(
+            SplitTunnelingMode.EXCLUDE, [], []
+        )
+
+
+@dataclass
+class SplitTunneling:
+    """Config that is used for split tunneling
+    """
+    enabled: bool
+    config: SplitTunnelingConfig
+
+    @staticmethod
+    def from_dict(data: dict) -> SplitTunneling:
+        """Generates `SplitTunneling` from regular python dict.
+
+        Args:
+            data (dict): the dict containing the necessary information
+
+        Returns:
+            SplitTunneling: new `SplitTunneling`
+        """
+        enabled = data.get("enabled")
+        enabled = enabled if enabled else \
+            SplitTunneling.default().enabled
+
+        split_tunneling_config = data.get("config")
+        split_tunneling_config = SplitTunneling.from_dict(split_tunneling_config) \
+            if split_tunneling_config else \
+            SplitTunneling.default().config
+
+        return SplitTunneling(
+            enabled=enabled,
+            config=split_tunneling_config
+        )
+
+    def to_dict(self) -> Dict[str, object]:
+        """Converts actual object to dict.
+
+        Returns:
+            dict: current object in dict
+        """
+        return {
+            "enabled": self.enabled,
+            "config": self.config.to_dict()
+        }
+
+    @staticmethod
+    def default() -> SplitTunnelingConfig:
+        """Generate default config.
+
+        Returns:
+            SplitTunnelingConfig: new empty object.
+        """
+        return SplitTunneling(
+            enabled=False,
+            config=SplitTunnelingConfig.default()
+        )

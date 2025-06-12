@@ -43,9 +43,12 @@ def default_free_settings_dict():
             "vpn_accelerator": True,
             "port_forwarding": False,
             "split_tunneling": {
-                "mode": SplitTunnelingMode.EXCLUDE.value,
-                "app_paths": [],
-                "ip_ranges": []
+                "enabled": False,
+                "config": {
+                    "mode": SplitTunnelingMode.EXCLUDE.value,
+                    "app_paths": [],
+                    "ip_ranges": []
+                }
             },
         }
     }
