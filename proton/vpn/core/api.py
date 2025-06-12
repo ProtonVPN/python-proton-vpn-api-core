@@ -59,7 +59,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         This will provide some additional helper methods
         related to VPN connections and VPN servers.
         """
-        if not self.is_split_tunneling_available:
+        if not self.split_tunneling_available:
             await self._init_daemon()
 
         if self._vpn_connector:
@@ -217,7 +217,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         return self._usage_reporting
 
     @property
-    def is_split_tunneling_available(self) -> bool:
+    def split_tunneling_available(self) -> bool:
         """Returns if split tunneling is available or not.
 
         Returns:
