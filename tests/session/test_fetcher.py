@@ -31,7 +31,7 @@ def test_extract_features():
             moderate_nat=False,
             vpn_accelerator=False,
             port_forwarding=True,
-            split_tunneling=SplitTunnelingConfig.default()
+            split_tunneling=SplitTunnelingConfig()
         )
     )
 

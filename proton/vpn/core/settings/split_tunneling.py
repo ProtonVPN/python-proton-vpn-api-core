@@ -21,7 +21,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 from typing import List, Dict
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 class SplitTunnelingMode(Enum):
@@ -35,9 +35,9 @@ class SplitTunnelingMode(Enum):
 class SplitTunnelingConfig:
     """Contains split tunneling data.
     """
-    mode: SplitTunnelingMode
-    app_paths: List[str]
-    ip_ranges: List[str]
+    mode: SplitTunnelingMode = SplitTunnelingMode.EXCLUDE
+    app_paths: List[str] = field(default_factory=list)
+    ip_ranges: List[str] = field(default_factory=list)
 
     @staticmethod
     def from_dict(data: dict):
@@ -49,10 +49,13 @@ class SplitTunnelingConfig:
         Returns:
             SplitTunnelingConfig: new `SplitTunnelingConfig`
         """
+        if not data:
+            return SplitTunnelingConfig()
+
         return SplitTunnelingConfig(
-            mode=SplitTunnelingMode(data["mode"]),
-            app_paths=data["app_paths"],
-            ip_ranges=data["ip_ranges"]
+            mode=SplitTunnelingMode(data.get("mode")),
+            app_paths=data.get("app_paths", []),
+            ip_ranges=data.get("ip_ranges", [])
         )
 
     def to_dict(self) -> dict:
@@ -67,24 +70,13 @@ class SplitTunnelingConfig:
             "ip_ranges": self.ip_ranges
         }
 
-    @staticmethod
-    def default() -> SplitTunnelingConfig:
-        """Generate default config.
-
-        Returns:
-            SplitTunnelingConfig: new empty object.
-        """
-        return SplitTunnelingConfig(
-            SplitTunnelingMode.EXCLUDE, [], []
-        )
-
 
 @dataclass
 class SplitTunneling:
     """Config that is used for split tunneling
     """
-    enabled: bool
-    config: SplitTunnelingConfig
+    enabled: bool = False
+    config: SplitTunnelingConfig = field(default_factory=SplitTunnelingConfig)
 
     @staticmethod
     def from_dict(data: dict) -> SplitTunneling:
@@ -96,18 +88,12 @@ class SplitTunneling:
         Returns:
             SplitTunneling: new `SplitTunneling`
         """
-        enabled = data.get("enabled")
-        enabled = enabled if enabled else \
-            SplitTunneling.default().enabled
-
-        split_tunneling_config = data.get("config")
-        split_tunneling_config = SplitTunneling.from_dict(split_tunneling_config) \
-            if split_tunneling_config else \
-            SplitTunneling.default().config
+        if not data:
+            return SplitTunneling()
 
         return SplitTunneling(
-            enabled=enabled,
-            config=split_tunneling_config
+            enabled=data.get("enabled"),
+            config=SplitTunnelingConfig.from_dict(data.get("config", {}))
         )
 
     def to_dict(self) -> Dict[str, object]:
@@ -120,15 +106,3 @@ class SplitTunneling:
             "enabled": self.enabled,
             "config": self.config.to_dict()
         }
-
-    @staticmethod
-    def default() -> SplitTunnelingConfig:
-        """Generate default config.
-
-        Returns:
-            SplitTunnelingConfig: new empty object.
-        """
-        return SplitTunneling(
-            enabled=False,
-            config=SplitTunnelingConfig.default()
-        )

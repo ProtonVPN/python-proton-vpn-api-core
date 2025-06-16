@@ -52,7 +52,7 @@ class Features:
         default = Features.default(user_tier)
         split_tunneling = data.get("split_tunneling")
         split_tunneling = SplitTunneling.from_dict(split_tunneling) \
-            if split_tunneling else SplitTunneling.default()
+            if split_tunneling else SplitTunneling()
 
         return Features(
             netshield=data.get("netshield", default.netshield),
@@ -86,7 +86,7 @@ class Features:
             moderate_nat=False,
             vpn_accelerator=True,
             port_forwarding=False,
-            split_tunneling=SplitTunneling.default()
+            split_tunneling=SplitTunneling()
         )
 
     def is_default(self, user_tier: int) -> bool:

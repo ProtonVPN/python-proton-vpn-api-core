@@ -1,3 +1,12 @@
+version: 0.44.5
+time: 2025/06/16 15:54
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: correct bug in settings generation from dict"
+---
 version: 0.44.4
 time: 2025/06/16 09:22
 author: Luke Titley

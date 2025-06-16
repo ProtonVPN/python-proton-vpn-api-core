@@ -105,11 +105,18 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._settings_persistence.save, settings)
         await self._vpn_connector.apply_settings(settings)
-        if self.split_tunneling_available:
-            await self._split_tunneling_client.set_config(
-                settings.features.split_tunneling.config
-            )
         self._usage_reporting.enabled = settings.anonymous_crash_reports
+
+        if not self.split_tunneling_available:
+            return
+
+        if not settings.features.split_tunneling.enabled:
+            await self._split_tunneling_client.clear_config()
+            return
+
+        await self._split_tunneling_client.set_config(
+            settings.features.split_tunneling.config
+        )
 
     async def login(self, username: str, password: str) -> LoginResult:
         """
