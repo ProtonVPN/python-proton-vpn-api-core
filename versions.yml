@@ -1,3 +1,12 @@
+version: 0.44.4
+time: 2025/06/16 09:22
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: location Lat and Long can be None (for now)"
+---
 version: 0.44.3
 time: 2025/06/13 11:00
 author: Alexandru Cheltuitor

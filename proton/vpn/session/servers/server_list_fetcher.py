@@ -87,12 +87,23 @@ class MixinEndpointV2:  # pylint: disable=R0903
         logicals, last_modified_time =\
             await self._request_logicals(MixinEndpointV2.LOGICALS)
 
-        location = self._session.vpn_account.location.to_dict()
+        location = self._session.vpn_account.location
+
+        if location.Lat is None or location.Long is None:
+            # If the location Lat and Long are not set, location is a cache
+            # from on disk.
+            #
+            # The user needs to log in again to fetch the location
+            # and set the Lat and Long values.
+            raise RuntimeError(
+                "Location Long and Lat must be set to compute server status. "
+                "Please login again and retry."
+            )
 
         # The import of the proton.vpn.lib module is delayed to avoid
         # importing it when the feature flag is disabled.
         from proton.vpn.lib import ServerStatus  # pylint: disable=C0415, E0401, E0611
-        self._server_status = ServerStatus(logicals, location)
+        self._server_status = ServerStatus(logicals, location.to_dict())
 
         status = await self._request_status(
             MixinEndpointV2.STATUS.format(token=logicals["Status"])

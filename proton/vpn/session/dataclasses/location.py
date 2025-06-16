@@ -18,6 +18,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 from dataclasses import dataclass
+from typing import Optional
 from proton.vpn.session.utils import Serializable
 
 # pylint: disable=invalid-name
@@ -29,8 +30,8 @@ class VPNLocation(Serializable):
     IP: str
     Country: str
     ISP: str
-    Long: float
-    Lat: float
+    Long: Optional[float]
+    Lat: Optional[float]
 
     @staticmethod
     def _deserialize(dict_data: dict) -> VPNLocation:
@@ -42,6 +43,6 @@ class VPNLocation(Serializable):
             IP=dict_data["IP"],
             Country=dict_data["Country"],
             ISP=dict_data["ISP"],
-            Long=dict_data["Long"],
-            Lat=dict_data["Lat"],
+            Long=dict_data.get("Long"),
+            Lat=dict_data.get("Lat"),
         )
