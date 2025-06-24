@@ -39,6 +39,14 @@ impl ServerStatus {
         }
     }
 
+    // Updates the user location. This will be used next time
+    // `compute_loads` is called.
+    // This is useful if the user changes their location, for example,
+    // if they move about whilst still logged in.
+    pub fn set_user_location(&mut self, user_location: UserLocation) {
+        self.user_location = user_location;
+    }
+
     // Returns the token that identifies the status endpoint.
     pub fn status_id(&self) -> &str {
         &self.status_id
@@ -48,6 +56,12 @@ impl ServerStatus {
     pub fn compute_loads(&self, status_file: &[u8]) -> Result<Vec<Load>> {
         let mut loads = Vec::new();
         loads.resize(self.servers.len(), Load::default());
+
+        log::info!(
+            "Computing loads for {} servers with user location: {}",
+            self.servers.len(),
+            self.user_location.country
+        );
 
         proton_vpn_binary_status::compute_loads(
             &self.user_location,
@@ -113,33 +127,33 @@ mod tests {
                 id: "server2".to_string(),
                 status: Status {
                     index: 1,
-                    penalty: 1.0,
-                    cost: 1,
+                    penalty: 0.0,
+                    cost: 0,
                 },
                 exit_location: Location {
                     lat: 0.0,
                     long: 0.0,
                 },
-                exit_country: "GB".to_string(),
+                exit_country: "FR".to_string(),
                 physical_servers: vec![],
             },
         ];
 
         let status_file = make_status_file(&[
-            make_server(1, 57, 1.97),
-            make_server(1, 75, 2.99),
-            make_server(1, 56, 2.97),
+            make_server(3, 50, 0.5),
+            make_server(3, 75, 0.25),
+            make_server(3, 90, 0.1),
         ]);
 
         (servers, status_file)
     }
 
-    #[test]
+    #[test_log::test]
     fn test_server_status_compute_loads() {
         let (servers, status_file) = make_servers_and_loads();
         let servers_len = servers.len();
 
-        let status = ServerStatus::new(
+        let mut status = ServerStatus::new(
             "test_status_id",
             servers,
             UserLocation {
@@ -155,10 +169,40 @@ mod tests {
             .compute_loads(&status_file)
             .expect("Failed to compute loads");
 
-        assert_eq!(loads.len(), servers_len);
+        assert_eq!(loads.len(), 2);
+        assert_eq!(servers_len, 2);
+
+        // Compute scores based on the loads
+        assert_eq!(loads[0].score, 0.5);
+        assert_eq!(loads[1].score, 0.25);
+
+        // Compute scores limited by distance
+        status.set_user_location(UserLocation {
+            country: "FR".to_string(),
+            location: Location {
+                lat: 45.0,
+                long: 0.0,
+            },
+        });
+
+        let loads = status
+            .compute_loads(&status_file)
+            .expect("Failed to compute loads");
+
+        let distance = 5003.7725; // Distance in km
+        let score = (10000_f32 - (738000_f32 / (distance + 1_f32))) / 10000_f32;
+
+        assert_eq!(loads[0].status, 3);
+        assert_eq!(loads[0].score, score);
+        assert_eq!(loads[0].load, 50);
+
+        assert_eq!(loads[1].status, 3);
+        assert_eq!(loads[1].score, score);
+        assert_eq!(loads[1].load, 75);
+
     }
 
-    #[test]
+    #[test_log::test]
     fn test_server_status_read_status() {
         let (_, status_file) = make_servers_and_loads();
 
@@ -166,14 +210,14 @@ mod tests {
             .expect("Failed to read status");
 
         assert_eq!(parsed_status.len(), 3);
-        assert_eq!(parsed_status.index(0).unwrap().status, 1);
-        assert_eq!(parsed_status.index(0).unwrap().load, 57);
-        assert_eq!(parsed_status.index(0).unwrap().partial_score, 1.97);
-        assert_eq!(parsed_status.index(1).unwrap().status, 1);
+        assert_eq!(parsed_status.index(0).unwrap().status, 3);
+        assert_eq!(parsed_status.index(0).unwrap().load, 50);
+        assert_eq!(parsed_status.index(0).unwrap().partial_score, 0.5);
+        assert_eq!(parsed_status.index(1).unwrap().status, 3);
         assert_eq!(parsed_status.index(1).unwrap().load, 75);
-        assert_eq!(parsed_status.index(1).unwrap().partial_score, 2.99);
-        assert_eq!(parsed_status.index(2).unwrap().status, 1);
-        assert_eq!(parsed_status.index(2).unwrap().load, 56);
-        assert_eq!(parsed_status.index(2).unwrap().partial_score, 2.97);
+        assert_eq!(parsed_status.index(1).unwrap().partial_score, 0.25);
+        assert_eq!(parsed_status.index(2).unwrap().status, 3);
+        assert_eq!(parsed_status.index(2).unwrap().load, 90);
+        assert_eq!(parsed_status.index(2).unwrap().partial_score, 0.1);
     }
 }

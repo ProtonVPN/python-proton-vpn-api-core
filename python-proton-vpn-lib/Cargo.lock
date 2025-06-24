@@ -400,7 +400,6 @@ dependencies = [
 [[package]]
 name = "proton-vpn-binary-status"
 version = "0.1.0"
-source = "git+ssh://git@gitlab.protontech.ch/ProtonVPN/linux/procure.git?branch=master#1508e22d13d32f944e1a84f7fceda998fe0db6df"
 dependencies = [
  "log",
  "serde",
