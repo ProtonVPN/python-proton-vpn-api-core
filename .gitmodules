@@ -4,3 +4,6 @@
 [submodule "ci-libraries-rust"]
 	path = ci-libraries-rust
 	url = ../integration/ci-libraries-rust.git
+[submodule "proton-vpn-binary-status"]
+	path = proton-vpn-binary-status
+	url = ../../rust/proton-vpn-binary-status.git

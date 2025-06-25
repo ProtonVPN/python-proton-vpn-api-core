@@ -19,7 +19,7 @@ impl std::convert::From<Error> for PyErr {
     fn from(err: Error) -> PyErr {
         match err {
             Error::VpnLib(e) => ProtonVpnLibError::new_err(format!("VpnLib {e}")),
-            Error::Pythonize(e) => ProtonVpnLibError::new_err(format!("Pythonize{e}")),
+            Error::Pythonize(e) => ProtonVpnLibError::new_err(format!("Pythonize {e}")),
             Error::PyErr(e) => ProtonVpnLibError::new_err(format!("PyErr {e}")),
         }
     }

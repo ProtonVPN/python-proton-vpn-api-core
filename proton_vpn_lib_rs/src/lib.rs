@@ -88,7 +88,7 @@ mod tests {
     use super::*;
     use proton_vpn_binary_status::{Location, Status};
 
-    const fn make_server(status: u8, load: u8, partial_score: f32) -> [u8; 6] {
+    fn make_server(status: u8, load: u8, partial_score: f32) -> [u8; 6] {
         [
             status,
             load,
