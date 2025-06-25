@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 // Copyright (c) 2024 Proton AG
 // -----------------------------------------------------------------------------
-pub use proton_vpn_binary_status::{Load, Server, UserLocation};
+pub use proton_vpn_binary_status::{Load, Server, UserLocation, Country};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -58,7 +58,7 @@ impl ServerStatus {
         loads.resize(self.servers.len(), Load::default());
 
         log::info!(
-            "Computing loads for {} servers with user location: {}",
+            "Computing loads for {} servers with user location: {:?}",
             self.servers.len(),
             self.user_location.country
         );
@@ -110,7 +110,6 @@ mod tests {
     fn make_servers_and_loads() -> (Vec<Server>, Vec<u8>) {
         let servers = vec![
             Server {
-                id: "server1".to_string(),
                 status: Status {
                     index: 0,
                     penalty: 0.0,
@@ -120,11 +119,10 @@ mod tests {
                     lat: 0.0,
                     long: 0.0,
                 },
-                exit_country: "FR".to_string(),
+                exit_country: Country::new(b"FR"),
                 physical_servers: vec![],
             },
             Server {
-                id: "server2".to_string(),
                 status: Status {
                     index: 1,
                     penalty: 0.0,
@@ -134,7 +132,7 @@ mod tests {
                     lat: 0.0,
                     long: 0.0,
                 },
-                exit_country: "FR".to_string(),
+                exit_country: Country::new(b"FR"),
                 physical_servers: vec![],
             },
         ];
@@ -157,7 +155,7 @@ mod tests {
             "test_status_id",
             servers,
             UserLocation {
-                country: "FR".to_string(),
+                country: Country::new(b"FR"),
                 location: Location {
                     lat: 0.0,
                     long: 0.0,
@@ -178,7 +176,7 @@ mod tests {
 
         // Compute scores limited by distance
         status.set_user_location(UserLocation {
-            country: "FR".to_string(),
+            country: Country::new(b"FR"),
             location: Location {
                 lat: 45.0,
                 long: 0.0,

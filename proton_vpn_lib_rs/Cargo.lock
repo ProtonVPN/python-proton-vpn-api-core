@@ -174,7 +174,7 @@ dependencies = [
 [[package]]
 name = "proton-vpn-binary-status"
 version = "0.1.0"
-source = "git+ssh://git@gitlab.protontech.ch/ProtonVPN/linux/procure.git?branch=master#4414462c2a6c31f426aac49fb5e02c8cb99a9ce1"
+source = "git+ssh://git@gitlab.protontech.ch/ProtonVPN/rust/proton-vpn-binary-status.git?branch=master#1cccc1c1ab472b71aa1b1af68b8f1bf62024af53"
 dependencies = [
  "log",
  "serde",
