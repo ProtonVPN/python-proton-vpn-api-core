@@ -32,6 +32,8 @@ from proton.vpn.connection.enum import ConnectionStateEnum, KillSwitchSetting
 from proton.vpn.connection.events import EventContext
 from proton.vpn.connection.exceptions import ConcurrentConnectionsError
 from proton.vpn.killswitch.interface import KillSwitch
+from proton.vpn.split_tunneling.interface import SplitTunneling
+from proton.vpn.core.settings.split_tunneling import SplitTunneling as SplitTunnelingSetting
 
 
 if TYPE_CHECKING:
@@ -54,12 +56,16 @@ class StateContext:
         reconnection: optional VPN connection to connect to as soon as stopping the current one.
         kill_switch: kill switch implementation.
         kill_switch_setting: on, off, permanent.
+        split_tunneling: split tunneling implementation, if available.
+        split_tunneling_setting: split tunneling configuration.
     """
     event: events.Event = field(default_factory=events.Initialized)
     connection: Optional["VPNConnection"] = None
     reconnection: Optional["VPNConnection"] = None
     kill_switch: ClassVar[KillSwitch] = None
     kill_switch_setting: ClassVar[KillSwitchSetting] = None
+    split_tunneling: ClassVar[Optional[SplitTunneling]] = None
+    split_tunneling_setting: ClassVar[SplitTunnelingSetting] = None
 
 
 class State(ABC):
@@ -189,6 +195,9 @@ class Disconnected(State):
             await self.context.kill_switch.disable()
             await self.context.kill_switch.disable_ipv6_leak_protection()
 
+        if self.context.split_tunneling:
+            await self.context.split_tunneling.clear_config()
+
         return None
 
 
@@ -285,6 +294,10 @@ class Connected(State):
         if self.context.kill_switch_setting == KillSwitchSetting.OFF:
             await self.context.kill_switch.enable_ipv6_leak_protection()
             await self.context.kill_switch.disable()
+            if self.context.split_tunneling_setting.enabled:
+                await self.context.split_tunneling.set_config(
+                    self.context.split_tunneling_setting.config
+                )
         else:
             # This is specific to the routing table KS implementation and should be removed.
             # At this point we switch from the routed KS to the full-on KS.

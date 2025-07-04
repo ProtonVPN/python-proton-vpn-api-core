@@ -19,10 +19,16 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional, Union
 
+from proton.loader import Loader
+
+from proton.vpn import logging
 from proton.vpn.core.settings import SplitTunnelingConfig
+
+logger = logging.getLogger(__name__)
 
 
 class SplitTunneling(ABC):
@@ -30,6 +36,28 @@ class SplitTunneling(ABC):
     """
     def __init__(self, uid: int):
         self._uid: int = uid
+
+    @staticmethod
+    async def get(uid: int) -> Optional[SplitTunneling]:
+        """
+        Returns the split tunneling implementation.
+
+        :param uid: unix user ID
+        """
+        try:
+            split_tunneling_class = Loader.get(
+                type_name="split_tunneling"
+            )
+        except RuntimeError:
+            logger.warning("Split tunneling backend not found")
+            return None
+
+        return await split_tunneling_class.build(uid)
+
+    @staticmethod
+    @abstractmethod
+    async def build(uid: int) -> SplitTunneling:
+        """Builds and returns the split tunneling instance."""
 
     @abstractmethod
     async def set_config(self, config: SplitTunnelingConfig) -> None:

@@ -1,3 +1,12 @@
+version: 0.45.0
+time: 2025/07/03 15:00
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat: add split tunneling feature"
+---
 version: 0.44.5
 time: 2025/06/16 15:54
 author: Alexandru Cheltuitor

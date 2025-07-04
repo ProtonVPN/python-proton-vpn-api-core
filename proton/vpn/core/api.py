@@ -21,9 +21,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import asyncio
 import copy
-import os
 
-from proton.loader import Loader
 from proton.vpn import logging
 from proton.vpn.core.connection import VPNConnector
 from proton.vpn.core.refresher.scheduler import Scheduler
@@ -59,9 +57,6 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         This will provide some additional helper methods
         related to VPN connections and VPN servers.
         """
-        if not self.split_tunneling_available:
-            await self._init_daemon()
-
         if self._vpn_connector:
             return self._vpn_connector
 
@@ -106,17 +101,6 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         await loop.run_in_executor(None, self._settings_persistence.save, settings)
         await self._vpn_connector.apply_settings(settings)
         self._usage_reporting.enabled = settings.anonymous_crash_reports
-
-        if not self.split_tunneling_available:
-            return
-
-        if not settings.features.split_tunneling.enabled:
-            await self._split_tunneling_client.clear_config()
-            return
-
-        await self._split_tunneling_client.set_config(
-            settings.features.split_tunneling.config
-        )
 
     async def login(self, username: str, password: str) -> LoginResult:
         """
@@ -228,21 +212,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
 
     @property
     def split_tunneling_available(self) -> bool:
-        """Returns if split tunneling is available or not.
-
-        Returns:
-            bool: _description_
-        """
-        return bool(self._split_tunneling_client)
-
-    async def _init_daemon(self) -> None:
-        """Initiates daemon.
-
-        All daemons that are initiated async have to be initiated from here.
-        """
-        try:
-            split_tunneling_backend = Loader.get("split_tunneling")
-        except RuntimeError:
-            logger.warning("Split tunneling backend not found")
-        else:
-            self._split_tunneling_client = await split_tunneling_backend.init(os.getuid())
+        """Deprecated, use VPNConnector.is_split_tunneling_available."""
+        logger.warning("Deprecated: use VPNConnector.is_split_tunneling_available instead")
+        # nosemgrep: python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses  # pylint: disable=line-too-long  # noqa: E501
+        return self._vpn_connector.is_split_tunneling_available

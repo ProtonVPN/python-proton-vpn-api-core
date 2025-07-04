@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import os
 import threading
 from typing import Optional, runtime_checkable, Protocol
 
@@ -33,6 +34,7 @@ from proton.vpn.connection.persistence import ConnectionPersistence
 from proton.vpn.core.refresher import VPNDataRefresher
 from proton.vpn.core.session_holder import SessionHolder
 from proton.vpn.core.settings import SettingsPersistence
+from proton.vpn.core.settings.split_tunneling import SplitTunneling as SplitTunnelingSetting
 from proton.vpn.killswitch.interface import KillSwitch
 
 from proton.vpn import logging
@@ -48,6 +50,7 @@ from proton.vpn.session.dataclasses import VPNLocation
 from proton.vpn.session.servers import LogicalServer, ServerFeatureEnum
 from proton.vpn.core.usage import UsageReporting
 from proton.vpn.connection.exceptions import FeatureSyntaxError, FeatureError
+from proton.vpn.split_tunneling.interface import SplitTunneling
 
 logger = logging.getLogger(__name__)
 
@@ -85,11 +88,13 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         """
         Builds a VPN connector instance and initializes it.
         """
+        split_tunneling = await SplitTunneling.get(os.getuid())
         connector = VPNConnector(
             session_holder,
             settings_persistence,
             kill_switch=kill_switch,
             usage_reporting=usage_reporting,
+            split_tunneling=split_tunneling
         )
         await connector.initialize_state()
         return connector
@@ -99,22 +104,33 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             session_holder: SessionHolder,
             settings_persistence: SettingsPersistence,
             usage_reporting: UsageReporting,
-            connection_persistence: ConnectionPersistence = None,
-            state: states.State = None,
-            kill_switch: KillSwitch = None,
-            publisher: Publisher = None,
+            connection_persistence: Optional[ConnectionPersistence] = None,
+            state: Optional[states.State] = None,
+            kill_switch: Optional[KillSwitch] = None,
+            split_tunneling: Optional[SplitTunneling] = None,
+            publisher: Optional[Publisher] = None,
     ):
         self._session_holder = session_holder
         self._settings_persistence = settings_persistence
         self._connection_persistence = connection_persistence or ConnectionPersistence()
         self._current_state = state
         self._kill_switch = kill_switch
+        self._split_tunneling = split_tunneling
         self._publisher = publisher or Publisher()
         self._lock = asyncio.Lock()
         self._background_tasks = set()
         self._usage_reporting = usage_reporting
 
         self._publisher.register(self._on_state_change)
+
+    @property
+    def is_split_tunneling_available(self) -> bool:
+        """Returns if split tunneling is available or not.
+
+        Returns:
+            bool: _description_
+        """
+        return bool(self._split_tunneling)
 
     def _filter_features(self, input_settings: Settings, user_tier: int = None) -> Settings:
         if not user_tier:
@@ -147,11 +163,11 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         """Returns the user's credentials."""
         return self._session_holder.vpn_credentials
 
-    def _set_ks_setting(self, settings: Settings):
-        StateContext.kill_switch_setting = KillSwitchSetting(settings.killswitch)
+    def _set_ks_setting(self, ks_setting: KillSwitchSetting, protocol: str):
+        StateContext.kill_switch_setting = ks_setting
 
         if isinstance(self.current_state, states.Disconnected):
-            self._set_ks_impl(settings)
+            self._set_ks_impl(protocol)
 
     async def update_credentials(self):
         """
@@ -169,13 +185,21 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         Sets the settings to be applied when establishing the next connection and
         applies them to the current connection whenever that's possible.
         """
-        self._set_ks_setting(settings)
-        await self._apply_kill_switch_setting(KillSwitchSetting(settings.killswitch))
-        if self.current_connection:
+        ks_setting = KillSwitchSetting(settings.killswitch)
+        protocol = settings.protocol
+        self._set_ks_setting(ks_setting, protocol)
+        await self._apply_kill_switch_setting(ks_setting)
 
+        if self.current_connection:
             await self.current_connection.update_settings(
                 self._filter_features(settings)
             )
+
+        st_setting = settings.features.split_tunneling
+        StateContext.split_tunneling_setting = st_setting
+        # nosemgrep: python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses  # pylint: disable=line-too-long  # noqa: E501
+        if self.is_split_tunneling_available and self.is_connected:
+            await self._apply_split_tunneling_settings(st_setting, ks_setting)
 
     async def _apply_kill_switch_setting(self, kill_switch_setting: KillSwitchSetting):
         """Enables/disables the kill switch depending on the setting value."""
@@ -205,6 +229,20 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
         else:
             raise RuntimeError(f"Unexpected kill switch setting: {kill_switch_setting}")
+
+    async def _apply_split_tunneling_settings(
+            self, st_settings: SplitTunnelingSetting, ks_setting: KillSwitchSetting
+    ):
+        if ks_setting != KillSwitchSetting.OFF:
+            logger.warning("Split tunneling is not compatible with the kill switch feature")
+            return
+
+        if not st_settings.enabled:
+            await self._split_tunneling.clear_config()
+        else:
+            await self._split_tunneling.set_config(
+                st_settings.config
+            )
 
     def get_certificate_based_openvpn(self):
         """
@@ -270,7 +308,10 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
         settings = await self.get_settings()
         StateContext.kill_switch_setting = KillSwitchSetting(settings.killswitch)
-        self._set_ks_impl(settings)
+        self._set_ks_impl(settings.protocol)
+
+        StateContext.split_tunneling = self._split_tunneling
+        StateContext.split_tunneling_setting = settings.features.split_tunneling
 
         connection = state.context.connection
         if connection:
@@ -375,7 +416,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         # Sets the settings to be applied when establishing the next connection.
         settings = await self.get_settings()
         # FIXME: this adds a big delay before creating the connection  # pylint: disable=fixme
-        self._set_ks_setting(settings)
+        self._set_ks_setting(KillSwitchSetting(settings.killswitch), settings.protocol)
 
         protocol = protocol or settings.protocol
 
@@ -480,6 +521,15 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             # Unregister from connection event updates once the connection ended.
             self._current_state.context.connection.unregister(self._on_connection_event)
 
+        if isinstance(old_state, states.Connected) and isinstance(new_state, states.Connected):
+            # A Connected state can transition to a new Connected state when local agent
+            # sends a new connected event, e.g. with a new port forwarding port. In this case,
+            # the connection subscribers are notified (to update data on the client UI)
+            # but the tasks associated with the connected state do not need to be run again
+            # since the connection state didn't really change, only its context data did.
+            self._publisher.notify(new_state)
+            return None
+
         if self._current_state.notify_early:
             self._publisher.notify(new_state)
             new_event = await self._current_state.run_tasks()
@@ -491,7 +541,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             not self._current_state.context.reconnection
             and isinstance(self._current_state, states.Disconnected)
         ):
-            self._set_ks_impl(await self.get_settings())
+            self._set_ks_impl((await self.get_settings()).protocol)
 
         return new_event
 
@@ -514,7 +564,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         )
         self._session_holder.session.set_location(vpnlocation)
 
-    def _set_ks_impl(self, settings: Settings):
+    def _set_ks_impl(self, protocol: str):
         """
         By using this specific method we're leaking implementation details.
 
@@ -524,7 +574,6 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         we only do this when we are in `Disconnected` state, to ensure
         that the environment is clean and we don't leave any residuals on a users machine.
         """
-        protocol = settings.protocol
         kill_switch_backend = KillSwitch.get(protocol=protocol)
         StateContext.kill_switch = self._kill_switch or kill_switch_backend()
 

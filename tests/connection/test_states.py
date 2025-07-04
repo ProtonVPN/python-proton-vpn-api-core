@@ -205,12 +205,13 @@ async def test_disconnected_run_tasks_when_reconnection_is_not_requested_and_kil
      - Disable kill switch.
      - Disable IPv6 leak protection.
     """
-    context = Mock()
+    context = Mock(spec=states.StateContext)
     context.reconnection = None  # Reconnection not requested
     context.kill_switch_setting = KillSwitchSetting.ON
     context.kill_switch.disable_ipv6_leak_protection = AsyncMock(return_value=None)
     context.kill_switch.disable = AsyncMock(return_value=None)
     context.connection.remove_persistence = AsyncMock(return_value=None)
+    context.split_tunneling.clear_config = AsyncMock(return_value=None)
 
     disconnected = states.Disconnected(context=context)
     generated_event = await disconnected.run_tasks()
@@ -218,7 +219,8 @@ async def test_disconnected_run_tasks_when_reconnection_is_not_requested_and_kil
     assert context.method_calls == [
         call.connection.remove_persistence(),
         call.kill_switch.disable(),
-        call.kill_switch.disable_ipv6_leak_protection()
+        call.kill_switch.disable_ipv6_leak_protection(),
+        call.split_tunneling.clear_config()
     ]
 
     assert generated_event is None
@@ -234,13 +236,15 @@ async def test_disconnected_run_tasks_does_not_disable_the_kill_switch_when_set_
     context.reconnection = None  # Reconnection not requested
     context.kill_switch_setting = KillSwitchSetting.PERMANENT
     context.connection.remove_persistence = AsyncMock(return_value=None)
+    context.split_tunneling.clear_config = AsyncMock(return_value=None)
 
     disconnected = states.Disconnected(context=context)
     generated_event = await disconnected.run_tasks()
 
     assert context.method_calls == [
         call.connection.remove_persistence(),
-        call.kill_switch.enable(permanent=True)
+        call.kill_switch.enable(permanent=True),
+        call.split_tunneling.clear_config()
     ]
 
     assert generated_event is None
@@ -251,7 +255,7 @@ async def test_disconnected_run_tasks_when_reconnection_is_requested_and_should_
     """
     When reconnection **is** requested while on the disconnected state then:
      - No connection tasks should be performed. It's very important that
-       IPv6 leak protection or the kill switch are **not** disabled.
+       IPv6 leak protection or the kill switch are **not** disabled.AsyncMock
      - An Up event should be returned with the new connection to be started.
     """
     context = AsyncMock()
@@ -285,7 +289,8 @@ async def test_disconnected_run_tasks_when_there_is_no_connection():
 
     assert context.method_calls == [
         call.kill_switch.disable(),
-        call.kill_switch.disable_ipv6_leak_protection()
+        call.kill_switch.disable_ipv6_leak_protection(),
+        call.split_tunneling.clear_config()
     ]
     assert generated_event is None
 
@@ -324,11 +329,12 @@ async def test_connecting_run_tasks(kill_switch_setting):
     "kill_switch_setting", [KillSwitchSetting.ON, KillSwitchSetting.PERMANENT, KillSwitchSetting.OFF]
 )
 async def test_connected_run_tasks(kill_switch_setting):
-    """The tasks to be run while on the connected state is to persist the connection parameters and 
+    """The tasks to be run while on the connected state is to persist the connection parameters and
     enable kill switch if it's set to be enabled."""
     context = AsyncMock()
     context.kill_switch_setting = kill_switch_setting
     context.event.context.forwarded_port = None
+    context.split_tunneling_setting = Mock()
 
     connected = states.Connected(context)
 
@@ -348,7 +354,8 @@ async def test_connected_run_tasks(kill_switch_setting):
         assert context.method_calls == [
             call.kill_switch.enable_ipv6_leak_protection(),
             call.kill_switch.disable(),
-            call.connection.add_persistence(None)
+            call.split_tunneling.set_config(context.split_tunneling_setting.config),
+            call.connection.add_persistence(None),
         ]
 
 

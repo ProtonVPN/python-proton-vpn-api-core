@@ -179,7 +179,7 @@ class VPNConnection(ABC):
     @staticmethod
     def create(server: VPNServer, credentials: VPNCredentials, settings: Settings = None,
                protocol: str = None, backend: str = None,
-               use_certificate: bool = False):
+               use_certificate: bool = False):  # pylint: disable=too-many-arguments
         """
         Creates a new VPN connection object. Note the VPN connection won't be initiated. For that
         to happen, see the `start` method.
