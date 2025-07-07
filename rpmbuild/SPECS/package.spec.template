@@ -31,7 +31,7 @@ Requires: python3-pynacl
 Requires: python3-proton-vpn-lib >= 0.1.1
 
 Conflicts: proton-vpn-gtk-app < 4.10.0~rc3
-Conflicts: python3-proton-vpn-network-manager < 0.12.10
+Conflicts: python3-proton-vpn-network-manager < 0.12.14
 
 Obsoletes: python3-proton-vpn-session
 Obsoletes: python3-proton-vpn-connection

@@ -22,7 +22,6 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
 import asyncio
-import copy
 import os
 import threading
 from typing import Optional, runtime_checkable, Protocol
@@ -132,19 +131,6 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         """
         return bool(self._split_tunneling)
 
-    def _filter_features(self, input_settings: Settings, user_tier: int = None) -> Settings:
-        if not user_tier:
-            user_tier = self._session_holder.user_tier or 0
-
-        settings = copy.deepcopy(input_settings)
-
-        if self._is_free_tier(user_tier):
-            # Our servers do not allow setting connection features on the free
-            # tier, not even the defaults.
-            settings.features = None
-
-        return settings
-
     async def get_settings(self) -> Settings:
         """Returns the user's settings."""
         # Default to free user settings if the session is not loaded yet.
@@ -156,7 +142,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             self._session_holder.session.feature_flags
         )
 
-        return self._filter_features(settings, user_tier)
+        return settings
 
     @property
     def credentials(self) -> Optional[VPNCredentials]:
@@ -191,9 +177,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         await self._apply_kill_switch_setting(ks_setting)
 
         if self.current_connection:
-            await self.current_connection.update_settings(
-                self._filter_features(settings)
-            )
+            await self.current_connection.update_settings(settings)
 
         st_setting = settings.features.split_tunneling
         StateContext.split_tunneling_setting = st_setting
