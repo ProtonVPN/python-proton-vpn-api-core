@@ -28,7 +28,7 @@ from proton.vpn.connection import events
 from proton.vpn.connection.events import EventContext
 from proton.vpn.connection.exceptions \
     import FeatureError, FeaturePolicyError, FeatureSyntaxError
-from proton.vpn.connection.interfaces import Features
+from proton.vpn.core.settings.features import Features
 
 from proton.vpn.backend.linux.networkmanager.core.local_agent import (
     AgentListener, Status, ExpiredCertificateError, AgentFeatures,
@@ -107,8 +107,15 @@ class LocalAgentMixin:  # pylint: disable=too-few-public-methods
         future.add_done_callback(lambda f: f.result())
 
     async def _request_connection_features(self, features: Features):
-        agent_features = self.__get_agent_features(features)
+        if features.are_free_tier_defaults():
+            # No need to request default features, since they are available by default.
+            # Also, the local agent server raises an error if features are requested
+            # for free users, even when the requested features are the default ones.
+            logger.info("Using default VPN connection features.")
+            return
+
         logger.info("Requesting VPN connection features...")
+        agent_features = self.__get_agent_features(features)
         await self._agent_listener.request_features(agent_features)
         logger.info("VPN connection features requested.")
 
@@ -230,12 +237,6 @@ class LocalAgentMixin:  # pylint: disable=too-few-public-methods
             raise
 
     def __get_agent_features(self, features: Features) -> AgentFeatures:
-        if features is None:
-            # The free tier does not pass connection features since
-            # our servers do not allow setting connection features on the free
-            # tier, not even the defaults.
-            return None
-
         randomized_nat = (not features.moderate_nat
                           if features.moderate_nat is not None else None)
 

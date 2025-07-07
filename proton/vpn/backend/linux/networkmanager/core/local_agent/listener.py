@@ -59,8 +59,7 @@ class AgentListener:
 
     async def request_features(self, features: AgentFeatures):
         """Requests the features to be set on the current VPN connection."""
-        if features:
-            await self._listener.request_features(features)
+        await self._listener.request_features(features)
 
     async def stop(self):
         """Stops reading incoming messages from LA."""
