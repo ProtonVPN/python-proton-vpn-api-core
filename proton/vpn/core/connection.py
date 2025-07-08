@@ -22,6 +22,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
 import asyncio
+from copy import deepcopy
 import os
 import threading
 from typing import Optional, runtime_checkable, Protocol
@@ -124,12 +125,12 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
     @property
     def is_split_tunneling_available(self) -> bool:
-        """Returns if split tunneling is available or not.
+        """Returns if split tunneling is available or not."""
+        split_tunneling_ff = self._get_split_tunneling_feature_flag()
+        return bool(self._split_tunneling) and split_tunneling_ff
 
-        Returns:
-            bool: _description_
-        """
-        return bool(self._split_tunneling)
+    def _get_split_tunneling_feature_flag(self):
+        return self._session_holder.session.feature_flags.get("DisplaySplitTunneling")
 
     async def get_settings(self) -> Settings:
         """Returns the user's settings."""
@@ -180,7 +181,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             await self.current_connection.update_settings(settings)
 
         st_setting = settings.features.split_tunneling
-        StateContext.split_tunneling_setting = st_setting
+        self._set_split_tunneling_setting(st_setting)
         # nosemgrep: python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses  # pylint: disable=line-too-long  # noqa: E501
         if self.is_split_tunneling_available and self.is_connected:
             await self._apply_split_tunneling_settings(st_setting, ks_setting)
@@ -294,8 +295,8 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         StateContext.kill_switch_setting = KillSwitchSetting(settings.killswitch)
         self._set_ks_impl(settings.protocol)
 
-        StateContext.split_tunneling = self._split_tunneling
-        StateContext.split_tunneling_setting = settings.features.split_tunneling
+        self._set_split_tunneling_setting(settings.features.split_tunneling)
+        self._set_split_tunneling_impl()
 
         connection = state.context.connection
         if connection:
@@ -401,6 +402,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         settings = await self.get_settings()
         # FIXME: this adds a big delay before creating the connection  # pylint: disable=fixme
         self._set_ks_setting(KillSwitchSetting(settings.killswitch), settings.protocol)
+        self._set_split_tunneling_setting(settings.features.split_tunneling)
 
         protocol = protocol or settings.protocol
 
@@ -561,8 +563,28 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         kill_switch_backend = KillSwitch.get(protocol=protocol)
         StateContext.kill_switch = self._kill_switch or kill_switch_backend()
 
-    def _is_free_tier(self, user_tier: int) -> bool:
-        return user_tier == 0
+    def _set_split_tunneling_setting(self, st_setting: SplitTunnelingSetting):
+        split_tunneling_ff = self._get_split_tunneling_feature_flag()
+
+        st_setting = deepcopy(st_setting)
+        st_setting.enabled = (
+            self._split_tunneling
+            and st_setting.enabled
+            and not self._is_free_tier()
+            and split_tunneling_ff
+        )
+
+        StateContext.split_tunneling_setting = st_setting
+
+    def _set_split_tunneling_impl(self):
+        StateContext.split_tunneling = self._split_tunneling
+
+    def _get_user_tier(self) -> int:
+        # Default to free tier if session is not loaded yet
+        return self._session_holder.user_tier or 0
+
+    def _is_free_tier(self) -> bool:
+        return self._get_user_tier() == 0
 
     def subscribe_to_certificate_updates(self, refresher: VPNDataRefresher):
         """Subscribes to certificate updates."""
