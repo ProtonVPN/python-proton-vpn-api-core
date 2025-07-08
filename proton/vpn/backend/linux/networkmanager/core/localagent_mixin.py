@@ -21,6 +21,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import asyncio
 import logging
+import random
 
 
 from proton.vpn.connection import events
@@ -62,11 +63,26 @@ class LocalAgentMixin:  # pylint: disable=too-few-public-methods
                     self._vpnserver.domain)
         context = EventContext(connection=self)
 
-        if not await self.__attempt_to_connect_to_listener(context):
-            return
+        agent_connection_drops = 0
+        while True:
+            if not await self.__attempt_to_connect_to_listener(context):
+                return
 
-        await self.__attempt_to_request_connection_features(context)
-        await self.__attempt_to_listen(context)
+            if not await self.__attempt_to_request_connection_features(context):
+                return
+
+            if not await self.__attempt_to_listen(context):
+                agent_connection_drops += 1
+                # nosemgrep: gitlab.bandit.B311
+                sleep_seconds = random.uniform(0, 10)  # nosec B311
+                logger.warning(
+                    "Agent connection dropped (#%s). Retrying in %.1f seconds.",
+                    agent_connection_drops, sleep_seconds
+                )
+                await asyncio.sleep(sleep_seconds)
+                continue
+
+            return
 
     def _async_start_local_agent_listener(self):
         """
@@ -176,11 +192,11 @@ class LocalAgentMixin:  # pylint: disable=too-few-public-methods
         except ExpiredCertificateError:
             self._notify_subscribers_threadsafe(
                 events.ExpiredCertificate(context))
-            return
+            return False
         except TimeoutError:
             logger.info("Connect timeout")
             self._notify_subscribers_threadsafe(events.Timeout(context))
-            return
+            return False
         except Exception:
             self._notify_subscribers_threadsafe(
                 events.UnexpectedError(context))
@@ -189,21 +205,25 @@ class LocalAgentMixin:  # pylint: disable=too-few-public-methods
         return True
 
     async def __attempt_to_request_connection_features(self,
-                                                       context: EventContext):
+                                                       context: EventContext) -> bool:
         try:
             await self._request_connection_features(self.settings.features)
         except TimeoutError:
             self._notify_subscribers_threadsafe(events.Timeout(context))
+            return False
         except Exception:
             self._notify_subscribers_threadsafe(
                 events.UnexpectedError(context))
             raise
 
-    async def __attempt_to_listen(self, context: EventContext):
+        return True
+
+    async def __attempt_to_listen(self, context: EventContext) -> bool:
         try:
             await self._agent_listener.listen()
+            return True
         except TimeoutError:
-            self._notify_subscribers_threadsafe(events.Timeout(context))
+            return False
         except Exception:
             self._notify_subscribers_threadsafe(
                 events.UnexpectedError(context))
