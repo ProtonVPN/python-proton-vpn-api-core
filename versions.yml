@@ -1,3 +1,12 @@
+version: 0.45.3
+time: 2025/07/09 15:42
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: Always return a default set of FeatureFlags if none have been got yet"
+---
 version: 0.45.2
 time: 2025/07/08 10:03
 author: Pep Llaneras
