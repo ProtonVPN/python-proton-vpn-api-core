@@ -320,6 +320,8 @@ class VPNSession(Session):
     @property
     def feature_flags(self) -> FeatureFlags:
         """Fetches general client configuration to connect to VPN servers."""
+        if self._feature_flags is None:
+            return FeatureFlags.default()
         return self._feature_flags
 
     async def submit_bug_report(self, bug_report: BugReportForm):
