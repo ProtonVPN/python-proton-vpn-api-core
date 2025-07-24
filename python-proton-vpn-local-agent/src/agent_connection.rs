@@ -39,7 +39,7 @@ impl AgentConnection {
     ) -> PyResult<Bound<'p, PyAny>> {
         let agent_connection = self.agent_connection.clone();
         future(py, async move {
-            agent_connection.request_status(timeout_in_seconds).await?;
+            agent_connection.request_status(timeout_in_seconds, None).await?;
             Ok(())
         })
     }

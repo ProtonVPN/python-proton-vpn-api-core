@@ -33,6 +33,25 @@ pub struct ConnectionDetails {
     pub server_ipv6: Option<String>,
 }
 
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct FeaturesStatistics {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub netshield_level: Option<NetshieldStats>,
+}
+
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct NetshieldStats {
+    #[serde(rename = "DNSBL/1b", skip_serializing_if = "Option::is_none")]
+    pub malware: Option<u32>,
+    #[serde(rename = "DNSBL/2a", skip_serializing_if = "Option::is_none")]
+    pub ads: Option<u32>,
+    #[serde(rename = "DNSBL/2b", skip_serializing_if = "Option::is_none")]
+    pub tracker: Option<u32>,
+}
+
 /// Represents the status message from the local agent server.
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -43,6 +62,8 @@ pub struct StatusMessage {
     pub features: Option<AgentFeatures>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub connection_details: Option<ConnectionDetails>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub features_statistics: Option<FeaturesStatistics>,
     /*
       "state": "connected",
         "features": {
@@ -91,7 +112,10 @@ pub struct Response {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct StatusGet {}
+pub struct StatusGet {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub features_statistics: Option<bool>
+}
 
 /// Represents the request to the local agent server.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,10 +138,10 @@ impl Request {
     }
 
     /// Creates a new Request with the status get.
-    pub fn new_status_get() -> Self {
+    pub fn new_status_get(features_statistics: Option<bool>) -> Self {
         Self {
             features_set: None,
-            status_get: Some(StatusGet {}),
+            status_get: Some(StatusGet { features_statistics }),
         }
     }
 }

@@ -53,6 +53,7 @@ impl Server {
                 reason: None,
                 features: None,
                 connection_details: None,
+                features_statistics: None,
             }),
             error: None,
         };

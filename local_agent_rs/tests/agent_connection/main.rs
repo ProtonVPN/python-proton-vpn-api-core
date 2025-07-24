@@ -32,7 +32,7 @@ async fn test_request_status() {
         .expect("AgentConnection couldn't be created");
 
     connection
-        .request_status(1)
+        .request_status(1, None)
         .await
         .expect("get-status failed");
 

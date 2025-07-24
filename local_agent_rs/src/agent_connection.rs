@@ -31,13 +31,13 @@ impl AgentConnection {
     /// Requests the local agent status. This method does not return anything.
     /// Eventually the local agent server will push the status, which can then
     /// be read via the read() method.
-    pub async fn request_status(&self, timeout_in_seconds: u64) -> Result<()> {
+    pub async fn request_status(&self, timeout_in_seconds: u64, features_statistics: Option<bool>) -> Result<()> {
         tokio::time::timeout(
             std::time::Duration::from_secs(timeout_in_seconds),
             async move {
                 self.transport
                     .send(Request {
-                        status_get: Some(StatusGet {}),
+                        status_get: Some(StatusGet { features_statistics }),
                         features_set: None,
                     })
                     .await
