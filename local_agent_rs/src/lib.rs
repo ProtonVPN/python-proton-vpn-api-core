@@ -1,6 +1,10 @@
 // -----------------------------------------------------------------------------
 // Copyright (c) 2024 Proton AG
 // -----------------------------------------------------------------------------
+
+#[cfg(feature = "uniffi")]
+uniffi::setup_scaffolding!();
+
 mod agent_connection;
 mod agent_connector;
 mod agent_features;

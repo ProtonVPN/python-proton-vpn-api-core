@@ -4,8 +4,10 @@
 use serde::{Deserialize, Serialize};
 // -----------------------------------------------------------------------------
 
+#[derive(Default)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct AgentFeatures {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub netshield_level: Option<u8>,

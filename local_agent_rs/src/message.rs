@@ -5,6 +5,7 @@ use crate::agent_features::*;
 use serde::{Deserialize, Serialize};
 
 /// Represents the state of the connection to the local agent client.
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum State {
@@ -12,6 +13,7 @@ pub enum State {
     HardJailed,
 }
 
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct Reason {
@@ -21,6 +23,7 @@ pub struct Reason {
     pub description: String,
 }
 
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct ConnectionDetails {
@@ -31,6 +34,7 @@ pub struct ConnectionDetails {
 }
 
 /// Represents the status message from the local agent server.
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct StatusMessage {
