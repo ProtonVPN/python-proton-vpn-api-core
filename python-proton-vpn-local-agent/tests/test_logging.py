@@ -40,7 +40,7 @@ async def test_logging(setup_logger):
 
     expected = (
        "INFO:proton.vpn.local_agent/transport_playback.rs:28:TransportPlayback::new\n"
-       "INFO:proton.vpn.local_agent/transport_playback.rs:58:TransportPlayback:recv() -> Response { status: Some(StatusMessage { state: Connected, reason: None, features: None, connection_details: None }), error: None }\n"
+       "INFO:proton.vpn.local_agent/transport_playback.rs:58:TransportPlayback:recv() -> Response { status: Some(StatusMessage { state: Connected, reason: None, features: None, connection_details: None, features_statistics: None }), error: None }\n"
        "INFO:proton.vpn.local_agent/transport_playback.rs:65:TransportPlayback:close()\n"
     )
 
