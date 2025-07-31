@@ -32,6 +32,7 @@ from proton.vpn.connection.enum import ConnectionStateEnum, KillSwitchSetting
 from proton.vpn.connection.events import EventContext
 from proton.vpn.connection.exceptions import ConcurrentConnectionsError
 from proton.vpn.killswitch.interface import KillSwitch
+from proton.vpn.split_tunneling.exceptions import SplitTunnelingError
 from proton.vpn.split_tunneling.interface import SplitTunneling
 from proton.vpn.core.settings.split_tunneling import SplitTunneling as SplitTunnelingSetting
 
@@ -196,7 +197,14 @@ class Disconnected(State):
             await self.context.kill_switch.disable_ipv6_leak_protection()
 
         if self.context.split_tunneling:
-            await self.context.split_tunneling.clear_config()
+            # ST config is always cleared independently of if ST is disabled via settings or
+            # via feature flag to make sure existing config is always cleaned up.
+            try:
+                await self.context.split_tunneling.clear_config()
+            except SplitTunnelingError:
+                # We decided to treat split tunneling error as non-fatal, to prevent they
+                # impact the core VPN functionality.
+                logger.exception("Error clearing split tunneling configuration")
 
         return None
 
@@ -295,9 +303,15 @@ class Connected(State):
             await self.context.kill_switch.enable_ipv6_leak_protection()
             await self.context.kill_switch.disable()
             if self.context.split_tunneling_setting.enabled:
-                await self.context.split_tunneling.set_config(
-                    self.context.split_tunneling_setting.config
-                )
+                try:
+                    await self.context.split_tunneling.set_config(
+                        self.context.split_tunneling_setting.config
+                    )
+                except SplitTunnelingError:
+                    # We decided to treat split tunneling error as non-fatal, to prevent they
+                    # impact the core VPN functionality.
+                    logger.exception("Error setting split tunnel configuration")
+
         else:
             # This is specific to the routing table KS implementation and should be removed.
             # At this point we switch from the routed KS to the full-on KS.

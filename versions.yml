@@ -1,3 +1,12 @@
+version: 0.45.4
+time: 2025/07/31 09:44
+author: Pep Llaneras
+email: josep.llaneras@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: treat split tunneling errors as non-fatal"
+---
 version: 0.45.3
 time: 2025/07/09 15:42
 author: Luke Titley

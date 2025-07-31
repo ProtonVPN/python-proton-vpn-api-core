@@ -24,6 +24,9 @@ import pytest
 from proton.vpn.connection import states, events
 from proton.vpn.connection.enum import KillSwitchSetting
 from proton.vpn.connection.exceptions import ConcurrentConnectionsError
+from proton.vpn.core.settings.split_tunneling import SplitTunneling as SplitTunnelingSetting
+from proton.vpn.split_tunneling.exceptions import SplitTunnelingError
+
 
 
 def test_state_subclass_raises_exception_when_missing_state():
@@ -371,3 +374,37 @@ async def test_disconnecting_run_tasks_stops_connection():
     connection_calls = connection.method_calls
     assert len(connection_calls) == 1
     connection_calls[0].method = connection.stop
+
+
+@pytest.mark.asyncio
+async def test_connected_run_tasks_swallows_split_tunneling_errors():
+    connection = Mock()
+    connection.add_persistence = AsyncMock()
+    context = states.StateContext(connection=connection)
+    context.kill_switch = AsyncMock()
+    context.kill_switch_setting = KillSwitchSetting.OFF
+    context.split_tunneling = AsyncMock()
+    context.split_tunneling_setting = SplitTunnelingSetting(enabled=True, config=Mock())
+    context.split_tunneling.set_config = AsyncMock(side_effect=SplitTunnelingError("forced error"))
+    connected = states.Connected(context)
+
+    await connected.run_tasks()
+
+    # The split tunneling exception shouldn't have bubbled up when applying ST config
+    context.split_tunneling.set_config.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_disconnected_run_tasks_swallows_split_tunneling_errors():
+    context = states.StateContext(connection=None, reconnection=None)
+    context.kill_switch = AsyncMock()
+    context.kill_switch_setting = KillSwitchSetting.OFF
+    context.split_tunneling = AsyncMock()
+    context.split_tunneling_setting = SplitTunnelingSetting(enabled=True, config=Mock())
+    context.split_tunneling.clear_config = AsyncMock(side_effect=SplitTunnelingError("forced error"))
+    disconnected = states.Disconnected(context)
+
+    await disconnected.run_tasks()
+
+    # The split tunneling exception shouldn't have bubbled up when clearing ST config
+    context.split_tunneling.clear_config.assert_called_once()
