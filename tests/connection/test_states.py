@@ -28,7 +28,6 @@ from proton.vpn.core.settings.split_tunneling import SplitTunneling as SplitTunn
 from proton.vpn.split_tunneling.exceptions import SplitTunnelingError
 
 
-
 def test_state_subclass_raises_exception_when_missing_state():
     class DummyState(states.State):
         pass
@@ -346,19 +345,19 @@ async def test_connected_run_tasks(kill_switch_setting):
     if kill_switch_setting == KillSwitchSetting.ON:
         assert context.method_calls == [
             call.kill_switch.enable(permanent=False),
-            call.connection.add_persistence(None)
+            call.connection.add_persistence()
         ]
     elif kill_switch_setting == KillSwitchSetting.PERMANENT:
         assert context.method_calls == [
             call.kill_switch.enable(permanent=True),
-            call.connection.add_persistence(None)
+            call.connection.add_persistence()
         ]
     else:  # Kill switch OFF.
         assert context.method_calls == [
             call.kill_switch.enable_ipv6_leak_protection(),
             call.kill_switch.disable(),
             call.split_tunneling.set_config(context.split_tunneling_setting.config),
-            call.connection.add_persistence(None),
+            call.connection.add_persistence(),
         ]
 
 

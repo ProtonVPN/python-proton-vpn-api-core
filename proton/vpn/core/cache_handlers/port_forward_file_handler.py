@@ -20,6 +20,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import os
 import pathlib
+from proton.vpn.connection import states
 from proton.utils.environment import VPNExecutionEnvironment
 
 DEFAULT_FORWARDED_PORT_FILEPATH = os.path.join(
@@ -27,18 +28,31 @@ DEFAULT_FORWARDED_PORT_FILEPATH = os.path.join(
 )
 
 
-class PortForwardFileHandler:
+class PortForwardFileHandler:  # pylint: disable=too-few-public-methods
     """Takes care of file creating/deleting and writing port to file."""
 
     def __init__(self, filepath: str = DEFAULT_FORWARDED_PORT_FILEPATH):
         self._filepath = pathlib.Path(filepath)
 
-    def write_port_to_file(self, port: int):
+    def on_state_change_update_port(self, state: states.State):
+        """Handles the new state.
+        If the state is `Connected`, it writes the forwarded port to the file.
+        If the state is not `Connected`, it removes the port from the file.
+
+        Args:
+            state (State): newly received state object.
+        """
+        if isinstance(state, states.Connected) and state.forwarded_port:
+            self._write_port_to_file(state.forwarded_port)
+        elif isinstance(state, (states.Connected, states.Disconnected)):
+            self._remove_port_from_file()
+
+    def _write_port_to_file(self, port: int):
         """Writes port to file."""
         with open(self._filepath, mode="w", encoding="utf8") as file:
             file.write(str(port))
 
-    def remove_port_from_file(self):
+    def _remove_port_from_file(self):
         """Removes the port from the file."""
         with open(self._filepath, mode="w", encoding="utf8") as file:
             file.write("")

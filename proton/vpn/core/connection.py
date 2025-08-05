@@ -51,6 +51,7 @@ from proton.vpn.session.servers import LogicalServer, ServerFeatureEnum
 from proton.vpn.core.usage import UsageReporting
 from proton.vpn.connection.exceptions import FeatureSyntaxError, FeatureError
 from proton.vpn.split_tunneling.interface import SplitTunneling
+from proton.vpn.core.cache_handlers import PortForwardFileHandler
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +110,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             kill_switch: Optional[KillSwitch] = None,
             split_tunneling: Optional[SplitTunneling] = None,
             publisher: Optional[Publisher] = None,
+            port_forward_file_handler: PortForwardFileHandler = None,
     ):
         self._session_holder = session_holder
         self._settings_persistence = settings_persistence
@@ -120,8 +122,10 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         self._lock = asyncio.Lock()
         self._background_tasks = set()
         self._usage_reporting = usage_reporting
+        self._port_forward_file_handler = port_forward_file_handler or PortForwardFileHandler()
 
-        self._publisher.register(self._on_state_change)
+        self._publisher.register(self._on_state_change_update_location)
+        self._publisher.register(self._port_forward_file_handler.on_state_change_update_port)
 
     @property
     def is_split_tunneling_available(self) -> bool:
@@ -531,24 +535,38 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
         return new_event
 
-    def _on_state_change(self, state: states.State):
+    def _on_state_change_update_location(self, state: states.State):
         """Updates the user location when the connection is established."""
-        if not isinstance(state, states.Connected):
-            return
-
-        connection_details = state.context.event.context.connection_details
-        if not connection_details or not connection_details.device_ip:
+        connection_details = self._get_connection_details_from_state(state)
+        if not connection_details:
             return
 
         current_location = self._session_holder.session.vpn_account.location
-        vpnlocation = VPNLocation(
+
+        self._session_holder.session.set_location(
+            self._create_new_vpn_location(connection_details, current_location)
+        )
+
+    def _get_connection_details_from_state(
+            self, state: states.State
+    ) -> Optional[events.ConnectionDetails]:
+        if not isinstance(state, states.Connected):
+            return None
+
+        connection_details = state.context.event.context.connection_details
+        if not connection_details or not connection_details.device_ip:
+            return None
+
+        return connection_details
+
+    def _create_new_vpn_location(self, connection_details, current_location) -> VPNLocation:
+        return VPNLocation(
             IP=connection_details.device_ip,
             Country=connection_details.device_country,
             ISP=current_location.ISP,
             Long=current_location.Long,
             Lat=current_location.Lat
         )
-        self._session_holder.session.set_location(vpnlocation)
 
     def _set_ks_impl(self, protocol: str):
         """

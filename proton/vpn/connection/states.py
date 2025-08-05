@@ -319,7 +319,7 @@ class Connected(State):
                 permanent=(self.context.kill_switch_setting == KillSwitchSetting.PERMANENT)
             )
 
-        await self.context.connection.add_persistence(self.forwarded_port)
+        await self.context.connection.add_persistence()
 
 
 class Disconnecting(State):

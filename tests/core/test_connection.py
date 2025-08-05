@@ -139,10 +139,11 @@ def test_on_state_change_stores_new_device_ip_when_successfully_connected_to_vpn
         settings_persistence=None,
         usage_reporting=None,
         connection_persistence=Mock(),
-        publisher=publisher_mock
+        publisher=publisher_mock,
+        port_forward_file_handler=Mock()
     )
 
-    on_state_change_callback = publisher_mock.register.call_args[0][0]
+    on_state_change_update_location_callback = publisher_mock.register.call_args_list[0][0][0]
 
     connected_event = events.Connected(
         context=events.EventContext(
@@ -152,12 +153,45 @@ def test_on_state_change_stores_new_device_ip_when_successfully_connected_to_vpn
     )
     connected_state = states.Connected(context=states.StateContext(connected_event))
 
-    on_state_change_callback(connected_state)
+    on_state_change_update_location_callback(connected_state)
 
     vpn_location = session_holder_mock.session.set_location.call_args[0][0]
 
     session_holder_mock.session.set_location.assert_called_once()
     assert vpn_location.IP == new_connection_details.device_ip
+
+
+def test_on_state_change_notifies_port_forwarding_file_handler_with_new_state():
+    publisher_mock = Mock()
+    session_holder_mock = Mock()
+    port_forwarding_file_handler_mock = Mock(name="port_forwarding_file_handler_mock")
+    new_connection_details = events.ConnectionDetails(
+        device_ip="192.168.0.1",
+        device_country="PT",
+        server_ipv4="0.0.0.0",
+        server_ipv6=None,
+    )
+    _ = VPNConnector(
+        session_holder=session_holder_mock,
+        settings_persistence=None,
+        usage_reporting=None,
+        connection_persistence=Mock(),
+        publisher=publisher_mock,
+        port_forward_file_handler=port_forwarding_file_handler_mock
+    )
+
+    on_state_change_update_port_callback = publisher_mock.register.call_args_list[1][0][0]
+
+    connected_event = events.Connected(
+        context=events.EventContext(
+            connection=Mock(),
+            connection_details=new_connection_details
+        )
+    )
+    connected_state = states.Connected(context=states.StateContext(connected_event))
+    on_state_change_update_port_callback(connected_state)
+
+    port_forwarding_file_handler_mock.on_state_change_update_port.assert_called_once_with(connected_state)
 
 
 def test_on_state_change_skip_store_new_device_ip_when_successfully_connected_to_vpn_and_connection_details_is_none():

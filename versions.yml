@@ -1,3 +1,12 @@
+version: 0.45.5
+time: 2025/08/05 10:04
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: fix pf not being properly written to file"
+---
 version: 0.45.4
 time: 2025/07/31 09:44
 author: Pep Llaneras
