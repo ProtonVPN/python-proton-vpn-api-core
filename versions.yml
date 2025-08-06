@@ -1,3 +1,12 @@
+version: 0.45.6
+time: 2025/08/06 11:51
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- "Update version breaks clause"
+---
 version: 0.45.5
 time: 2025/08/05 10:04
 author: Alexandru Cheltuitor
