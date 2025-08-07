@@ -76,7 +76,13 @@ class SplitTunneling:
     """Config that is used for split tunneling
     """
     enabled: bool = False
-    config: SplitTunnelingConfig = field(default_factory=SplitTunnelingConfig)
+    mode: SplitTunnelingMode = SplitTunnelingMode.EXCLUDE
+    config_by_mode: dict[SplitTunnelingMode, SplitTunnelingConfig] = field(
+        default_factory=lambda: {  # nosemgrep: python.lang.maintainability.return.return-not-in-function  # pylint: disable=line-too-long  # noqa: E501
+            SplitTunnelingMode.EXCLUDE: SplitTunnelingConfig(mode=SplitTunnelingMode.EXCLUDE),
+            SplitTunnelingMode.INCLUDE: SplitTunnelingConfig(mode=SplitTunnelingMode.INCLUDE)
+        }
+    )
 
     @staticmethod
     def from_dict(data: dict) -> SplitTunneling:
@@ -91,10 +97,27 @@ class SplitTunneling:
         if not data:
             return SplitTunneling()
 
+        raw_data = data.get("config_by_mode", {})
+
+        config_by_mode = {
+            SplitTunnelingMode(k): SplitTunnelingConfig.from_dict(v)
+            for k, v in raw_data.items()
+        }
+        mode = SplitTunnelingMode(data.get("mode", SplitTunnelingMode.EXCLUDE.value))
+
         return SplitTunneling(
-            enabled=data.get("enabled"),
-            config=SplitTunnelingConfig.from_dict(data.get("config", {}))
+            enabled=data.get("enabled", False),
+            mode=mode,
+            config_by_mode=config_by_mode
         )
+
+    def get_config(self) -> SplitTunnelingConfig:
+        """Returns the split tunneling config for the currently selected mode.
+
+        Returns:
+            SplitTunnelingConfig: the split tunneling object
+        """
+        return self.config_by_mode[self.mode]
 
     def to_dict(self) -> Dict[str, object]:
         """Converts actual object to dict.
@@ -102,7 +125,11 @@ class SplitTunneling:
         Returns:
             dict: current object in dict
         """
+        config_by_mode: dict[str, dict[str, str]] = \
+            {k.value: v.to_dict() for k, v in self.config_by_mode.items()}
+
         return {
             "enabled": self.enabled,
-            "config": self.config.to_dict()
+            "mode": self.mode.value,
+            "config_by_mode": config_by_mode
         }

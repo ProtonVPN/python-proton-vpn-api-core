@@ -305,7 +305,8 @@ class Connected(State):
             if self.context.split_tunneling_setting.enabled:
                 try:
                     await self.context.split_tunneling.set_config(
-                        self.context.split_tunneling_setting.config
+                        self.context.split_tunneling_setting
+                            .get_config()
                     )
                 except SplitTunnelingError:
                     # We decided to treat split tunneling error as non-fatal, to prevent they

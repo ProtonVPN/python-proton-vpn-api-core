@@ -44,10 +44,18 @@ def default_free_settings_dict():
             "port_forwarding": False,
             "split_tunneling": {
                 "enabled": False,
-                "config": {
-                    "mode": SplitTunnelingMode.EXCLUDE.value,
-                    "app_paths": [],
-                    "ip_ranges": []
+                "mode": SplitTunnelingMode.EXCLUDE.value,
+                "config_by_mode": {
+                    SplitTunnelingMode.EXCLUDE.value: {
+                        "mode": SplitTunnelingMode.EXCLUDE.value,
+                        "app_paths": [],
+                        "ip_ranges": []
+                    },
+                    SplitTunnelingMode.INCLUDE.value: {
+                        "mode": SplitTunnelingMode.INCLUDE.value,
+                        "app_paths": [],
+                        "ip_ranges": []
+                    },
                 }
             },
         }

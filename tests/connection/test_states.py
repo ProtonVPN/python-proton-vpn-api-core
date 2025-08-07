@@ -333,10 +333,10 @@ async def test_connecting_run_tasks(kill_switch_setting):
 async def test_connected_run_tasks(kill_switch_setting):
     """The tasks to be run while on the connected state is to persist the connection parameters and
     enable kill switch if it's set to be enabled."""
-    context = AsyncMock()
+    context = AsyncMock(name="context")
     context.kill_switch_setting = kill_switch_setting
     context.event.context.forwarded_port = None
-    context.split_tunneling_setting = Mock()
+    context.split_tunneling_setting = Mock(name="split_tunneling_setting")
 
     connected = states.Connected(context)
 
@@ -356,7 +356,7 @@ async def test_connected_run_tasks(kill_switch_setting):
         assert context.method_calls == [
             call.kill_switch.enable_ipv6_leak_protection(),
             call.kill_switch.disable(),
-            call.split_tunneling.set_config(context.split_tunneling_setting.config),
+            call.split_tunneling.set_config(context.split_tunneling_setting.get_config()),
             call.connection.add_persistence(),
         ]
 
@@ -383,7 +383,7 @@ async def test_connected_run_tasks_swallows_split_tunneling_errors():
     context.kill_switch = AsyncMock()
     context.kill_switch_setting = KillSwitchSetting.OFF
     context.split_tunneling = AsyncMock()
-    context.split_tunneling_setting = SplitTunnelingSetting(enabled=True, config=Mock())
+    context.split_tunneling_setting = SplitTunnelingSetting(enabled=True)
     context.split_tunneling.set_config = AsyncMock(side_effect=SplitTunnelingError("forced error"))
     connected = states.Connected(context)
 
@@ -399,7 +399,7 @@ async def test_disconnected_run_tasks_swallows_split_tunneling_errors():
     context.kill_switch = AsyncMock()
     context.kill_switch_setting = KillSwitchSetting.OFF
     context.split_tunneling = AsyncMock()
-    context.split_tunneling_setting = SplitTunnelingSetting(enabled=True, config=Mock())
+    context.split_tunneling_setting = SplitTunnelingSetting(enabled=True)
     context.split_tunneling.clear_config = AsyncMock(side_effect=SplitTunnelingError("forced error"))
     disconnected = states.Disconnected(context)
 
