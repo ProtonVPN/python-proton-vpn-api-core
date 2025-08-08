@@ -1,3 +1,12 @@
+version: 0.45.8
+time: 2025/08/08 12:20
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: fix logic when loading st persisted settings"
+---
 version: 0.45.7
 time: 2025/08/07 15:13
 author: Alexandru Cheltuitor

@@ -79,8 +79,8 @@ class SplitTunneling:
     mode: SplitTunnelingMode = SplitTunnelingMode.EXCLUDE
     config_by_mode: dict[SplitTunnelingMode, SplitTunnelingConfig] = field(
         default_factory=lambda: {  # nosemgrep: python.lang.maintainability.return.return-not-in-function  # pylint: disable=line-too-long  # noqa: E501
-            SplitTunnelingMode.EXCLUDE: SplitTunnelingConfig(mode=SplitTunnelingMode.EXCLUDE),
-            SplitTunnelingMode.INCLUDE: SplitTunnelingConfig(mode=SplitTunnelingMode.INCLUDE)
+            SplitTunnelingMode.EXCLUDE.value: SplitTunnelingConfig(mode=SplitTunnelingMode.EXCLUDE),
+            SplitTunnelingMode.INCLUDE.value: SplitTunnelingConfig(mode=SplitTunnelingMode.INCLUDE)
         }
     )
 
@@ -100,7 +100,7 @@ class SplitTunneling:
         raw_data = data.get("config_by_mode", {})
 
         config_by_mode = {
-            SplitTunnelingMode(k): SplitTunnelingConfig.from_dict(v)
+            SplitTunnelingMode(k).value: SplitTunnelingConfig.from_dict(v)
             for k, v in raw_data.items()
         }
         mode = SplitTunnelingMode(data.get("mode", SplitTunnelingMode.EXCLUDE.value))
@@ -117,7 +117,7 @@ class SplitTunneling:
         Returns:
             SplitTunnelingConfig: the split tunneling object
         """
-        return self.config_by_mode[self.mode]
+        return self.config_by_mode[self.mode.value]
 
     def to_dict(self) -> Dict[str, object]:
         """Converts actual object to dict.
@@ -126,7 +126,7 @@ class SplitTunneling:
             dict: current object in dict
         """
         config_by_mode: dict[str, dict[str, str]] = \
-            {k.value: v.to_dict() for k, v in self.config_by_mode.items()}
+            {k: v.to_dict() for k, v in self.config_by_mode.items()}
 
         return {
             "enabled": self.enabled,
