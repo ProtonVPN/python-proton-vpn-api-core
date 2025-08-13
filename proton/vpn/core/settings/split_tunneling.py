@@ -84,6 +84,22 @@ class SplitTunneling:
         }
     )
 
+    @property
+    def exclude(self) -> SplitTunnelingConfig:
+        """Returns the split tunneling config for the exclude mode."""
+        return self.config_by_mode.get(
+            SplitTunnelingMode.EXCLUDE.value,
+            SplitTunnelingConfig(mode=SplitTunnelingMode.EXCLUDE)
+        )
+
+    @property
+    def include(self) -> SplitTunnelingConfig:
+        """Returns the split tunneling config for the include mode."""
+        return self.config_by_mode.get(
+            SplitTunnelingMode.INCLUDE.value,
+            SplitTunnelingConfig(mode=SplitTunnelingMode.INCLUDE)
+        )
+
     @staticmethod
     def from_dict(data: dict) -> SplitTunneling:
         """Generates `SplitTunneling` from regular python dict.

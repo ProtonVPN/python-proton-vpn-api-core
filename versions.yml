@@ -1,3 +1,12 @@
+version: 0.45.9
+time: 2025/08/13 11:15
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: add properties for easier access"
+---
 version: 0.45.8
 time: 2025/08/08 12:20
 author: Alexandru Cheltuitor
