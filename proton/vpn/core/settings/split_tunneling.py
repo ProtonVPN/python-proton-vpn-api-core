@@ -113,12 +113,21 @@ class SplitTunneling:
         if not data:
             return SplitTunneling()
 
-        raw_data = data.get("config_by_mode", {})
+        raw_data = data.get("config_by_mode")
 
-        config_by_mode = {
-            SplitTunnelingMode(k).value: SplitTunnelingConfig.from_dict(v)
-            for k, v in raw_data.items()
-        }
+        if not raw_data:
+            config_by_mode = {
+                SplitTunnelingMode.EXCLUDE.value:
+                    SplitTunnelingConfig(mode=SplitTunnelingMode.EXCLUDE),
+                SplitTunnelingMode.INCLUDE.value:
+                    SplitTunnelingConfig(mode=SplitTunnelingMode.INCLUDE)
+            }
+        else:
+            config_by_mode = {
+                SplitTunnelingMode(k).value: SplitTunnelingConfig.from_dict(v)
+                for k, v in raw_data.items()
+            }
+
         mode = SplitTunnelingMode(data.get("mode", SplitTunnelingMode.EXCLUDE.value))
 
         return SplitTunneling(

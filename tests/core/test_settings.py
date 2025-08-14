@@ -17,6 +17,7 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from unittest.mock import Mock
+import copy
 import pytest
 import itertools
 from proton.vpn.core.settings import Settings, SettingsPersistence, NetShield, SplitTunnelingMode
@@ -172,3 +173,11 @@ def test_get_ipv6_custom_dns_ips_returns_only_valid_ips(default_free_settings_di
     list_of_ipv6_addresses_in_string_form = [ip.exploded for ip in sp.custom_dns.get_enabled_ipv6_ips()]
 
     assert [dns["ip"] for dns in valid_ips] == list_of_ipv6_addresses_in_string_form
+
+
+def test_settings_default_split_tunneling_data_is_built_when_config_by_mode_value_is_invalid(default_free_settings_dict):
+    deep_copy_default_free_settings_dict = copy.deepcopy(default_free_settings_dict)
+    default_free_settings_dict["features"]["split_tunneling"]["config_by_mode"] = {}
+    free_settings = Settings.default(FREE_TIER)
+
+    free_settings.to_dict() == deep_copy_default_free_settings_dict
