@@ -50,8 +50,8 @@ class ServerListRefresher:
         """Returns the initial delay before the first refresh."""
         return self._session.server_list.seconds_until_expiration
 
-    async def refresh(self) -> RunAgain:
-        """Refreshes the server list/loads if expired, else schedules a future refresh."""
+    async def update_if_necessary(self) -> float:
+        """Refreshes the server list/loads if expired, and returns seconds till next expiration"""
         try:
             if self._session.server_list.expired:
                 server_list = await self._session.fetch_server_list()
@@ -78,6 +78,12 @@ class ServerListRefresher:
                 "Stopping server list refresh."
             )
             raise
+
+        return next_refresh_delay
+
+    async def refresh(self) -> RunAgain:
+        """Refreshes the server list/loads if expired, else schedules a future refresh."""
+        next_refresh_delay = await self.update_if_necessary()
 
         # Let the scheduler know that this method should be run again after a delay.
         logger.info(

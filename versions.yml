@@ -1,3 +1,12 @@
+version: 0.45.10
+time: 2025/08/14 10:51
+author: Richard Paterson
+email: richard.paterson@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat: add synchronous path to updating serverlist cache for CLI"
+---
 version: 0.45.9
 time: 2025/08/13 11:15
 author: Alexandru Cheltuitor

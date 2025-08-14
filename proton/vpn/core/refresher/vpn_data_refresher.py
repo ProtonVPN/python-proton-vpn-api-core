@@ -99,6 +99,17 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
         """Sets the callback to be called whenever the certificate is updated."""
         self._certificate_refresher.certificate_updated_callback = callback
 
+    async def server_list_updated(self):
+        """
+        Returns the list of available VPN servers, after updating if expired.
+        """
+        await self._refresh_vpn_session_if_necessary()
+        if self._scheduler.is_started is False:  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
+            # only update if scheduler isn't tasked with doing so
+            await self._server_list_refresher.update_if_necessary()
+
+        return self._session.server_list
+
     @property
     def server_list(self) -> ServerList:
         """
@@ -131,17 +142,8 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
 
     async def enable(self):
         """Start retrieving data periodically from Proton's REST API."""
-        if self._session.loaded:
-            self._enable()
-        else:
-            # The VPN session is normally loaded straight after the user logs in. However,
-            # it could happen that it's not loaded in any of the following scenarios:
-            # a) After a successful authentication, the HTTP requests to retrieve
-            #    the required VPN session data failed, so it was never persisted.
-            # b) The persisted VPN session does not have the expected format.
-            #    This can happen if we introduce a breaking change or if the persisted
-            #    data is messed up because the user changes it, or it gets corrupted.
-            await self._refresh_vpn_session_and_then_enable()
+        await self._refresh_vpn_session_if_necessary()
+        self._enable()
 
     async def disable(self):
         """Stops retrieving data periodically from Proton's REST API."""
@@ -206,7 +208,14 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
 
         self._scheduler.start()
 
-    async def _refresh_vpn_session_and_then_enable(self):
-        logger.warning("Reloading VPN session...")
-        await self._session.fetch_session_data()
-        self._enable()
+    async def _refresh_vpn_session_if_necessary(self):
+        if not self._session.loaded:
+            # The VPN session is normally loaded straight after the user logs in. However,
+            # it could happen that it's not loaded in any of the following scenarios:
+            # a) After a successful authentication, the HTTP requests to retrieve
+            #    the required VPN session data failed, so it was never persisted.
+            # b) The persisted VPN session does not have the expected format.
+            #    This can happen if we introduce a breaking change or if the persisted
+            #    data is messed up because the user changes it, or it gets corrupted.
+            logger.warning("Reloading VPN session...")
+            await self._session.fetch_session_data()
