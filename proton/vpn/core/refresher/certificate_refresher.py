@@ -94,6 +94,30 @@ class CertificateRefresher:
 
         return RunAgain.after_seconds(next_refresh_delay)
 
+    async def update_if_necessary(self):
+        """Fetches a new certificate from the REST API
+           if the current certificate has expired or will soon expire"""
+        pubkey_credentials = self._session.vpn_account.vpn_credentials.pubkey_credentials
+        if pubkey_credentials.remaining_time_to_next_refresh > 0:
+            return  # too early to update the certificate
+
+        try:
+            await self._session.fetch_certificate()
+            await self._notify()
+        except ProtonAPIError as error:
+            if error.http_code != 429:
+                raise
+
+            logger.warning(f"Certificate refresh failed {error}")
+        except (ProtonAPINotReachable, ProtonAPINotAvailable) as error:
+            logger.warning(f"Certificate refresh failed: {error}")
+        except Exception:
+            logger.error(
+                "Certificate refresh failed unexpectedly."
+                "Stopping certificate refresh."
+            )
+            raise
+
     def _get_next_refresh_delay(self):
         return min(
             generate_backoff_value(self._number_of_failed_refresh_attempts),

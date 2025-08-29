@@ -49,6 +49,27 @@ class FeatureFlagsRefresher:
         """Returns the initial delay before the first refresh."""
         return self._session.feature_flags.seconds_until_expiration
 
+    async def update_if_necessary(self):
+        """Fetches the new feature flags if the current list has expired"""
+        if not self._session.feature_flags.is_expired:
+            return  # no need to update too early
+
+        try:
+            await self._session.fetch_feature_flags()
+        except ProtonAPIError as error:
+            if error.http_code != 429:
+                raise
+
+            logger.warning(f"Feature flag refresh failed {error}")
+        except (ProtonAPINotReachable, ProtonAPINotAvailable) as error:
+            logger.warning(f"Feature flag refresh failed: {error}")
+        except Exception:
+            logger.error(
+                "Feature flag refresh failed unexpectedly."
+                "Stopping feature flag refresh."
+            )
+            raise
+
     async def refresh(self) -> RunAgain:
         """Fetches the new features from the REST API."""
         try:

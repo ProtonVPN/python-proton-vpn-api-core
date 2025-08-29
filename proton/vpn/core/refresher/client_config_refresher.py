@@ -50,6 +50,27 @@ class ClientConfigRefresher:
         """Returns the initial delay before the first refresh."""
         return self._session.client_config.seconds_until_expiration
 
+    async def update_if_necessary(self):
+        """Fetches the new client config if the current one has expired"""
+        if not self._session.client_config.is_expired:
+            return  # no need to update too early
+
+        try:
+            await self._session.fetch_client_config()
+        except ProtonAPIError as error:
+            if error.http_code != 429:
+                raise
+
+            logger.warning(f"Client config refresh failed: {error}")
+        except (ProtonAPINotReachable, ProtonAPINotAvailable) as error:
+            logger.warning(f"Client config refresh failed: {error}")
+        except Exception:
+            logger.error(
+                "Client config refresh failed unexpectedly. "
+                "Stopping client config refresh."
+            )
+            raise
+
     async def refresh(self) -> RunAgain:
         """Fetches the new client configuration from the REST API."""
         try:

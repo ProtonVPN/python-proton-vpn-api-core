@@ -99,16 +99,47 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
         """Sets the callback to be called whenever the certificate is updated."""
         self._certificate_refresher.certificate_updated_callback = callback
 
-    async def server_list_updated(self):
+    async def get_up_to_date_server_list(self) -> ServerList:
         """
         Returns the list of available VPN servers, after updating if expired.
         """
         await self._refresh_vpn_session_if_necessary()
-        if self._scheduler.is_started is False:  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
+        if not self._scheduler.is_started:
             # only update if scheduler isn't tasked with doing so
             await self._server_list_refresher.update_if_necessary()
 
         return self._session.server_list
+
+    async def get_up_to_date_client_config(self) -> ClientConfig:
+        """
+        Returns the VPN client configuration, after updating if expired.
+        """
+        await self._refresh_vpn_session_if_necessary()
+        if not self._scheduler.is_started:
+            # only update if scheduler isn't tasked with doing so
+            await self._client_config_refresher.update_if_necessary()
+
+        return self._session.client_config
+
+    async def get_up_to_date_feature_flags(self) -> FeatureFlags:
+        """
+        Returns the feature flags list, after updating if expired.
+        """
+        await self._refresh_vpn_session_if_necessary()
+        if not self._scheduler.is_started:
+            # only update if scheduler isn't tasked with doing so
+            await self._feature_flags_refresher.update_if_necessary()
+
+        return self._session.feature_flags
+
+    async def update_certificate_if_necessary(self):
+        """
+        Updates the API certificate if it has expired, or will soon do so.
+        """
+        await self._refresh_vpn_session_if_necessary()
+        if not self._scheduler.is_started:
+            # only update if scheduler isn't tasked with doing so
+            await self._certificate_refresher.update_if_necessary()
 
     @property
     def server_list(self) -> ServerList:
