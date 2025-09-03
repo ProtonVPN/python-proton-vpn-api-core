@@ -230,7 +230,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             await self._split_tunneling.clear_config()
         else:
             await self._split_tunneling.set_config(
-                st_settings.config
+                st_settings.get_config()
             )
 
     def get_certificate_based_openvpn(self):
