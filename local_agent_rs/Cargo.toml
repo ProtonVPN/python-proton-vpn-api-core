@@ -23,8 +23,6 @@ bincode = "1.3.3"
 test-log = ">=0.2.16"
 static_assertions = "1.1.0"
 uniffi = { version = "0.29.3", features = ["cli"], optional = true }
-
-[dev-dependencies]
 x509-parser = "0.16.0"
 
 [build-dependencies]

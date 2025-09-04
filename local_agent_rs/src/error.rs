@@ -39,6 +39,10 @@ pub enum Error {
     PortForwarding(String),
     #[error("Bincode: {0}")]
     BincodeError(#[from] bincode::Error),
+    #[error("Expired certificate")]
+    ExpiredCertificate,
+    #[error("Unable to parse certificate")]
+    UnableToParseCertificate,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

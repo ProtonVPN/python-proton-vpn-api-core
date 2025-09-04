@@ -9,7 +9,7 @@ use crate::{
 use rustls_pki_types::CertificateDer;
 use std::sync::Arc;
 use tokio::net::TcpStream;
-use tokio_rustls::rustls::{version::TLS12, ClientConfig, RootCertStore};
+use tokio_rustls::rustls::{ClientConfig, RootCertStore};
 use tokio_rustls::TlsConnector;
 // -----------------------------------------------------------------------------
 
@@ -98,6 +98,24 @@ fn parse_certificates(cert: &str) -> Result<Vec<CertificateDer<'static>>> {
     Ok(certs)
 }
 
+fn ensure_certificates_are_current(
+    certificates: &[CertificateDer<'_>]
+) -> Result<()> {
+
+    for cert_d in certificates {
+
+        let (_, cert) = x509_parser::parse_x509_certificate(cert_d).map_err(
+            |_| Error::UnableToParseCertificate,
+        )?;
+
+        if !cert.tbs_certificate.validity.is_valid() {
+            return Err(Error::ExpiredCertificate);
+        }
+    }
+
+    Ok(())
+}
+
 /// Creator of AgentConnections.
 ///
 /// You should only need one of these per application.
@@ -122,14 +140,15 @@ impl AgentConnector {
 
         let certs = parse_certificates(&params.cert)?;
 
+        // This does a time validation of the certificates
+        // and will return an error if any of them are expired.
+        ensure_certificates_are_current(&certs)?;
+
         // Key is in pks8 format
         let key = rustls_pemfile::private_key(&mut std::io::Cursor::new(&params.key))?
             .ok_or(Error::NoPrivateKeyFound)?;
 
-        // TLS 1.2 is forced because with 1.3 we were not getting any errors
-        // when later we were establishing a connection with an expired certificate.
-        // FIX-ME: see how to achieve the same with 1.3
-        let config = ClientConfig::builder_with_protocol_versions(&[&TLS12])
+        let config = ClientConfig::builder()
             .with_root_certificates(root_cert_store)
             .with_client_auth_cert(certs, key)?;
 

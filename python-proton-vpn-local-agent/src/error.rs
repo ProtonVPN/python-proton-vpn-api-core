@@ -43,27 +43,15 @@ const FEATURE_ERROR_RANGE: std::ops::Range<u32> = 86200..86300;
 impl std::convert::From<Error> for PyErr {
     fn from(err: Error) -> PyErr {
         match err {
-            Error::LocalAgent(la::Error::Tokio(e))
-                if e.kind() == ErrorKind::InvalidData =>
-            {
-                ExpiredCertificateError::new_err(convert_error_message_string(
-                    &e,
-                ))
-            }
-
+            Error::LocalAgent(la::Error::ExpiredCertificate) =>
+                ExpiredCertificateError::new_err(
+                    convert_error_message_string(&la::Error::ExpiredCertificate)
+                ),
             Error::LocalAgent(la::Error::Tokio(e))
                 if e.kind() == ErrorKind::TimedOut
                     || e.kind() == ErrorKind::BrokenPipe =>
             {
                 PyTimeoutError::new_err(convert_error_message_string(&e))
-            }
-            Error::LocalAgent(la::Error::Tokio(e))
-                if e.kind() == ErrorKind::UnexpectedEof
-                    && e.to_string() == "tls handshake eof" =>
-            {
-                ExpiredCertificateError::new_err(convert_error_message_string(
-                    &e,
-                ))
             }
             Error::LocalAgent(la::Error::TokioElapsed(e)) => {
                 PyTimeoutError::new_err(convert_error_message_string(&e))
