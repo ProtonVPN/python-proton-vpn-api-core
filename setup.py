@@ -24,7 +24,7 @@ setup(
     include_package_data=True,
     install_requires=["proton-core", "proton-vpn-api-core", "pygobject", "pycairo", "packaging", "jinja2"],
     extras_require={
-        "development": ["wheel", "pytest", "pytest-cov", "pytest-asyncio", "flake8", "pylint", "PyYAML"]
+        "development": ["proton-vpn-local-agent", "wheel", "pytest", "pytest-cov", "pytest-asyncio", "flake8", "pylint", "PyYAML"]
     },
     entry_points={
         "proton_loader_backend": [

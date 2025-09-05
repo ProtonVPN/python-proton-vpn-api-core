@@ -19,7 +19,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from typing import Union
+from __future__ import annotations
+import os
+from random import randrange
+from typing import Optional, Union
 from ipaddress import IPv4Address, IPv6Address
 import socket
 import uuid
@@ -42,6 +45,10 @@ from proton.vpn.backend.linux.networkmanager.core import (LinuxNetworkManager,
 
 
 logger = logging.getLogger(__name__)
+
+FWMARK_ENV_VAR = "PROTON_VPN_FWMARK"
+MIN_FWMARK_VALUE = 51821
+MAX_FWMARK_VALUE = 2**32  # 32-bit integer
 
 
 @dataclass
@@ -90,13 +97,46 @@ wg_config = WireGuardConfig(
 )
 
 
+def get_fwmark_from_env_var() -> Optional[int]:
+    """
+    Returns the fwmark from the env var or None if not available or not valid.
+    """
+    fwmark_str = os.getenv(FWMARK_ENV_VAR)
+
+    if not fwmark_str:
+        return None
+
+    try:
+        fwmark = int(fwmark_str)
+
+        if fwmark not in range(MIN_FWMARK_VALUE, MAX_FWMARK_VALUE):
+            raise ValueError("fwmark out of range")
+
+        return fwmark
+    except ValueError:
+        logger.error(
+            "The %s env var should contain an integer "
+            "higher or equal than %s and lower than %s",
+            FWMARK_ENV_VAR, MIN_FWMARK_VALUE, MAX_FWMARK_VALUE
+        )
+
+    return None
+
+
+def get_random_fwmark() -> int:
+    """Returns a random fwmark within the expected range."""
+    # nosemgrep: gitlab.bandit.B311
+    return randrange(MIN_FWMARK_VALUE, MAX_FWMARK_VALUE)  # nosec B311
+
+
 class Wireguard(LinuxNetworkManager, LocalAgentMixin):
     """Creates a Wireguard connection."""
-    SIGNAL_NAME = "state-changed"
-    VIRTUAL_DEVICE_NAME = "proton0"
-    protocol = "wireguard"
-    ui_protocol = "WireGuard"
-    connection = None
+    SIGNAL_NAME: str = "state-changed"
+    VIRTUAL_DEVICE_NAME: str = "proton0"
+    protocol: str = "wireguard"
+    ui_protocol: str = "WireGuard"
+    connection: Optional[NM.SimpleConnection] = None
+    FWMARK: int = get_fwmark_from_env_var() or get_random_fwmark()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -263,6 +303,10 @@ class Wireguard(LinuxNetworkManager, LocalAgentMixin):
         wireguard_config.set_property(
             NM.SETTING_WIREGUARD_PRIVATE_KEY,
             self._vpncredentials.pubkey_credentials.wg_private_key
+        )
+
+        wireguard_config.set_property(
+            NM.SETTING_WIREGUARD_FWMARK, self.FWMARK
         )
 
         self.connection.add_setting(wireguard_config)

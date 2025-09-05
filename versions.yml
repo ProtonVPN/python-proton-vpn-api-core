@@ -1,3 +1,12 @@
+version: 0.13.0
+time: 2025/09/05 12:58
+author: Pep Llaneras
+email: josep.llaneras@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat: keep wireguard fwmark stable"
+---
 version: 0.12.15
 time: 2025/07/07 10:18
 author: Pep Llaneras
