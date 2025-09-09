@@ -22,7 +22,7 @@ import itertools
 import random
 import time
 from enum import Enum
-from typing import Optional, List, Callable
+from typing import Callable, Generator, Iterable, List, Optional
 
 from proton.vpn import logging
 from proton.vpn.session.dataclasses.servers import Country
@@ -198,35 +198,73 @@ class ServerList:  # pylint: disable=R0902, R0904
                 f"The server with {name=} was not found"
             ) from error
 
-    def get_fastest_in_country(self, country_code: str) -> LogicalServer:
-        """
-        :returns: the fastest server in the specified country and the tiers
-        the user has access to.
-        """
-        country_servers = [
-            server for server in self.logicals
-            if server.exit_country.lower() == country_code.lower()
-        ]
-        return ServerList(
-            self.user_tier, country_servers, index_servers=False
-        ).get_fastest()
+    @staticmethod
+    def __get_fastest_available_server(
+            servers: Iterable[LogicalServer],
+            user_tier: TierEnum
+    ) -> Optional[LogicalServer]:
 
-    def get_fastest(self) -> LogicalServer:
-        """:returns: the fastest server in the tiers the user has access to."""
-        available_servers = [
-            server for server in self.logicals
+        available_servers = (
+            server for server in servers
             if (
                 server.enabled
-                and server.tier <= self.user_tier
+                and server.tier <= user_tier
                 and ServerFeatureEnum.SECURE_CORE not in server.features
                 and ServerFeatureEnum.TOR not in server.features
             )
-        ]
+        )
 
-        if not available_servers:
+        return min(available_servers, key=lambda s: s.score, default=None)
+
+    def _get_servers_in_country_code(self, country_code: str) -> Generator[LogicalServer]:
+        return (
+            server for server in self.logicals
+            if server.exit_country.lower() == country_code.lower()
+        )
+
+    def _get_servers_in_city(self, city_name: str) -> Generator[LogicalServer]:
+        return (
+            server for server in self.logicals
+            if server.city.lower() == city_name.lower()
+        )
+
+    def get_fastest_in_country(self, country_code: str) -> LogicalServer:
+        """
+        :returns: the fastest server for the specified country code and the tiers
+        the user has access to.
+        """
+        country_servers = self._get_servers_in_country_code(country_code)
+        fastest_available_server = \
+            ServerList.__get_fastest_available_server(country_servers, self.user_tier)
+
+        if not fastest_available_server:
             raise ServerNotFoundError("No server available in the current tier")
 
-        return sorted(available_servers, key=lambda server: server.score)[0]
+        return fastest_available_server
+
+    def get_fastest_in_city(self, city_name: str) -> LogicalServer:
+        """
+        :returns: the fastest server in the specified city and the tiers
+        the user has access to.
+        """
+        city_servers = self._get_servers_in_city(city_name)
+        fastest_available_server = \
+            ServerList.__get_fastest_available_server(city_servers, self.user_tier)
+
+        if not fastest_available_server:
+            raise ServerNotFoundError("No server available in the current tier")
+
+        return fastest_available_server
+
+    def get_fastest(self) -> LogicalServer:
+        """:returns: the fastest server in the tiers the user has access to."""
+        fastest_available_server = \
+            ServerList.__get_fastest_available_server(self.logicals, self.user_tier)
+
+        if not fastest_available_server:
+            raise ServerNotFoundError("No server available in the current tier")
+
+        return fastest_available_server
 
     def group_by_country(self) -> List[Country]:
         """

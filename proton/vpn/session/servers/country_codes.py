@@ -20,6 +20,8 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+from typing import Optional
+
 
 def get_country_name_by_code(country_code: str):
     """Returns country name based on provided country code."""
@@ -27,6 +29,15 @@ def get_country_name_by_code(country_code: str):
 
     # If the country name was not found then default to the country code.
     return country_name or country_code
+
+
+def get_country_code_for_name(country_name: str) -> Optional[str]:
+    """Returns country code based on provided country name, or None if not present"""
+    for code, name in country_codes.items():
+        if name.lower() == country_name.lower():
+            return code
+
+    return None
 
 
 country_codes = {

@@ -16,12 +16,15 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+import pytest
+
 from proton.vpn.session.servers import LogicalServer, ServerFeatureEnum
 from proton.vpn.session.servers.logicals import sort_servers_alphabetically_by_country_and_server_name, ServerList
 
 
-def test_server_list_get_fastest():
-    api_response = {
+@pytest.fixture(name="api_response")
+def fixture_api_response() -> str:
+    return {
         "Code": 1000,
         "LogicalServers": [
             {
@@ -32,6 +35,7 @@ def test_server_list_get_fastest():
                 "Score": 15.0,  # AR#9 has better score (lower is better)
                 "Tier": 2,
                 "ExitCountry": "JP",
+                "City": "Tokyo"
             },
             {
                 "ID": 2,
@@ -41,18 +45,40 @@ def test_server_list_get_fastest():
                 "Score": 1.0,  # Even though it has a better score than CH#9,
                 "Tier": 3,     # it's not in the user tier (2).
                 "ExitCountry": "AR",
+                "City": "Buenos Aires"
             },
             {
                 "ID": 3,
+                "Name": "AR#13",
+                "Status": 1,
+                "Servers": [{"Status": 1}],
+                "Score": 2.0,  # Even though it has a better score than CH#9,
+                "Tier": 3,     # it's not in the user tier (2).
+                "ExitCountry": "AR",
+                "City": "Rosario"
+            },
+            {
+                "ID": 4,
+                "Name": "AR#14",
+                "Status": 1,
+                "Servers": [{"Status": 1}],
+                "Score": 3.0,  # Even though it has a better score than CH#9,
+                "Tier": 3,     # it's not in the user tier (2).
+                "ExitCountry": "AR",
+                "City": "Rosario"
+            },
+            {
+                "ID": 5,
                 "Name": "AR#9",
                 "Status": 1,
                 "Servers": [{"Status": 1}],
                 "Score": 10.0,  # Fastest server in the  user tier (2)
                 "Tier": 2,
                 "ExitCountry": "AR",
+                "City": "Rosario"
             },
             {
-                "ID": 4,
+                "ID": 6,
                 "Name": "CH#18-TOR",
                 "Status": 1,
                 "Servers": [{"Status": 1}],
@@ -60,9 +86,10 @@ def test_server_list_get_fastest():
                 "Features": ServerFeatureEnum.TOR,  # TOR servers should be ignored.
                 "Tier": 2,
                 "ExitCountry": "CH",
+                "City": "Wuhan"
             },
             {
-                "ID": 5,
+                "ID": 7,
                 "Name": "CH-US#1",
                 "Status": 1,
                 "Servers": [{"Status": 1}],
@@ -70,19 +97,23 @@ def test_server_list_get_fastest():
                 "Features": ServerFeatureEnum.SECURE_CORE,  # secure core servers should be ignored.
                 "Tier": 2,
                 "ExitCountry": "CH",
+                "City": "Beijing"
             },
             {
-                "ID": 6,
+                "ID": 8,
                 "Name": "JP#1",
                 "Score": 9.0,  # Even though it has a better score than AR#9,
                 "Status": 0,   # this server is not enabled.
                 "Servers": [{"Status": 0}],
                 "Tier": 2,
                 "ExitCountry": "JP",
+                "City": "Osaka",
             },
         ]
     }
 
+
+def test_server_list_get_fastest(api_response: str):
     server_list = ServerList(
         user_tier=2,
         logicals=[LogicalServer(ls) for ls in api_response["LogicalServers"]]
@@ -90,6 +121,26 @@ def test_server_list_get_fastest():
 
     fastest = server_list.get_fastest()
     assert fastest.name == "AR#9"
+
+
+def test_server_list_get_fastest_in_country(api_response: str):
+    server_list = ServerList(
+        user_tier=3,
+        logicals=[LogicalServer(ls) for ls in api_response["LogicalServers"]]
+    )
+
+    fastest = server_list.get_fastest_in_country("AR")
+    assert fastest.name == "AR#11"
+
+
+def test_server_list_get_fastest_in_city(api_response: str):
+    server_list = ServerList(
+        user_tier=3,
+        logicals=[LogicalServer(ls) for ls in api_response["LogicalServers"]]
+    )
+
+    fastest = server_list.get_fastest_in_city("Rosario")
+    assert fastest.name == "AR#13"
 
 
 def test_sort_servers_alphabetically_by_country_and_server_name():

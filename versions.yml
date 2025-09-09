@@ -1,3 +1,12 @@
+version: 0.45.14
+time: 2025/09/09 09:24
+author: Richard Paterson
+email: richard.paterson@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat: Add fastest server in city"
+---
 version: 0.45.13
 time: 2025/09/03 16:35
 author: Luke Titley
