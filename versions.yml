@@ -1,3 +1,12 @@
+version: 0.46.0
+time: 2025/09/11 14:48
+author: Pep Llaneras
+email: josep.llaneras@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat: add security key support for 2FA"
+---
 version: 0.45.14
 time: 2025/09/09 09:24
 author: Richard Paterson

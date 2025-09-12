@@ -21,6 +21,7 @@ from os.path import basename
 from typing import Optional
 
 from proton.session import Session, FormData, FormField
+from proton.session.api import Fido2Assertion, Fido2AssertionParameters
 
 from proton.vpn import logging
 from proton.vpn.session.account import VPNAccount
@@ -73,6 +74,15 @@ class VPNSession(Session):
             **kwargs
     ):  # pylint: disable=too-many-arguments
         self._fetcher = fetcher or VPNSessionFetcher(session=self)
+
+        try:
+            # pylint: disable=import-outside-toplevel
+            from proton.vpn.session.u2f import U2FKeys
+            self._u2f_keys = U2FKeys()
+        except ImportError as error:
+            self._u2f_keys = None
+            logger.warning(error)
+
         self._vpn_account = vpn_account
         self._server_list = server_list
         self._client_config = client_config
@@ -135,13 +145,45 @@ class VPNSession(Session):
 
         return LoginResult(success=True, authenticated=True, twofa_required=False)
 
-    async def provide_2fa(self, code: str) -> LoginResult:  # pylint: disable=arguments-differ # noqa: E501
+    async def provide_2fa_code(self, code: str) -> LoginResult:
         """
         Submits the 2FA code.
         :returns: whether the 2FA was successful or not.
         """
-        valid_code = await super().async_provide_2fa(code)
+        valid_code = await super().async_validate_2fa_code(code)
+
         if not valid_code:
+            return LoginResult(success=False, authenticated=True, twofa_required=True)
+
+        return LoginResult(success=True, authenticated=True, twofa_required=False)
+
+    @property
+    def fido2_lib_available(self) -> Fido2AssertionParameters:
+        """
+        :returns: whether the expected FIDO2 library is available or not.
+        """
+        return bool(self._u2f_keys)
+
+    async def generate_2fa_fido2_assertion(self) -> Fido2Assertion:
+        """Scans for U2F/FIDO2 keys and generates a FIDO2 assertion."""
+        if not self.fido2_lib_available:
+            raise RuntimeError("U2F/FIDO2 support is not available on this platform")
+
+        assertion = await self._u2f_keys.select_and_get_assertion(self)
+
+        return assertion
+
+    async def provide_2fa_fido2(self, fido2_assertion: Fido2Assertion) -> LoginResult:
+        """
+        Submits the 2FA FIDO2 assertion.
+        :returns: whether the 2FA was successful or not.
+        """
+        if not self.fido2_lib_available:
+            raise RuntimeError("U2F/FIDO2 support is not available on this platform")
+
+        valid_assertion = await super().async_validate_2fa_fido2(fido2_assertion)
+
+        if not valid_assertion:
             return LoginResult(success=False, authenticated=True, twofa_required=True)
 
         return LoginResult(success=True, authenticated=True, twofa_required=False)

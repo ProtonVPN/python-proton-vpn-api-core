@@ -33,6 +33,8 @@ from proton.vpn.session.account import VPNAccount
 from proton.vpn.session import FeatureFlags
 from proton.vpn.core.usage import UsageReporting
 
+from proton.session.api import Fido2Assertion
+
 logger = logging.getLogger(__name__)
 
 
@@ -124,7 +126,34 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         :return: The login result.
         """
         session = self._session_holder.session
-        result = await session.provide_2fa(code)
+        result = await session.provide_2fa_code(code)
+
+        if result.success and not session.loaded:
+            await session.fetch_session_data()
+
+        return result
+
+    @property
+    def is_fido2_lib_available(self) -> bool:
+        """
+        Returns whether we support U2F/FIDO2 security keys for 2FA on this platform.
+        """
+        return bool(self._session_holder.session.fido2_lib_available)
+
+    async def generate_2fa_fido2_assertion(self) -> Fido2Assertion:
+        """
+        Generates a 2FA assertion using a U2F/FIDO2 security key.
+        :return: The generated FIDO2 assertion.
+        """
+        return await self._session_holder.session.generate_2fa_fido2_assertion()
+
+    async def submit_2fa_fido2(self, fido2_assertion: Fido2Assertion) -> LoginResult:
+        """
+        Submits the 2-factor authentication using a U2F/FIDO2 security key.
+        :return: The login result.
+        """
+        session = self._session_holder.session
+        result = await session.provide_2fa_fido2(fido2_assertion)
 
         if result.success and not session.loaded:
             await session.fetch_session_data()

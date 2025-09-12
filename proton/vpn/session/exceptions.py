@@ -67,3 +67,23 @@ class ServerNotFoundError(Exception):
 
 class ClientConfigDecodeError(ValueError):
     """The client configuration could not be parsed."""
+
+
+class SecurityKeyError(Exception):
+    """Base exception for security key errors."""
+
+
+class Fido2NotSupportedError(SecurityKeyError):
+    """Raised when FIDO2 authentication is not available on the current session."""
+
+
+class SecurityKeyNotFoundError(SecurityKeyError):
+    """Raised when no security key is found."""
+
+
+class InvalidSecurityKeyError(SecurityKeyError):
+    """Raised when the security key is invalid or cannot be used."""
+
+
+class SecurityKeyTimeoutError(SecurityKeyError):
+    """Raised when the security key operation times out."""
