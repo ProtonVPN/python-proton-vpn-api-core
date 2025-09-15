@@ -37,6 +37,12 @@ from proton.vpn.backend.linux.networkmanager.core.local_agent import (
 
 logger = logging.getLogger(__name__)
 
+TWOFA_REASON_CODES = [
+    ReasonCode.REASON_CODE_2FA_UNSPECIFIED,
+    ReasonCode.REASON_CODE_2FA_EXPIRED,
+    ReasonCode.REASON_CODE_2FA_SITUATION_CHANGED
+]
+
 
 class LocalAgentMixin:  # pylint: disable=too-few-public-methods
     """
@@ -142,6 +148,10 @@ class LocalAgentMixin:  # pylint: disable=too-few-public-methods
         if status.reason.code == ReasonCode.CERTIFICATE_EXPIRED:
             self._notify_subscribers_threadsafe(
                 events.ExpiredCertificate(context)
+            )
+        elif status.reason.code in TWOFA_REASON_CODES:
+            self._notify_subscribers_threadsafe(
+                events.TwoFARequired(context)
             )
         elif self.__has_reached_max_amount_of_concurrent_vpn_connections(status.reason.code):
             self._notify_subscribers_threadsafe(

@@ -1,3 +1,12 @@
+version: 0.13.1
+time: 2025/09/17 16:16
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat: Support 2fa hard-jailing"
+---
 version: 0.13.0
 time: 2025/09/05 12:58
 author: Pep Llaneras

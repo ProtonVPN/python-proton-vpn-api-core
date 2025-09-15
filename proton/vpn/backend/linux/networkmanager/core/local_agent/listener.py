@@ -27,6 +27,8 @@ from proton.vpn import logging
 
 logger = logging.getLogger(__name__)
 
+DEBUG_LA_RESPONSES = None
+
 
 class AgentListener:
     """Listens for local agent messages asynchronously."""
@@ -46,9 +48,13 @@ class AgentListener:
         :raises TimeoutError: when the connection to LA server times out.
         :raises Exception: any other exceptions.
         """
-        private_key = credentials.get_ed25519_sk_pem()
-        certificate = credentials.certificate_pem
-        self._listener = await Listener.connect(domain, private_key, certificate)
+        if DEBUG_LA_RESPONSES:
+            self._listener = await Listener.playback(DEBUG_LA_RESPONSES)
+        else:
+            private_key = credentials.get_ed25519_sk_pem()
+            certificate = credentials.certificate_pem
+            self._listener = await Listener.connect(domain, private_key,
+                                                    certificate)
 
     async def listen(self):
         """Starts the background process of listening to incoming messages from LA."""
