@@ -32,7 +32,7 @@ Requires: python3-pynacl
 Requires: python3-proton-vpn-lib >= 0.1.1
 Requires: python3-fido2
 
-Conflicts: proton-vpn-gtk-app < 4.11.0~rc2
+Conflicts: proton-vpn-gtk-app < 4.11.0~b0
 Conflicts: python3-proton-vpn-network-manager < 0.12.14
 
 Obsoletes: python3-proton-vpn-session

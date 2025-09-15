@@ -15,6 +15,6 @@ Depends: ${python3:Depends}, ${misc:Depends},
     python3-proton-core (>= 0.5.0),
     python3-distro, python3-sentry-sdk, python3-nacl, python3-proton-vpn-lib (>= 0.1.1),
     python3-fido2
-Breaks: proton-vpn-gtk-app (<< 4.11.0~rc2), python3-proton-vpn-network-manager (<< 0.12.14)
+Breaks: proton-vpn-gtk-app (<< 4.11.0~b0), python3-proton-vpn-network-manager (<< 0.12.14)
 Replaces: python3-proton-vpn-session, python3-proton-vpn-connection, python3-proton-vpn-killswitch, python3-proton-vpn-logger
 Description: Python3 ProtonVPN Core API
