@@ -21,6 +21,8 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import asyncio
 import copy
+from threading import Event
+from typing import Optional
 
 from proton.vpn import logging
 from proton.vpn.core.connection import VPNConnector
@@ -34,6 +36,8 @@ from proton.vpn.session import FeatureFlags
 from proton.vpn.core.usage import UsageReporting
 
 from proton.session.api import Fido2Assertion
+
+from proton.vpn.session.u2f_interaction import UserInteraction
 
 logger = logging.getLogger(__name__)
 
@@ -140,12 +144,23 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         """
         return bool(self._session_holder.session.fido2_lib_available)
 
-    async def generate_2fa_fido2_assertion(self) -> Fido2Assertion:
+    async def generate_2fa_fido2_assertion(
+            self,
+            user_interaction: Optional[UserInteraction] = None,
+            cancel_assertion: Optional[Event] = None
+    ) -> Fido2Assertion:
         """
         Generates a 2FA assertion using a U2F/FIDO2 security key.
-        :return: The generated FIDO2 assertion.
+
+        :param user_interaction: object handling any required user interaction
+            while generating the assertion.
+        :param cancel_assertion: optional event that can be set to cancel the
+        fido 2 assertion process.
+        :returns: the generated FIDO 2 assertion.
         """
-        return await self._session_holder.session.generate_2fa_fido2_assertion()
+        return await self._session_holder.session.generate_2fa_fido2_assertion(
+            user_interaction, cancel_assertion
+        )
 
     async def submit_2fa_fido2(self, fido2_assertion: Fido2Assertion) -> LoginResult:
         """

@@ -18,6 +18,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import asyncio
 from os.path import basename
+from threading import Event
 from typing import Optional
 
 from proton.session import Session, FormData, FormField
@@ -32,6 +33,7 @@ from proton.vpn.session.dataclasses import LoginResult, BugReportForm, VPNCertif
 from proton.vpn.session.exceptions import VPNAccountDecodeError, ServerListDecodeError
 from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.feature_flags_fetcher import FeatureFlags
+from proton.vpn.session.u2f_interaction import UserInteraction
 
 logger = logging.getLogger(__name__)
 
@@ -164,14 +166,26 @@ class VPNSession(Session):
         """
         return bool(self._u2f_keys)
 
-    async def generate_2fa_fido2_assertion(self) -> Fido2Assertion:
-        """Scans for U2F/FIDO2 keys and generates a FIDO2 assertion."""
+    async def generate_2fa_fido2_assertion(
+            self,
+            user_interaction: Optional[UserInteraction] = None,
+            cancel_assertion: Optional[Event] = None
+    ) -> Fido2Assertion:
+        """
+        Scans for U2F/FIDO2 keys and generates a FIDO2 assertion.
+
+        :param user_interaction: object handling any required user interaction
+            while generating the assertion.
+        :param cancel_assertion: optional event that can be set to cancel the
+        fido 2 assertion process.
+        :returns: the generated FIDO2 assertion.
+        """
         if not self.fido2_lib_available:
             raise RuntimeError("U2F/FIDO2 support is not available on this platform")
 
-        assertion = await self._u2f_keys.select_and_get_assertion(self)
-
-        return assertion
+        return await self._u2f_keys.scan_keys_and_get_assertion(
+            self, user_interaction, cancel_assertion
+        )
 
     async def provide_2fa_fido2(self, fido2_assertion: Fido2Assertion) -> LoginResult:
         """

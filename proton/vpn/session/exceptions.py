@@ -87,3 +87,17 @@ class InvalidSecurityKeyError(SecurityKeyError):
 
 class SecurityKeyTimeoutError(SecurityKeyError):
     """Raised when the security key operation times out."""
+
+
+class SecurityKeyPINNotSetError(SecurityKeyError):
+    """
+    Raised when the FIDO 2 server requires a PIN to be set
+    on the security key, but the user didn't set it.
+    """
+
+
+class SecurityKeyPINInvalidError(SecurityKeyError):
+    """
+    Raised when the security key has a PIN set but the one the
+    user provided is not correct.
+    """

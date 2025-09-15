@@ -1,3 +1,12 @@
+version: 0.48.0
+time: 2025/09/24 14:05
+author: Pep Llaneras
+email: josep.llaneras@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat: handle U2F key PIN"
+---
 version: 0.47.1
 time: 2025/09/24 13:00
 author: Alexandru Cheltuitor
