@@ -83,3 +83,9 @@ class FeatureSyntaxError(FeatureError):
     connection feature is incorrect, ie: passing wrong/non-existent values, format is
     incorrect, etc.
     """
+
+
+class HardJailedTwoFAError(VPNConnectionError):
+    """
+    When a user is hard jailed due to 2FA issues, this exception is thrown.
+    """

@@ -47,6 +47,7 @@ class StateMachineEventEnum(Enum):
     CERTIFICATE_EXPIRED = auto()
     MAXIMUM_SESSIONS_REACHED = auto()
     UNHANDLED_ERROR = auto()
+    TWOFA_REQUIRED = auto()
 
 
 class KillSwitchSetting(IntEnum):

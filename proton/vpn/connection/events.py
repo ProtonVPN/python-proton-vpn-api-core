@@ -139,6 +139,11 @@ class UnexpectedError(Error):
     type = StateMachineEventEnum.UNEXPECTED_ERROR
 
 
+class TwoFARequired(Error):
+    """Signals that 2 factor authentication is required."""
+    type = StateMachineEventEnum.TWOFA_REQUIRED
+
+
 _event_types = [
     event_type for event_type in Event.__subclasses__()
     if event_type is not Error  # As error is an abstract class.
