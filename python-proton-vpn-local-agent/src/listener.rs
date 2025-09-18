@@ -48,6 +48,20 @@ impl Listener {
         })
     }
 
+    #[classmethod]
+    #[pyo3(signature = (responses))]
+    pub fn playback<'p>(
+        _cls: &Bound<'_, PyType>,
+        py: Python<'p>,
+        responses: String,
+    ) -> PyResult<Bound<'p, PyAny>> {
+        future(py, async move {
+            Ok(Listener {
+                listener: la::Listener::playback(&responses).await?,
+            })
+        })
+    }
+
     /// Starts listening for local agent status updates.
     ///
     /// # Arguments

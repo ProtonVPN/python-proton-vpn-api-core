@@ -916,7 +916,7 @@ dependencies = [
 
 [[package]]
 name = "python-proton-vpn-local-agent"
-version = "1.4.8"
+version = "1.5.0"
 dependencies = [
  "local-agent-rs",
  "log",

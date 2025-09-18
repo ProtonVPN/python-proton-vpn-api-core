@@ -27,6 +27,9 @@ pub enum ReasonCode {
     POLICY_VIOLATION_DELINQUENT,
     USER_TORRENT_NOT_ALLOWED,
     USER_BAD_BEHAVIOR,
+    REASON_CODE_2FA_UNSPECIFIED,
+    REASON_CODE_2FA_EXPIRED,
+    REASON_CODE_2FA_SITUATION_CHANGED,
 }
 
 impl From<i32> for ReasonCode {
@@ -69,6 +72,15 @@ impl From<i32> for ReasonCode {
             }
             la::REASON_CODE_USER_TORRENT_NOT_ALLOWED => {
                 ReasonCode::USER_TORRENT_NOT_ALLOWED
+            }
+            la::REASON_CODE_2FA_UNSPECIFIED => {
+                ReasonCode::REASON_CODE_2FA_UNSPECIFIED
+            }
+            la::REASON_CODE_2FA_EXPIRED => {
+                ReasonCode::REASON_CODE_2FA_EXPIRED
+            }
+            la::REASON_CODE_2FA_SITUATION_CHANGED => {
+                ReasonCode::REASON_CODE_2FA_SITUATION_CHANGED
             }
             la::REASON_CODE_USER_BAD_BEHAVIOR => ReasonCode::USER_BAD_BEHAVIOR,
             _ => ReasonCode::UNKNOWN,

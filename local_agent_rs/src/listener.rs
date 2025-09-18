@@ -34,6 +34,12 @@ impl Listener {
         Ok(Self { connection })
     }
 
+    /// Starts playback of recorded agent responses.
+    pub async fn playback(responses: &str) -> Result<Self> {
+        let connection = AgentConnector::playback(responses).await?;
+        Ok(Self { connection })
+    }
+
     /// Starts listening for local agent status updates.
     ///
     /// # Arguments

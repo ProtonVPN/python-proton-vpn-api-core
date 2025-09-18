@@ -23,3 +23,6 @@ pub const REASON_CODE_POLICY_VIOLATION_LOW_PLAN: i32 = 86151;
 pub const REASON_CODE_POLICY_VIOLATION_DELINQUENT: i32 = 86152;
 pub const REASON_CODE_USER_TORRENT_NOT_ALLOWED: i32 = 86153;
 pub const REASON_CODE_USER_BAD_BEHAVIOR: i32 = 86154;
+pub const REASON_CODE_2FA_UNSPECIFIED: i32 = 86120; // 2FA necessary, reason not specified
+pub const REASON_CODE_2FA_EXPIRED: i32 = 86121; // 2FA necessary, session expired
+pub const REASON_CODE_2FA_SITUATION_CHANGED: i32 = 86122; // 2FA necessary, situation changed (e.g. new connection, change of location)

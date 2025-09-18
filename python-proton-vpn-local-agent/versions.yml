@@ -1,3 +1,12 @@
+version: 1.5.0
+time: 2025/09/17 16:06
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat!: Support hard-jailing for Two factor authentication"
+---
 version: 1.4.8
 time: 2025/09/05 11:20
 author: Luke Titley
