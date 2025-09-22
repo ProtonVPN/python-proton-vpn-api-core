@@ -498,6 +498,11 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             return None
 
         old_state = self._current_state
+
+        if isinstance(new_state.context.event, events.TwoFARequired) and \
+           isinstance(old_state.context.event, events.TwoFARequired):
+            return None
+
         self._current_state = new_state
 
         logger.info(

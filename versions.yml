@@ -1,3 +1,12 @@
+version: 0.46.3
+time: 2025/09/24 07:55
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: Dont error twice with 2fa hard-jailing"
+---
 version: 0.46.2
 time: 2025/09/17 16:14
 author: Luke Titley
