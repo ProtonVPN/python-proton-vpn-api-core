@@ -1,3 +1,12 @@
+version: 0.47.1
+time: 2025/09/24 13:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: update spec file."
+---
 version: 0.47.0
 time: 2025/09/24 10:54
 author: Alexandru Cheltuitor
@@ -224,7 +233,7 @@ description:
 - "fix: Fixes to issues reported by qa"
 ---
 version: 0.44.0
-time: 2025/06/08 10:00
+time: 2025/06/12 10:00
 author: Alexandru Cheltuitor
 email: alexandru.cheltuitor@proton.ch
 urgency: low
@@ -596,7 +605,7 @@ description:
 - Fix refregresion (logout user on 401 API error).
 ---
 version: 0.35.0
-time: 2024/09/09 11:00
+time: 2024/09/13 17:00
 author: Alexandru Cheltuitor
 email: alexandru.cheltuitor@proton.ch
 urgency: medium
@@ -812,7 +821,7 @@ description:
 - Update VPN credentials when an active VPN connection is found at startup.
 ---
 version: 0.29.0
-time: 2024/07/10 15:00
+time: 2024/07/11 15:00
 author: Josep Llaneras
 email: josep.llaneras@proton.ch
 urgency: medium
@@ -983,7 +992,7 @@ description:
 - Fix error saving cache file when parent directory does not exist.
 ---
 version: 0.24.0
-time: 2024/04/30 16:00
+time: 2024/04/30 14:00
 author: Luke Titley
 email: luke.titley@proton.ch
 urgency: medium
