@@ -1,3 +1,12 @@
+version: 0.13.3
+time: 2025/09/22 10:00
+author: Alexandru Cheltuitor
+email: <alexandru.cheltuitor@proton.ch>
+urgency: low
+stability: unstable
+description:
+- "fix: update spec file"
+---
 version: 0.13.2
 time: 2025/09/18 14:21
 author: Luke Titley
@@ -26,7 +35,7 @@ description:
 - "feat: keep wireguard fwmark stable"
 ---
 version: 0.12.15
-time: 2025/07/07 10:18
+time: 2025/07/08 10:18
 author: Pep Llaneras
 email: josep.llaneras@proton.ch
 urgency: low
@@ -35,7 +44,7 @@ description:
 - "fix: Do not request default connection features"
 ---
 version: 0.12.14
-time: 2025/07/08 16:40
+time: 2025/07/07 16:40
 author: Pep Llaneras
 email: josep.llaneras@proton.ch
 urgency: low
@@ -252,7 +261,7 @@ description:
 - Fix unsupported type annotation in python 3.8.10.
 ---
 version: 0.9.6
-time: 2024/10/30 09:00
+time: 2024/10/30 12:00
 author: Alexandru Cheltuitor
 email: alexandru.cheltuitor@proton.ch
 urgency: medium
@@ -261,7 +270,7 @@ description:
 - Fix bug where automatic DNS settings is ignored, regardless if custom DNS is passed or not.
 ---
 version: 0.9.5
-time: 2024/10/30 12:00
+time: 2024/10/30 09:00
 author: Luke Titley
 email: luke.titley@proton.ch
 urgency: medium

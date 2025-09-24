@@ -13,3 +13,5 @@ html
 .coverage
 .idea
 venv
+package.spec
+changelog
