@@ -1,3 +1,12 @@
+version: 0.47.0
+time: 2025/09/24 10:54
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: remove proton-vpn-lib dependency"
+---
 version: 0.46.3
 time: 2025/09/24 07:55
 author: Luke Titley
