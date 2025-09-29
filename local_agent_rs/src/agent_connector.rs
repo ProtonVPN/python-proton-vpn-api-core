@@ -108,8 +108,13 @@ fn ensure_certificates_are_current(
             |_| Error::UnableToParseCertificate,
         )?;
 
-        if !cert.tbs_certificate.validity.is_valid() {
-            return Err(Error::ExpiredCertificate);
+        let validity = &cert.tbs_certificate.validity;
+        if !validity.is_valid() {
+            return Err(Error::ExpiredCertificate(format!(
+                "Now {:?}, Start: {}, End: {}",
+                std::time::SystemTime::now(),
+                &validity.not_before, &validity.not_after
+            )));
         }
     }
 
