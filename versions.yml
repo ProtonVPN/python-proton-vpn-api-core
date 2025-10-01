@@ -1,3 +1,12 @@
+version: 0.13.4
+time: 2025/10/01 16:25
+author: Richard Paterson
+email: richard.paterson@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: Silence CancelledError exceptions when cancelling local agent"
+---
 version: 0.13.3
 time: 2025/09/22 10:00
 author: Alexandru Cheltuitor

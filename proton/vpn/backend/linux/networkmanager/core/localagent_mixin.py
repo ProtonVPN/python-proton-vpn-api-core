@@ -23,6 +23,7 @@ import asyncio
 import logging
 import random
 
+from concurrent import futures
 
 from proton.vpn.connection import events
 from proton.vpn.connection.events import EventContext
@@ -90,6 +91,13 @@ class LocalAgentMixin:  # pylint: disable=too-few-public-methods
 
             return
 
+    # Absorb CancelledError before it is logged by Future's done callback handler
+    def _handle_future_result(self, future: futures.Future):
+        try:
+            future.result()
+        except futures.CancelledError:
+            pass
+
     def _async_start_local_agent_listener(self):
         """
         This schedules the local agent listener to start, but it will not wait
@@ -99,7 +107,7 @@ class LocalAgentMixin:  # pylint: disable=too-few-public-methods
             self._start_local_agent_listener(),
             self._asyncio_loop
         )
-        future.add_done_callback(lambda f: f.result())
+        future.add_done_callback(self._handle_future_result)
 
     def _async_stop_local_agent_listener(self):
         """
@@ -110,7 +118,7 @@ class LocalAgentMixin:  # pylint: disable=too-few-public-methods
             self._agent_listener.stop(),
             self._asyncio_loop
         )
-        future.add_done_callback(lambda f: f.result())
+        future.add_done_callback(self._handle_future_result)
 
     async def _request_connection_features(self, features: Features):
         if features.are_free_tier_defaults():
