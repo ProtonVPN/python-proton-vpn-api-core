@@ -1,3 +1,12 @@
+version: 0.48.1
+time: 2025/10/15 16:21
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: [VPNLINUX-1415] Support for Fedora 43"
+---
 version: 0.48.0
 time: 2025/09/24 14:05
 author: Pep Llaneras

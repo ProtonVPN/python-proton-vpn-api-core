@@ -26,16 +26,13 @@ from typing import Iterator, Optional
 
 from packaging.version import Version
 
-fido2_version = Version(version("fido2"))
-if fido2_version < Version("1.1.2") or fido2_version >= Version("2.0.0"):
-    raise ImportError(f"python3-fido2 version {fido2_version} not supported")
-
 from fido2.hid import CtapHidDevice
 # pylint: disable=no-name-in-module
-from fido2.client import Fido2Client, ClientError, \
-    PublicKeyCredentialRequestOptions, \
-    UserInteraction as DefaultUserInteraction
+from fido2.client import (
+    Fido2Client, ClientError, UserInteraction as Fido2UserInteraction
+)
 from fido2.ctap import CtapError
+from fido2.ctap2.pin import ClientPin
 
 
 from proton.session import Session
@@ -43,10 +40,50 @@ from proton.session.api import Fido2AssertionParameters, Fido2Assertion
 
 from proton.vpn.session.exceptions import (
     SecurityKeyError, Fido2NotSupportedError,
-    SecurityKeyNotFoundError, InvalidSecurityKeyError, SecurityKeyPINInvalidError,
-    SecurityKeyPINNotSetError, SecurityKeyTimeoutError
+    SecurityKeyNotFoundError, InvalidSecurityKeyError,
+    SecurityKeyPINInvalidError, SecurityKeyPINNotSetError,
+    SecurityKeyTimeoutError
 )
 from proton.vpn.session.u2f_interaction import UserInteraction
+
+fido2_version = Version(version("fido2"))
+if fido2_version >= Version("2.0.0"):
+    import proton.vpn.session.fido2_2 as fido2_handler
+elif fido2_version >= Version("1.1.2"):
+    import proton.vpn.session.fido2_1 as fido2_handler
+else:
+    raise ImportError(
+        f"python3-fido2 version {fido2_version} not supported. "
+        "Version 1.1.2 or higher required."
+    )
+
+
+class Fido2UserInteractionAdaptor(Fido2UserInteraction):
+    """
+    Wraps a UserInteraction object to provide the Fido2UserInteraction
+    interface.
+
+    See UserInteraction in fido2.client for details.
+    """
+    def __init__(self, user_interaction: UserInteraction):
+        """Initialize the adaptor with the given UserInteraction object."""
+        self._user_interaction = user_interaction
+
+    def prompt_up(self) -> None:
+        """Called when the authenticator is awaiting a user presence check."""
+        self._user_interaction.prompt_up()
+
+    def request_pin(
+        self, permissions: ClientPin.PERMISSION, rp_id: Optional[str]
+    ) -> Optional[str]:
+        """Called when the client requires a PIN from the user"""
+        return self._user_interaction.request_pin(permissions, rp_id)
+
+    def request_uv(
+        self, permissions: ClientPin.PERMISSION, rp_id: Optional[str]
+    ) -> bool:
+        """Called when the client is about to request UV from the user."""
+        return self._user_interaction.request_uv(permissions, rp_id)
 
 
 class U2FKeys:
@@ -75,10 +112,11 @@ class U2FKeys:
         origin = "https://" + session.supports_fido2.rp_id
         fido2_clients = [
             # pylint: disable=unexpected-keyword-arg
-            Fido2Client(
+            fido2_handler.create_client(
                 device,
                 origin,
-                user_interaction=user_interaction or DefaultUserInteraction()
+                Fido2UserInteractionAdaptor(user_interaction)
+                if user_interaction else Fido2UserInteraction()
             )
             for device in self.list_devices()
         ]
@@ -105,12 +143,7 @@ class U2FKeys:
             cancel_assertion: Event
     ) -> Fido2Assertion:
         """Get an assertion from the given FIDO2 client."""
-        options = PublicKeyCredentialRequestOptions(
-            challenge=assertion_parameters.challenge,
-            rp_id=assertion_parameters.rp_id,
-            allow_credentials=assertion_parameters.allow_credentials,
-            user_verification=assertion_parameters.user_verification
-        )
+        options = fido2_handler.create_options(assertion_parameters)
         try:
             assertion_selection = await asyncio.to_thread(
                 client.get_assertion, options, cancel_assertion
@@ -146,13 +179,7 @@ class U2FKeys:
         except Exception as error:
             raise SecurityKeyError("An error occcurred with the security key") from error
 
-        response = assertion_selection.get_response(0)
-        return Fido2Assertion(
-            client_data=bytes(response.client_data),
-            authenticator_data=bytes(response.authenticator_data),
-            signature=bytes(response.signature),
-            credential_id=bytes(response.credential_id)
-        )
+        return fido2_handler.create_from_client_assertion(assertion_selection)
 
     async def _touch_key_to_use(self, fido2_clients: list[Fido2Client]) -> Fido2Client:
         cancel_key_selection = Event()
