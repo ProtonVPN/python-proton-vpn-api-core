@@ -17,14 +17,12 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 # pylint: disable=C0413
-from importlib.metadata import version
-
 import asyncio
 from getpass import getpass
 from threading import Event
 from typing import Iterator, Optional
 
-from packaging.version import Version
+from proton.vpn.session import fido2_handler
 
 from fido2.hid import CtapHidDevice
 # pylint: disable=no-name-in-module
@@ -33,11 +31,8 @@ from fido2.client import (
 )
 from fido2.ctap import CtapError
 from fido2.ctap2.pin import ClientPin
-
-
 from proton.session import Session
 from proton.session.api import Fido2AssertionParameters, Fido2Assertion
-
 from proton.vpn.session.exceptions import (
     SecurityKeyError, Fido2NotSupportedError,
     SecurityKeyNotFoundError, InvalidSecurityKeyError,
@@ -45,17 +40,6 @@ from proton.vpn.session.exceptions import (
     SecurityKeyTimeoutError
 )
 from proton.vpn.session.u2f_interaction import UserInteraction
-
-fido2_version = Version(version("fido2"))
-if fido2_version >= Version("2.0.0"):
-    import proton.vpn.session.fido2_2 as fido2_handler
-elif fido2_version >= Version("1.1.2"):
-    import proton.vpn.session.fido2_1 as fido2_handler
-else:
-    raise ImportError(
-        f"python3-fido2 version {fido2_version} not supported. "
-        "Version 1.1.2 or higher required."
-    )
 
 
 class Fido2UserInteractionAdaptor(Fido2UserInteraction):
