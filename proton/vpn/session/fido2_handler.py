@@ -21,11 +21,21 @@ from packaging.version import Version
 
 fido2_version = Version(version("fido2"))
 if fido2_version >= Version("2.0.0"):
-    from proton.vpn.session.fido2_2 import *  # noqa: F403, F401
+    from proton.vpn.session.fido2_2 import (create_client,  # noqa: F401
+                                            create_options,
+                                            create_from_client_assertion)
 elif fido2_version >= Version("1.1.2"):
-    from proton.vpn.session.fido2_1 import *  # noqa: F403, F401
+    from proton.vpn.session.fido2_1 import (create_client,  # noqa: F401
+                                            create_options,
+                                            create_from_client_assertion)
 else:
     raise ImportError(
         f"python3-fido2 version {fido2_version} not supported. "
         "Version 1.1.2 or higher required."
     )
+
+__all__ = [
+    "create_client",
+    "create_options",
+    "create_from_client_assertion"
+]

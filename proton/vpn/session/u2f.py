@@ -23,14 +23,6 @@ from threading import Event
 from typing import Iterator, Optional
 
 from proton.vpn.session import fido2_handler
-
-from fido2.hid import CtapHidDevice
-# pylint: disable=no-name-in-module
-from fido2.client import (
-    Fido2Client, ClientError, UserInteraction as Fido2UserInteraction
-)
-from fido2.ctap import CtapError
-from fido2.ctap2.pin import ClientPin
 from proton.session import Session
 from proton.session.api import Fido2AssertionParameters, Fido2Assertion
 from proton.vpn.session.exceptions import (
@@ -40,6 +32,15 @@ from proton.vpn.session.exceptions import (
     SecurityKeyTimeoutError
 )
 from proton.vpn.session.u2f_interaction import UserInteraction
+
+
+from fido2.hid import CtapHidDevice    # pylint: disable=wrong-import-order
+# pylint: disable=no-name-in-module
+from fido2.client import (             # pylint: disable=wrong-import-order
+    Fido2Client, ClientError, UserInteraction as Fido2UserInteraction
+)
+from fido2.ctap import CtapError       # pylint: disable=wrong-import-order
+from fido2.ctap2.pin import ClientPin  # pylint: disable=wrong-import-order
 
 
 class Fido2UserInteractionAdaptor(Fido2UserInteraction):
