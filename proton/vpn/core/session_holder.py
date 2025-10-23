@@ -21,61 +21,24 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 from dataclasses import dataclass
-from importlib import metadata
 
 from pathlib import Path
 import platform
 from typing import Optional
 
-from packaging.version import Version
 import distro
 
 from proton.sso import ProtonSSO
 from proton.vpn import logging
 from proton.vpn.connection import VPNCredentials
 from proton.vpn.session import VPNSession
-from proton.vpn.session.utils import to_semver_build_metadata_format
+from proton.vpn.session.utils import to_semver_build_metadata_format, get_core_api_semver_version
 
 logger = logging.getLogger(__name__)
 
 CPU_ARCHITECTURE = to_semver_build_metadata_format(platform.machine())
 DISTRIBUTION_ID = distro.id()
 DISTRIBUTION_VERSION = distro.version()
-
-
-def _get_semver_version() -> str:
-    """
-    Converts the PEP440 version of this python package to the equivalent semver version.
-
-    Disclaimers:
-    - It assumes the PEP440 version contains the major, minor, micro triplet (e.g. 1.2.3).
-    - Date-based releases are not supported (e.g. 2023.05).
-    - Post release segments are not supported, since semver doesn't allow them.
-
-    https://peps.python.org/pep-0440
-    https://semver.org
-    """
-    ver = Version(metadata.version("proton-vpn-api-core"))
-
-    # Even though PEP440 doesn't require it, our versions always contain
-    # the major, minor, and micro triplet.
-    result = f"{ver.major}.{ver.minor}.{ver.micro}"
-
-    if ver.pre is not None:
-        prerelease_mappings = {
-            "a": "alpha",
-            "b": "beta",
-            "rc": "rc"
-        }
-        result += f"-{prerelease_mappings[ver.pre[0]]}.{ver.pre[1]}"
-
-    if ver.dev is not None:
-        result += f"-dev.{ver.dev}"
-
-    if ver.local is not None:
-        result += f"+{ver.local}"
-
-    return result
 
 
 def _is_beta_repo_installed() -> bool:
@@ -94,7 +57,7 @@ BETA_REPO_INSTALLED = _is_beta_repo_installed()
 @dataclass
 class ClientTypeMetadata:  # pylint: disable=missing-class-docstring
     type: str
-    version: str = _get_semver_version()
+    version: str = get_core_api_semver_version()
 
 
 class SessionHolder:

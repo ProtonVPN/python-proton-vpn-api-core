@@ -17,8 +17,8 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import re
+from importlib import metadata
 from typing import Optional
-
 
 import time
 import random
@@ -26,6 +26,7 @@ import os as sys_os
 import json
 from dataclasses import asdict
 import distro
+from packaging.version import Version
 from proton.vpn import logging
 
 logger = logging.getLogger(__name__)
@@ -144,6 +145,48 @@ def get_distro_version() -> str:
      - Fedora: "39"/"40"
     """
     return distro.version()
+
+
+def semver_from_pep440(pep440_version: str) -> str:
+    """
+    Converts a PEP440 version to a semver version.
+
+    Disclaimers:
+    - It assumes the PEP440 version contains the major, minor, micro triplet (e.g. 1.2.3).
+    - Date-based releases are not supported (e.g. 2023.05).
+    - Post release segments are not supported, since semver doesn't allow them.
+
+    https://peps.python.org/pep-0440
+    https://semver.org
+    """
+    ver = Version(pep440_version)
+
+    # Even though PEP440 doesn't require it, our versions always contain
+    # the major, minor, and micro triplet.
+    result = f"{ver.major}.{ver.minor}.{ver.micro}"
+
+    if ver.pre is not None:
+        prerelease_mappings = {
+            "a": "alpha",
+            "b": "beta",
+            "rc": "rc"
+        }
+        result += f"-{prerelease_mappings[ver.pre[0]]}.{ver.pre[1]}"
+
+    if ver.dev is not None:
+        result += f"-dev.{ver.dev}"
+
+    if ver.local is not None:
+        result += f"+{ver.local}"
+
+    return result
+
+
+def get_core_api_semver_version() -> str:
+    """
+    Converts the PEP440 version of this python package to the equivalent semver version.
+    """
+    return semver_from_pep440(metadata.version("proton-vpn-api-core"))
 
 
 def generate_os_string() -> str:

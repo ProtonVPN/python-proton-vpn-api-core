@@ -1,3 +1,12 @@
+version: 4.12.2
+time: 2025/10/23 13:08
+author: Richard Paterson
+email: richard.paterson@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat: Add test from pep440 to semver conversion"
+---
 version: 4.12.1
 time: 2025/10/23 10:40
 author: Pep Llaneras
