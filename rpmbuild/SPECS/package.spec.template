@@ -24,12 +24,14 @@ BuildRequires: python3-distro
 BuildRequires: python3-sentry-sdk
 BuildRequires: python3-pynacl
 BuildRequires: python3-fido2
+BuildRequires: python3-packaging
 
 Requires: python3-proton-core >= 0.5.0
 Requires: python3-distro
 Requires: python3-sentry-sdk
 Requires: python3-pynacl
 Requires: python3-fido2
+Requires: python3-packaging
 
 Conflicts: proton-vpn-gtk-app < 4.11.0~b0
 Conflicts: python3-proton-vpn-network-manager < 0.12.14

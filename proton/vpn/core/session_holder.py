@@ -21,10 +21,13 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 from dataclasses import dataclass
+from importlib import metadata
 
+from pathlib import Path
 import platform
 from typing import Optional
 
+from packaging.version import Version
 import distro
 
 from proton.sso import ProtonSSO
@@ -40,11 +43,58 @@ DISTRIBUTION_ID = distro.id()
 DISTRIBUTION_VERSION = distro.version()
 
 
+def _get_semver_version() -> str:
+    """
+    Converts the PEP440 version of this python package to the equivalent semver version.
+
+    Disclaimers:
+    - It assumes the PEP440 version contains the major, minor, micro triplet (e.g. 1.2.3).
+    - Date-based releases are not supported (e.g. 2023.05).
+    - Post release segments are not supported, since semver doesn't allow them.
+
+    https://peps.python.org/pep-0440
+    https://semver.org
+    """
+    ver = Version(metadata.version("proton-vpn-api-core"))
+
+    # Even though PEP440 doesn't require it, our versions always contain
+    # the major, minor, and micro triplet.
+    result = f"{ver.major}.{ver.minor}.{ver.micro}"
+
+    if ver.pre is not None:
+        prerelease_mappings = {
+            "a": "alpha",
+            "b": "beta",
+            "rc": "rc"
+        }
+        result += f"-{prerelease_mappings[ver.pre[0]]}.{ver.pre[1]}"
+
+    if ver.dev is not None:
+        result += f"-dev.{ver.dev}"
+
+    if ver.local is not None:
+        result += f"+{ver.local}"
+
+    return result
+
+
+def _is_beta_repo_installed() -> bool:
+    if distro.id() == "debian" or distro.like() == "debian":
+        return Path("/etc/apt/sources.list.d/protonvpn-beta.sources").is_file()
+
+    if distro.id() == "fedora" or distro.like() == "fedora":
+        return Path("/etc/yum.repos.d/protonvpn-beta.repo").is_file()
+
+    return False
+
+
+BETA_REPO_INSTALLED = _is_beta_repo_installed()
+
+
 @dataclass
 class ClientTypeMetadata:  # pylint: disable=missing-class-docstring
     type: str
-    version: str
-    architecture: str = CPU_ARCHITECTURE
+    version: str = _get_semver_version()
 
 
 class SessionHolder:
@@ -99,11 +149,35 @@ class SessionHolder:
 
         return None
 
-    @staticmethod
-    def _get_app_version_header_value(client_type_metadata: ClientTypeMetadata) -> str:
+    @classmethod
+    def _get_app_version_header_value(cls, client_type_metadata: ClientTypeMetadata) -> str:
         app_version = f"linux-vpn-{client_type_metadata.type}@{client_type_metadata.version}"
 
-        if client_type_metadata.architecture:
-            app_version = f"{app_version}+{client_type_metadata.architecture}"
+        version_metadata = cls._get_version_metadata()
+        if version_metadata:
+            app_version += f"+{version_metadata}"
 
         return app_version
+
+    @staticmethod
+    def _get_version_metadata():
+        """
+        The following version metadata is sent to the REST API for the following reasons:
+        1. We want to have an idea on the amount of total users running on each CPU architecture,
+           to know which archs we should target when compiling components written in rust.
+        2. We want to know if users have our early release linux repositories installed, so that
+           2.a We have an idea of the amount of early release users.
+           2.b We can enable feature flags only for early release users (i.e. users with our
+               official beta release package installed).
+
+        The reason why we do this unconventional use of the semver build metadata section is
+        that currently our infra doesn't allow passing/parsing this information through another
+        header that's not x-pm-appversion.
+        """
+        metas = []
+        if CPU_ARCHITECTURE:
+            metas.append(CPU_ARCHITECTURE)
+        if BETA_REPO_INSTALLED:
+            metas.append("beta")
+
+        return ".".join(metas)

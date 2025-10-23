@@ -15,7 +15,7 @@ setup(
     url="https://github.com/ProtonVPN/python-proton-vpn-api-core",
     install_requires=[
         "proton-core", "distro", "sentry-sdk",
-        "cryptography", "PyNaCl", "distro", "fido2"
+        "cryptography", "PyNaCl", "distro", "fido2", "packaging"
     ],
     extras_require={
         "development": ["pytest", "pytest-coverage", "pylint", "flake8", "pytest-asyncio", "PyYAML"]
