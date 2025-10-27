@@ -141,8 +141,25 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
     def is_fido2_lib_available(self) -> bool:
         """
         Returns whether we support U2F/FIDO2 security keys for 2FA on this platform.
+
+        This is deprecated, use is_fido2_available instead.
         """
+        logger.warning("is_fido2_lib_available is deprecated, use is_fido2_available instead")
         return bool(self._session_holder.session.fido2_lib_available)
+
+    @property
+    def supports_fido2(self) -> bool:
+        """
+        Returns if
+        - We support U2F/FIDO2 security keys for 2FA on this platform.
+        - The user has fido2 keys registered.
+
+        This only returns True if both conditions are met and if the user
+        is currently authenticating a session that requires 2FA.
+        """
+        lib_available = self.is_fido2_lib_available
+        supports_fido2 = self._session_holder.session.supports_fido2
+        return bool(lib_available and supports_fido2)
 
     async def generate_2fa_fido2_assertion(
             self,

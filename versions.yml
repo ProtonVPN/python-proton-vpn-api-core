@@ -1,3 +1,12 @@
+version: 4.13.0
+time: 2025/10/27 10:13
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat: Added 'supports_fido2 method to api'"
+---
 version: 4.12.2
 time: 2025/10/23 13:08
 author: Richard Paterson
