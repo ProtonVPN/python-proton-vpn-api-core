@@ -40,6 +40,7 @@ Obsoletes: python3-proton-vpn-session
 Obsoletes: python3-proton-vpn-connection
 Obsoletes: python3-proton-vpn-killswitch
 Obsoletes: python3-proton-vpn-logger
+Obsoletes: python3-proton-vpn-lib
 
 %{{?python_disable_dependency_generator}}
 
