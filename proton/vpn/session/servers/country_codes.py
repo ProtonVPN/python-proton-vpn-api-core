@@ -40,6 +40,14 @@ def get_country_code_for_name(country_name: str) -> Optional[str]:
     return None
 
 
+def validate_country_code(country_code: str) -> Optional[str]:
+    """Returns the provided country code if it is recognised, or None otherwise"""
+    if country_code.upper() in country_codes:
+        return country_code
+
+    return None
+
+
 country_codes = {
     "BD": "Bangladesh",
     "BE": "Belgium",

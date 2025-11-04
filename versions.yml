@@ -1,3 +1,12 @@
+version: 4.13.2
+time: 2025/11/04 10:27
+author: Richard Paterson
+email: richard.paterson@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat: Ensure server specification is case insensitive"
+---
 version: 4.13.1
 time: 2025/10/29 16:57
 author: Pep Llaneras

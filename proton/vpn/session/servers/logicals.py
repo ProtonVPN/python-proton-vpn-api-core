@@ -90,7 +90,7 @@ class ServerList:  # pylint: disable=R0902, R0904
 
         for logical_server in logicals:
             logicals_by_id[logical_server.id] = logical_server
-            logicals_by_name[logical_server.name] = logical_server
+            logicals_by_name[logical_server.name.upper()] = logical_server
 
         return logicals_by_id, logicals_by_name
 
@@ -191,8 +191,9 @@ class ServerList:  # pylint: disable=R0902, R0904
         """
         if self._logicals_by_name is None:
             raise RuntimeError("The server list was not indexed.")
+        upper_case_name = name.upper()
         try:
-            return self._logicals_by_name[name]
+            return self._logicals_by_name[upper_case_name]
         except KeyError as error:
             raise ServerNotFoundError(
                 f"The server with {name=} was not found"
