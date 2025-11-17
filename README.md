@@ -1,7 +1,7 @@
 # Proton VPN Core API
 
 The `proton-vpn-core-api` acts as a facade to the other Proton VPN components,
-exposing a uniform API to the available Proton VPN services. 
+exposing a uniform API to the available Proton VPN services.
 
 ## Development
 
@@ -23,10 +23,20 @@ pip config set global.index-url https://__token__:{GITLAB_TOKEN}@gitlab.protonte
 In the index URL above, `777` is the id of the current root GitLab group,
 the one containing the repositories of all our Proton VPN components.
 
+### Known issues
+
+This component depends on the `PyGObject` python package.
+
+To be able to pip install `PyGObject`, please check the required distribution packages in the
+[official documentation](https://pygobject.readthedocs.io/en/latest/devguide/dev_environ.html).
+
+```shell
+sudo apt install pkg-config libdbus-1-dev libglib2.0-dev
+```
+
 ### Virtual environment
 
-You can create the virtual environment and install the rest of dependencies as
-follows:
+You can create the virtual environment and install the rest of dependencies as follows:
 
 ```shell
 python3 -m venv venv

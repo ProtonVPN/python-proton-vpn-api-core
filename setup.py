@@ -13,18 +13,42 @@ setup(
     author="Proton AG",
     author_email="opensource@proton.me",
     url="https://github.com/ProtonVPN/python-proton-vpn-api-core",
+    include_package_data=True,
     install_requires=[
         "proton-core", "distro", "sentry-sdk",
-        "cryptography", "PyNaCl", "distro", "fido2", "packaging"
+        "cryptography", "PyNaCl", "distro", "fido2", "packaging",
+        "pygobject", "pycairo", "jinja2", "proton-vpn-local-agent"  # network manager backend
     ],
     extras_require={
         "development": ["pytest", "pytest-coverage", "pylint", "flake8", "pytest-asyncio", "PyYAML"]
     },
     packages=find_namespace_packages(include=[
-        "proton.vpn.core*", "proton.vpn.connection*",
-        "proton.vpn.killswitch.interface*", "proton.vpn.session*",
-        "proton.vpn.logging*", "proton.vpn.split_tunneling*"
+        "proton.vpn.core*",
+        "proton.vpn.connection*",
+        "proton.vpn.killswitch.interface*",
+        "proton.vpn.session*",
+        "proton.vpn.logging*",
+        "proton.vpn.split_tunneling*",
+        "proton.vpn.backend.networkmanager.core*",
+        "proton.vpn.backend.networkmanager.protocol.openvpn*",
+        "proton.vpn.backend.networkmanager.protocol.wireguard*",
+        "proton.vpn.backend.networkmanager.killswitch.default*",
+        "proton.vpn.backend.networkmanager.killswitch.wireguard*",
     ]),
+    entry_points={
+        "proton_loader_backend": [
+            "linuxnetworkmanager = proton.vpn.backend.networkmanager.core:LinuxNetworkManager",
+        ],
+        "proton_loader_linuxnetworkmanager": [
+            "openvpn-tcp = proton.vpn.backend.networkmanager.protocol.openvpn:OpenVPNTCP",
+            "openvpn-udp = proton.vpn.backend.networkmanager.protocol.openvpn:OpenVPNUDP",
+            "wireguard = proton.vpn.backend.networkmanager.protocol.wireguard:Wireguard",
+        ],
+        "proton_loader_killswitch": [
+            "default = proton.vpn.backend.networkmanager.killswitch.default:NMKillSwitch",
+            "wireguard = proton.vpn.backend.networkmanager.killswitch.wireguard:WGKillSwitch",
+        ]
+    },
     python_requires=">=3.9",
     license="GPLv3",
     platforms="Linux",

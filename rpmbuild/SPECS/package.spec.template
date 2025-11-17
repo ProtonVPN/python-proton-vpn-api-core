@@ -26,6 +26,15 @@ BuildRequires: python3-pynacl
 BuildRequires: python3-fido2
 BuildRequires: python3-packaging
 
+# Network manager backend dependencies
+BuildRequires: python3-gobject
+BuildRequires: NetworkManager
+BuildRequires: NetworkManager-openvpn
+BuildRequires: NetworkManager-openvpn-gnome
+BuildRequires: gobject-introspection
+BuildRequires: python3-proton-vpn-local-agent >= 1.5.0
+BuildRequires: python3-jinja2
+
 Requires: python3-proton-core >= 0.5.0
 Requires: python3-distro
 Requires: python3-sentry-sdk
@@ -33,14 +42,24 @@ Requires: python3-pynacl
 Requires: python3-fido2
 Requires: python3-packaging
 
+# Network manager backend dependencies
+Requires: python3-gobject
+Requires: NetworkManager
+Requires: NetworkManager-openvpn
+Requires: NetworkManager-openvpn-gnome
+Requires: gobject-introspection
+Requires: python3-proton-vpn-local-agent >= 1.5.0
+Requires: python3-jinja2
+
 Conflicts: proton-vpn-gtk-app < 4.11.0~b0
-Conflicts: python3-proton-vpn-network-manager < 0.12.14
+Conflicts: python3-proton-vpn-network-manager < 0.13.5
 
 Obsoletes: python3-proton-vpn-session
 Obsoletes: python3-proton-vpn-connection
 Obsoletes: python3-proton-vpn-killswitch
 Obsoletes: python3-proton-vpn-logger
 Obsoletes: python3-proton-vpn-lib
+Obsoletes: python3-proton-vpn-network-manager
 
 %{{?python_disable_dependency_generator}}
 

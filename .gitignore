@@ -9,6 +9,7 @@ __SOURCE_APP
 .env
 cov.xml
 html
+.vscode
 .coverage
 .idea
 venv
