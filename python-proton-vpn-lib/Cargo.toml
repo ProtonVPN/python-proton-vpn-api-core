@@ -6,10 +6,6 @@ edition = "2021"
 [lib]
 crate-type   = ["cdylib"]
 
-[profile.release]
-# Strip debug symbols in release builds
-strip = true
-
 [dependencies]
 proton-vpn-lib-rs = { path = "../proton_vpn_lib_rs" }
 pyo3 = {version="0.24.2", features = ["extension-module", "abi3-py38", "serde"]}
