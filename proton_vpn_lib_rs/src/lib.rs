@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 // Copyright (c) 2024 Proton AG
 // -----------------------------------------------------------------------------
-pub use proton_vpn_binary_status::{Load, Server, UserLocation, Country};
+pub use proton_vpn_binary_status::{Load, Logical, Location, Country};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -15,8 +15,9 @@ pub type Result<T> = std::result::Result<T, Error>;
 // based on the user location, a list of servers and a binary status file.
 pub struct ServerStatus {
     status_id: String,
-    servers: Vec<Server>,
-    user_location: UserLocation,
+    logicals: Vec<Logical>,
+    user_location: Option<Location>,
+    user_country: Option<Country>,
 }
 
 impl ServerStatus {
@@ -29,13 +30,15 @@ impl ServerStatus {
     // the longitude/latitude.
     pub fn new(
         status_id: &str,
-        servers: Vec<Server>,
-        user_location: UserLocation,
+        logicals: Vec<Logical>,
+        user_location: Option<Location>,
+        user_country: Option<Country>,
     ) -> Self {
         Self {
-            status_id: status_id.to_string(),
-            servers,
+            status_id: status_id.into(),
+            logicals,
             user_location,
+            user_country,
         }
     }
 
@@ -43,8 +46,9 @@ impl ServerStatus {
     // `compute_loads` is called.
     // This is useful if the user changes their location, for example,
     // if they move about whilst still logged in.
-    pub fn set_user_location(&mut self, user_location: UserLocation) {
-        self.user_location = user_location;
+    pub fn set_user_location(&mut self, location: Option<Location>, country : Option<Country>) {
+        self.user_location = location;
+        self.user_country = country;
     }
 
     // Returns the token that identifies the status endpoint.
@@ -55,29 +59,23 @@ impl ServerStatus {
     // Given a status file, computes the load for each server.
     pub fn compute_loads(&self, status_file: &[u8]) -> Result<Vec<Load>> {
         let mut loads = Vec::new();
-        loads.resize(self.servers.len(), Load::default());
+        loads.resize(self.logicals.len(), Load::default());
 
         log::info!(
             "Computing loads for {} servers with user location: {:?}",
-            self.servers.len(),
-            self.user_location.country
+            self.logicals.len(),
+            self.user_country
         );
 
         proton_vpn_binary_status::compute_loads(
-            &self.user_location,
             &mut loads,
-            &self.servers,
+            &self.logicals,
             status_file,
+            &self.user_location,
+            &self.user_country,
         )?;
 
         Ok(loads)
-    }
-
-    // This is a utility primary for debugging purposes.
-    // This provides a way to iterate over the servers and their loads,
-    // and to print them as a json string.
-    pub fn read_status(status_file: &[u8]) -> Result<proton_vpn_binary_status::Parser> {
-        Ok(proton_vpn_binary_status::Parser::try_from(status_file)?)
     }
 }
 
@@ -86,7 +84,7 @@ mod tests {
     use std::vec;
 
     use super::*;
-    use proton_vpn_binary_status::{Location, Status};
+    use proton_vpn_binary_status::{Location, StatusReference};
 
     fn make_server(status: u8, load: u8, partial_score: f32) -> [u8; 6] {
         [
@@ -107,40 +105,46 @@ mod tests {
         result
     }
 
-    fn make_servers_and_loads() -> (Vec<Server>, Vec<u8>) {
+    fn make_servers_and_loads() -> (Vec<Logical>, Vec<u8>) {
         let servers = vec![
-            Server {
-                status: Status {
+            Logical {
+                status_reference: StatusReference {
                     index: 0,
                     penalty: 0.0,
                     cost: 0,
                 },
-                exit_location: Location {
-                    lat: 0.0,
-                    long: 0.0,
+                entry_location: Location {
+                    latitude: 0.0,
+                    longitude: 0.0,
                 },
-                exit_country: Country::new(b"FR"),
-                physical_servers: vec![],
+                exit_location: Location {
+                    latitude: 0.0,
+                    longitude: 0.0,
+                },
+                exit_country: Country::new(b"FR").expect("Invalid country code"),
             },
-            Server {
-                status: Status {
+            Logical {
+                status_reference: StatusReference {
                     index: 1,
                     penalty: 0.0,
                     cost: 0,
                 },
-                exit_location: Location {
-                    lat: 0.0,
-                    long: 0.0,
+                entry_location: Location {
+                    latitude: 0.0,
+                    longitude: 0.0,
                 },
-                exit_country: Country::new(b"FR"),
-                physical_servers: vec![],
+                exit_location: Location {
+                    latitude: 0.0,
+                    longitude: 0.0,
+                },
+                exit_country: Country::new(b"FR").expect("Invalid country code"),
             },
         ];
 
         let status_file = make_status_file(&[
-            make_server(3, 50, 0.5),
-            make_server(3, 75, 0.25),
-            make_server(3, 90, 0.1),
+            make_server(7, 50, 0.5_f32),
+            make_server(7, 75, 0.25_f32),
+            make_server(7, 90, 0.1_f32),
         ]);
 
         (servers, status_file)
@@ -154,68 +158,58 @@ mod tests {
         let mut status = ServerStatus::new(
             "test_status_id",
             servers,
-            UserLocation {
-                country: Country::new(b"FR"),
-                location: Location {
-                    lat: 0.0,
-                    long: 0.0,
-                },
-            },
+            Some(Location {
+                latitude: 0.0,
+                longitude: 0.0,
+            }),
+            Some(Country::new(b"FR").expect("Invalid country code")),
         );
 
         let loads = status
             .compute_loads(&status_file)
             .expect("Failed to compute loads");
 
+        fn assert_score_eq(a: f64, b: f64) {
+            const jitter: f64 = 0.01;
+            if (a - b).abs() >= jitter {
+                panic!("Scores are not equal: {} != {}", a, b);
+            }
+        }
+
         assert_eq!(loads.len(), 2);
         assert_eq!(servers_len, 2);
 
         // Compute scores based on the loads
-        assert_eq!(loads[0].score, 0.5);
-        assert_eq!(loads[1].score, 0.25);
+        assert_score_eq(loads[0].score, 0.5);
+        assert_score_eq(loads[1].score, 0.25);
 
         // Compute scores limited by distance
-        status.set_user_location(UserLocation {
-            country: Country::new(b"FR"),
-            location: Location {
-                lat: 45.0,
-                long: 0.0,
-            },
-        });
+        status.set_user_location(
+            Some(Location {
+                latitude: 45.0,
+                longitude: 0.0,
+            }),
+            Some(Country::new(b"FR").expect("Invalid country code"))
+        );
 
         let loads = status
             .compute_loads(&status_file)
             .expect("Failed to compute loads");
 
         let distance = 5003.7725; // Distance in km
-        let score = (10000_f32 - (738000_f32 / (distance + 1_f32))) / 10000_f32;
+        let score = (10000.0 - (738000.0 / f64::max(distance, 1.0))) / 10000.0;
 
-        assert_eq!(loads[0].status, 3);
-        assert_eq!(loads[0].score, score);
+        assert_eq!(loads[0].is_enabled, true);
+        assert_eq!(loads[0].is_visible, true);
+        assert_eq!(loads[0].is_autoconnectable, true);
+        assert_score_eq(loads[0].score, score);
         assert_eq!(loads[0].load, 50);
 
-        assert_eq!(loads[1].status, 3);
-        assert_eq!(loads[1].score, score);
+        assert_eq!(loads[1].is_enabled, true);
+        assert_eq!(loads[1].is_visible, true);
+        assert_eq!(loads[1].is_autoconnectable, true);
+        assert_score_eq(loads[1].score, score);
         assert_eq!(loads[1].load, 75);
 
-    }
-
-    #[test_log::test]
-    fn test_server_status_read_status() {
-        let (_, status_file) = make_servers_and_loads();
-
-        let parsed_status = ServerStatus::read_status(&status_file)
-            .expect("Failed to read status");
-
-        assert_eq!(parsed_status.len(), 3);
-        assert_eq!(parsed_status.index(0).unwrap().status, 3);
-        assert_eq!(parsed_status.index(0).unwrap().load, 50);
-        assert_eq!(parsed_status.index(0).unwrap().partial_score, 0.5);
-        assert_eq!(parsed_status.index(1).unwrap().status, 3);
-        assert_eq!(parsed_status.index(1).unwrap().load, 75);
-        assert_eq!(parsed_status.index(1).unwrap().partial_score, 0.25);
-        assert_eq!(parsed_status.index(2).unwrap().status, 3);
-        assert_eq!(parsed_status.index(2).unwrap().load, 90);
-        assert_eq!(parsed_status.index(2).unwrap().partial_score, 0.1);
     }
 }

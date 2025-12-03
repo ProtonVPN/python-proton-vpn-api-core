@@ -22,13 +22,15 @@ impl ServerStatus {
     #[new]
     pub fn new(
         logicals: &Bound<PyAny>,
-        location: &Bound<PyAny>,
+        user_location: &Bound<PyAny>,
+        user_country: &Bound<PyAny>,
     ) -> Result<Self> {
         let status: String = logicals.get_item(STATUS)?.extract()?;
         Ok(Self(proton_vpn_lib_rs::ServerStatus::new(
             &status,
             pythonize::depythonize(&(logicals.get_item(LOGICAL_SERVERS)?))?,
-            pythonize::depythonize(location)?,
+            pythonize::depythonize(user_location)?,
+            pythonize::depythonize(user_country)?,
         )))
     }
 
@@ -44,17 +46,6 @@ impl ServerStatus {
         Ok(pythonize::pythonize(
             py,
             &self.0.compute_loads(status_file)?,
-        )?)
-    }
-
-    #[staticmethod]
-    pub fn read_status<'py>(
-        py: Python<'py>,
-        status_file: &[u8],
-    ) -> Result<Bound<'py, PyAny>> {
-        Ok(pythonize::pythonize(
-            py,
-            &proton_vpn_lib_rs::ServerStatus::read_status(status_file)?,
         )?)
     }
 }

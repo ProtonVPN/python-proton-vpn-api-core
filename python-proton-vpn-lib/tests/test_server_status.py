@@ -12,17 +12,12 @@ LOADS = [
 
 
 @pytest.fixture
-def mock_location_logicals():
-    location = {
-        "Country": "FR",
-        "Lat": 35.65,
-        "Long": 139.83
-    }
+def mock_logicals_location_country():
     logicals = {
         "Status": STATUS_TOKEN,
         "LogicalServers": [
             {
-                "Status": {
+                "StatusReference": {
                     "Index": 0,
                     "Penalty": 0,
                     "Cost": 1,
@@ -31,21 +26,27 @@ def mock_location_logicals():
                 "EntryCountry": "FR",
                 "ExitCountry": "FR",
                 "ID": "jfskjfsdkfjksdnvknsvskdjv",
-                "Location": {
-                    "Lat": 35.65,
-                    "Long": 139.83
+                "EntryLocation": {
+                    "Latitude": 35.65,
+                    "Longitude": 139.83
+                },
+                "ExitLocation": {
+                    "Latitude": 35.65,
+                    "Longitude": 139.83
                 },
                 "Name": "SE-JP#1",
-                "Servers": [
-                    {
-                        "Domain": "node-jp-14.protonvpn.net",
-                    },
-                ]
             }
         ]
     }
 
-    return (location, logicals)
+    user_location = {
+        "Latitude": 35.65,
+        "Longitude": 139.83
+    }
+
+    user_country = "FR"
+
+    return (logicals, user_location, user_country)
 
 
 def make_binary_status(loads):
@@ -69,32 +70,30 @@ def mock_binary_status():
     return make_binary_status(LOADS)
 
 
-def test_server_status_new(mock_location_logicals):
-    location, logicals = mock_location_logicals
+def test_server_status_new(mock_logicals_location_country):
+    logicals, user_location, user_country = mock_logicals_location_country
 
-    proton.vpn.lib.ServerStatus(logicals, location)
+    proton.vpn.lib.ServerStatus(logicals, user_location, user_country)
 
 
-def test_server_status_status_id(mock_location_logicals):
-    location, logicals = mock_location_logicals
+def test_server_status_status_id(mock_logicals_location_country):
+    logicals, user_location, user_country = mock_logicals_location_country
 
-    server_status = proton.vpn.lib.ServerStatus(logicals, location)
+    server_status = proton.vpn.lib.ServerStatus(logicals, user_location,
+                                                user_country)
     assert server_status.status_id() == STATUS_TOKEN
 
 
-def test_server_status_compute_loads(mock_location_logicals,
+def test_server_status_compute_loads(mock_logicals_location_country,
                                      mock_binary_status):
-    location, logicals = mock_location_logicals
+    logicals, user_location, user_country = mock_logicals_location_country
 
-    server_status = proton.vpn.lib.ServerStatus(logicals, location)
+    server_status = proton.vpn.lib.ServerStatus(logicals, user_location,
+                                                user_country)
     loads = server_status.compute_loads(mock_binary_status)
-    assert loads[0] == {'ID': '', 'Status': 3, 'Load': 50, 'Score': 0.5}
 
-
-def test_server_status_read_status(mock_location_logicals,
-                                   mock_binary_status):
-    location, logicals = mock_location_logicals
-
-    server_status = proton.vpn.lib.ServerStatus(logicals, location)
-    loads = server_status.read_status(mock_binary_status)
-    assert loads == LOADS
+    assert loads[0]["IsEnabled"] is True
+    assert loads[0]["IsVisible"] is True
+    assert loads[0]["IsAutoconnectable"] is False
+    assert loads[0]["Load"] == 50
+    assert abs(loads[0]["Score"] - 0.5) < 0.01
