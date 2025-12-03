@@ -7,7 +7,7 @@ use pyo3::prelude::*;
 // -----------------------------------------------------------------------------
 use error::Result;
 
-const STATUS: &str = "Status";
+const STATUS_ID: &str = "StatusID";
 const LOGICAL_SERVERS: &str = "LogicalServers";
 
 fn init_logger() {
@@ -25,7 +25,7 @@ impl ServerStatus {
         user_location: &Bound<PyAny>,
         user_country: &Bound<PyAny>,
     ) -> Result<Self> {
-        let status: String = logicals.get_item(STATUS)?.extract()?;
+        let status: String = logicals.get_item(STATUS_ID)?.extract()?;
         Ok(Self(proton_vpn_lib_rs::ServerStatus::new(
             &status,
             pythonize::depythonize(&(logicals.get_item(LOGICAL_SERVERS)?))?,

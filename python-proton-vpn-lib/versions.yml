@@ -1,3 +1,12 @@
+version: 1.0.1
+time: 2025/12/03 15:13
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: Status key should be StatusID"
+---
 version: 1.0.0
 time: 2025/12/02 09:50
 author: Luke Titley

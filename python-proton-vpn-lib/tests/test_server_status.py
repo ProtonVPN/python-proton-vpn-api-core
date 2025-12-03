@@ -14,7 +14,7 @@ LOADS = [
 @pytest.fixture
 def mock_logicals_location_country():
     logicals = {
-        "Status": STATUS_TOKEN,
+        "StatusID": STATUS_TOKEN,
         "LogicalServers": [
             {
                 "StatusReference": {
