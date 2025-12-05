@@ -31,6 +31,15 @@ from proton.vpn.session.utils import rest_api_request
 
 if TYPE_CHECKING:
     from proton.vpn.session import VPNSession
+    from proton.vpn.session.dataclasses import VPNLocation
+
+try:
+    # The import of the proton.vpn.lib module is delayed to avoid
+    # importing it when the feature flag is disabled.
+    from proton.vpn.lib import ServerStatus  # pylint: disable=C0415, E0401, E0611
+    VPN_LIB_AVAILABLE = True
+except ImportError:
+    VPN_LIB_AVAILABLE = False
 
 NETZONE_HEADER = "X-PM-netzone"
 MODIFIED_SINCE_HEADER = "If-Modified-Since"
@@ -83,30 +92,33 @@ class MixinEndpointV2:  # pylint: disable=R0903
     LOGICALS = "/vpn/v2/logicals?SecureCoreFilter=all"
     STATUS = "/vpn/v2/status/{token}/binary"
 
-    async def _v2_fetch_logicals(self) -> Tuple[Dict, str]:
+    def _convert_load(self, load: Dict) -> Dict:
+
+        # Going forward we want to properly integrate, IsEnabled, IsVisible and
+        # IsAutoconnectable see VPNLINUX-1502.
+        score = load["Score"] + (0 if load["IsAutoconnectable"] else 1000)
+        return {
+            "Load": load["Load"],
+            "Score": score,
+            "Status": load["IsEnabled"] and load["IsVisible"],
+        }
+
+    async def _v2_fetch_logicals(self, location: Optional["VPNLocation"]) -> Tuple[Dict, str]:
+
         logicals, last_modified_time =\
             await self._request_logicals(MixinEndpointV2.LOGICALS)
 
-        location = self._session.vpn_account.location
-
-        if location.Lat is None or location.Long is None:
-            # If the location Lat and Long are not set, location is a cache
-            # from on disk.
-            #
-            # The user needs to log in again to fetch the location
-            # and set the Lat and Long values.
-            raise RuntimeError(
-                "Location Long and Lat must be set to compute server status. "
-                "Please login again and retry."
-            )
-
-        # The import of the proton.vpn.lib module is delayed to avoid
-        # importing it when the feature flag is disabled.
-        from proton.vpn.lib import ServerStatus  # pylint: disable=C0415, E0401, E0611
-        self._server_status = ServerStatus(logicals, location.to_dict())
+        self._server_status = ServerStatus(
+            logicals,
+            user_location={
+                "Latitude": location.Lat,
+                "Longitude": location.Long
+            },
+            user_country=location.Country
+        )
 
         status = await self._request_status(
-            MixinEndpointV2.STATUS.format(token=logicals["Status"])
+            MixinEndpointV2.STATUS.format(token=logicals["StatusID"])
         )
 
         loads = self._server_status.compute_loads(status)
@@ -120,7 +132,7 @@ class MixinEndpointV2:  # pylint: disable=R0903
             )
 
         for server, load in zip(servers, loads):
-            server.update(load)
+            server.update(self._convert_load(load))
 
         return logicals, last_modified_time
 
@@ -138,7 +150,7 @@ class MixinEndpointV2:  # pylint: disable=R0903
         )
 
         loads = self._server_status.compute_loads(binary_status)
-        server_loads = [ServerLoad(data) for data in loads]
+        server_loads = [ServerLoad(self._convert_load(data)) for data in loads]
 
         self._server_list.update(server_loads)
         self._cache_file.save(self._server_list.to_dict())
@@ -197,13 +209,25 @@ class ServerListFetcher(MixinEndpointV1, MixinEndpointV2):
 
         return status_response.data
 
+    def _v2_validate_location(self) -> Optional["VPNLocation"]:
+        location = self._session.vpn_account.location
+        if (location.Lat is None or location.Long is None):
+            return None
+
+        return location
+
     async def fetch(self, endpoint_version: EndpointVersion) -> ServerList:
         """Fetches the list of VPN servers. Warning: this is a heavy request."""
 
-        if endpoint_version == EndpointVersion.V1:
-            response, last_modified_time = await self._v1_fetch_logicals()
+        location = self._v2_validate_location()
+        use_v2 = endpoint_version == EndpointVersion.V2 \
+            and VPN_LIB_AVAILABLE\
+            and location is not None
+
+        if use_v2:
+            response, last_modified_time = await self._v2_fetch_logicals(location)
         else:
-            response, last_modified_time = await self._v2_fetch_logicals()
+            response, last_modified_time = await self._v1_fetch_logicals()
 
         Keys = PersistenceKeys
         entries_to_update = {
@@ -222,13 +246,13 @@ class ServerListFetcher(MixinEndpointV1, MixinEndpointV2):
 
         return self._server_list
 
-    async def update_loads(self) -> ServerList:
+    async def update_loads(self, endpoint_version: EndpointVersion) -> ServerList:
         """
         Queries the REST API for the latest server loads and updates
         the current server list with them, return the updated server list.
         """
         status_token = self._server_list.status_token
-        if status_token:
+        if status_token and (endpoint_version == EndpointVersion.V2):
             server_list = await self._v2_update_loads(status_token)
         else:
             server_list = await self._v1_update_loads()

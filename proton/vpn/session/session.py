@@ -37,7 +37,7 @@ from proton.vpn.session.u2f_interaction import UserInteraction
 
 logger = logging.getLogger(__name__)
 
-LOGICALS_V2 = "LogicalsV2"
+BINARY_SERVER_STATUS = "BinaryServerStatus"
 
 
 class VPNSession(Session):
@@ -334,14 +334,18 @@ class VPNSession(Session):
         finally:
             self._requests_unlock()
 
+    def _serverlist_endpoint_version(self) -> EndpointVersion:
+        """Returns the endpoint version to be used for server list fetching."""
+        if self._feature_flags.get(BINARY_SERVER_STATUS):
+            return EndpointVersion.V2
+        return EndpointVersion.V1
+
     async def fetch_server_list(self) -> ServerList:
         """
         Fetches the server list from the REST API.
         """
         self._server_list = await self._fetcher.fetch_server_list(
-            EndpointVersion.V2
-            if self._feature_flags.get(LOGICALS_V2)
-            else EndpointVersion.V1
+            self._serverlist_endpoint_version()
         )
         return self._server_list
 
@@ -355,7 +359,9 @@ class VPNSession(Session):
         Fetches the server loads from the REST API and updates the current
         server list with them.
         """
-        self._server_list = await self._fetcher.update_server_loads()
+        self._server_list = await self._fetcher.update_server_loads(
+            self._serverlist_endpoint_version()
+        )
         return self._server_list
 
     async def fetch_client_config(self) -> ClientConfig:

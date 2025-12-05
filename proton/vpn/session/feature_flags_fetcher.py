@@ -80,7 +80,7 @@ DEFAULT = {
             }
         },
         {
-            "name": "LogicalsV2",
+            "name": "BinaryServerStatus",
             "enabled": False,
             "impressionData": False,
             "variant": {
