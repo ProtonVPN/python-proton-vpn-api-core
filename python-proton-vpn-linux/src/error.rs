@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("{0}")]
-    VpnLib(#[from] proton_vpn_lib_rs::Error),
+    VpnLib(#[from] proton_vpn_linux_rs::Error),
     #[error("{0}")]
     Pythonize(#[from] pythonize::PythonizeError),
     #[error("{0}")]

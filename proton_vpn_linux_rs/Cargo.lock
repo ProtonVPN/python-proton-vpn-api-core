@@ -229,7 +229,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "proton-vpn-lib-rs"
+name = "proton-vpn-linux-rs"
 version = "0.1.0"
 dependencies = [
  "env_logger",

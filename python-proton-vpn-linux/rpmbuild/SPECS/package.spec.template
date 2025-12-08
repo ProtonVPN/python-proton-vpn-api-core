@@ -1,4 +1,4 @@
-%define unmangled_name proton-vpn-lib
+%define unmangled_name proton-vpn-linux
 %define version {version}
 %define release 1
 

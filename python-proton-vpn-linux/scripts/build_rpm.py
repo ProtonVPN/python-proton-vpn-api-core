@@ -70,8 +70,8 @@ with tarfile.open(name=f"{HOME}/rpmbuild/SOURCES/{ROOT}.tar.gz",
     archive.add("setup.py", arcname=f"{ROOT}/setup.py")
     archive.add("proton", arcname=f"{ROOT}/proton")
     archive.add("versions.yml", arcname=f"{ROOT}/versions.yml")
-    archive.add(f"target/{RUST_TRIPLET}/release/libpython_proton_vpn_lib.so",
-                arcname=f"{ROOT}/proton/vpn/lib/lib.abi3.so")
+    archive.add(f"target/{RUST_TRIPLET}/release/libpython_proton_vpn_linux.so",
+                arcname=f"{ROOT}/proton/vpn/linux/lib.abi3.so")
 
 subprocess.check_output(["rpmbuild", "--quiet", "-bb",
                          "--buildroot", BUILDROOT,

@@ -1,5 +1,5 @@
 import pytest
-import proton.vpn.lib
+import proton.vpn.linux
 import struct
 
 STATUS_TOKEN = 'kjdkjskfjkjsdfjsdkfjksd'
@@ -73,13 +73,13 @@ def mock_binary_status():
 def test_server_status_new(mock_logicals_location_country):
     logicals, user_location, user_country = mock_logicals_location_country
 
-    proton.vpn.lib.ServerStatus(logicals, user_location, user_country)
+    proton.vpn.linux.ServerStatus(logicals, user_location, user_country)
 
 
 def test_server_status_status_id(mock_logicals_location_country):
     logicals, user_location, user_country = mock_logicals_location_country
 
-    server_status = proton.vpn.lib.ServerStatus(logicals, user_location,
+    server_status = proton.vpn.linux.ServerStatus(logicals, user_location,
                                                 user_country)
     assert server_status.status_id() == STATUS_TOKEN
 
@@ -88,7 +88,7 @@ def test_server_status_compute_loads(mock_logicals_location_country,
                                      mock_binary_status):
     logicals, user_location, user_country = mock_logicals_location_country
 
-    server_status = proton.vpn.lib.ServerStatus(logicals, user_location,
+    server_status = proton.vpn.linux.ServerStatus(logicals, user_location,
                                                 user_country)
     loads = server_status.compute_loads(mock_binary_status)
 

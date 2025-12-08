@@ -7,11 +7,11 @@ VERSIONS = 'versions.yml'
 VERSION = re.search(r'version: (\S+)', open(VERSIONS, encoding='utf-8').readline()).group(1)
 
 setup(
-    name='proton-vpn-lib',
+    name='proton-vpn-linux',
     version=VERSION,
     packages=find_namespace_packages(include=["proton.vpn.*"]),
     package_dir={'': '.'},
-    package_data={'proton.vpn.lib': ['lib.abi3.so']},
+    package_data={'proton.vpn.linux': ['lib.abi3.so']},
     include_package_data=True,
     python_requires=">=3.9",
     license="GPLv3",

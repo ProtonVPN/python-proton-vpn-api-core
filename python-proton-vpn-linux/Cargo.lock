@@ -450,7 +450,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "proton-vpn-lib-rs"
+name = "proton-vpn-linux-rs"
 version = "0.1.0"
 dependencies = [
  "env_logger",
@@ -550,13 +550,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "python-proton-vpn-lib"
+name = "python-proton-vpn-linux"
 version = "1.0.1"
 dependencies = [
  "env_logger",
  "log",
  "proton-vpn-binary-status",
- "proton-vpn-lib-rs",
+ "proton-vpn-linux-rs",
  "pyo3",
  "pyo3-async-runtimes",
  "pythonize",

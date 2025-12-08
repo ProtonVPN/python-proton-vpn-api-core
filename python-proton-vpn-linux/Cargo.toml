@@ -1,5 +1,5 @@
 [package]
-name = "python-proton-vpn-lib"
+name = "python-proton-vpn-linux"
 version = "1.0.1"
 edition = "2021"
 
@@ -8,7 +8,7 @@ crate-type   = ["cdylib"]
 
 [dependencies]
 proton-vpn-binary-status = { version="1", registry = "proton_public", features=["serde"] }
-proton-vpn-lib-rs = { path = "../proton_vpn_lib_rs" }
+proton-vpn-linux-rs = { path = "../proton_vpn_linux_rs" }
 pyo3 = {version="0.24.2", features = ["extension-module", "abi3-py38", "serde"]}
 pyo3-async-runtimes = {version="0.24.0", features = ["attributes", "tokio-runtime"]}
 tokio = { version = "1.38.0", features = ["full"] }

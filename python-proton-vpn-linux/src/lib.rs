@@ -15,7 +15,7 @@ fn init_logger() {
 }
 
 #[pyclass]
-struct ServerStatus(proton_vpn_lib_rs::ServerStatus);
+struct ServerStatus(proton_vpn_linux_rs::ServerStatus);
 
 #[pymethods]
 impl ServerStatus {
@@ -26,7 +26,7 @@ impl ServerStatus {
         user_country: &Bound<PyAny>,
     ) -> Result<Self> {
         let status: String = logicals.get_item(STATUS_ID)?.extract()?;
-        Ok(Self(proton_vpn_lib_rs::ServerStatus::new(
+        Ok(Self(proton_vpn_linux_rs::ServerStatus::new(
             &status,
             pythonize::depythonize(&(logicals.get_item(LOGICAL_SERVERS)?))?,
             pythonize::depythonize(user_location)?,

@@ -13,7 +13,7 @@ import sys
 import pathlib
 # ------------------------------------------------------------------------------
 PROJECT_DIR = (pathlib.Path(__file__).parent / ".." / "..").resolve()
-NAME = 'lib'
+NAME = 'linux'
 PROTON_VPN_NAMESPACE = 'proton-vpn'
 # ------------------------------------------------------------------------------
 PROTON_PREFIX = f'python-{PROTON_VPN_NAMESPACE}-'

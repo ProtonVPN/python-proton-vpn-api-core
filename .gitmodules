@@ -1,5 +1,5 @@
 [submodule "python-proton-vpn-base/scripts/devtools"]
-	path = python-proton-vpn-lib/scripts/devtools
+	path = python-proton-vpn-linux/scripts/devtools
 	url = ../integration/devtools.git
 [submodule "ci-libraries-rust"]
 	path = ci-libraries-rust
