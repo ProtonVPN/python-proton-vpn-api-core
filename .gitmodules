@@ -4,3 +4,6 @@
 [submodule "ci-libraries-rust"]
 	path = ci-libraries-rust
 	url = ../integration/ci-libraries-rust.git
+[submodule "proton_vpn_linux_rs/dependencies/protun"]
+	path = proton_vpn_linux_rs/dependencies/protun
+	url = git@gitlab.protontech.ch:ProtonVPN/development/protun.git

@@ -16,12 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-//! ProtonVPN Linux client library.
-//!
-//! Provides VPN connection management, server load computation, and
-//! NetworkManager integration for Linux.
 
-#[cfg(feature = "core")]
-pub mod core;
-pub mod proton;
-pub mod services;
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("{0}")]
+    ProtonVpnBinaryStatus(#[from] proton_vpn_binary_status::Error),
+}
+pub type Result<T> = std::result::Result<T, Error>;

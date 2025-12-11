@@ -16,12 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-//! ProtonVPN Linux client library.
-//!
-//! Provides VPN connection management, server load computation, and
-//! NetworkManager integration for Linux.
+//! This is where any long running daemon/services are implemented.
 
-#[cfg(feature = "core")]
-pub mod core;
-pub mod proton;
-pub mod services;
+#[cfg(feature = "protun")]
+pub mod protun;

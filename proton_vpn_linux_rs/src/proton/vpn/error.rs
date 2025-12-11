@@ -16,12 +16,26 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-//! ProtonVPN Linux client library.
-//!
-//! Provides VPN connection management, server load computation, and
-//! NetworkManager integration for Linux.
+//! Error types for VPN operations.
 
-#[cfg(feature = "core")]
-pub mod core;
-pub mod proton;
-pub mod services;
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("{0}")]
+    IO(#[from] std::io::Error),
+    #[error("{0}")]
+    Serini(#[from] serini::Error),
+    #[error("{0}")]
+    Base64(#[from] base64::DecodeError),
+    #[error("{0}")]
+    TryFromSlice(#[from] std::array::TryFromSliceError),
+    #[error("{0}")]
+    InvalidState(String),
+    #[error("{0}")]
+    ParseIntError(#[from] std::num::ParseIntError),
+    #[error("{0}")]
+    AddrParseError(#[from] std::net::AddrParseError),
+    #[error("{0}")]
+    NetlinkError(#[from] rtnetlink::Error),
+}
+
+pub type Result<T> = std::result::Result<T, Error>;

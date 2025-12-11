@@ -1,0 +1,6 @@
+[VPN Connection]
+name=protun
+service=org.freedesktop.NetworkManager.protun
+program=/home/testing/src/ProtonVPN/linux/proton-vpn-linux/proton_vpn_linux_rs/target/debug/protun
+supports-multiple-connections=false
+SystemdService=nm-protun.service

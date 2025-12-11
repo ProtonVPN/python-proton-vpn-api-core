@@ -16,12 +16,31 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-//! ProtonVPN Linux client library.
+//! High-level VPN SDK interface.
 //!
-//! Provides VPN connection management, server load computation, and
-//! NetworkManager integration for Linux.
+//! Provides a simple API for managing VPN connections.
 
-#[cfg(feature = "core")]
-pub mod core;
-pub mod proton;
-pub mod services;
+pub use super::connection_manager::*;
+
+#[derive(Debug)]
+pub struct Sdk {
+    connection_manager: ConnectionManager,
+}
+
+impl Default for Sdk {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Sdk {
+    pub fn new() -> Self {
+        Sdk {
+            connection_manager: ConnectionManager::new(),
+        }
+    }
+
+    pub fn connection_manager(&mut self) -> &mut ConnectionManager {
+        &mut self.connection_manager
+    }
+}

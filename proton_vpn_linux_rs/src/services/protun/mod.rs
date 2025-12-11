@@ -16,12 +16,15 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-//! ProtonVPN Linux client library.
+//! The NetworkManager VPN Plugin for ProtonVPN.
 //!
-//! Provides VPN connection management, server load computation, and
-//! NetworkManager integration for Linux.
+//! This module contains the implementation of the protun VPN service.
+//! The service provides a VPN connection to the ProtonVPN network and is
+//! configured via the NetworkManager D-Bus API.
 
-#[cfg(feature = "core")]
-pub mod core;
-pub mod proton;
-pub mod services;
+mod helpers;
+mod plugin;
+mod run;
+mod types;
+
+pub use run::run;
