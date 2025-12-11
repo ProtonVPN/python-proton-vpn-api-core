@@ -16,10 +16,18 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+import functools
+from typing import List
+
 import pytest
+from unittest.mock import Mock
 
 from proton.vpn.session.servers import LogicalServer, ServerFeatureEnum
 from proton.vpn.session.servers.logicals import sort_servers_alphabetically_by_country_and_server_name, ServerList
+
+
+def _compact_features(features: List[ServerFeatureEnum]) -> ServerFeatureEnum:
+    return functools.reduce(lambda f1, f2: f1 | f2, features, 0)
 
 
 @pytest.fixture(name="api_response")
@@ -35,7 +43,8 @@ def fixture_api_response() -> str:
                 "Score": 15.0,  # AR#9 has better score (lower is better)
                 "Tier": 2,
                 "ExitCountry": "JP",
-                "City": "Tokyo"
+                "City": "Tokyo",
+                "Features": ServerFeatureEnum.P2P | ServerFeatureEnum.STREAMING
             },
             {
                 "ID": 2,
@@ -45,7 +54,8 @@ def fixture_api_response() -> str:
                 "Score": 1.0,  # Even though it has a better score than CH#9,
                 "Tier": 3,     # it's not in the user tier (2).
                 "ExitCountry": "AR",
-                "City": "Buenos Aires"
+                "City": "Buenos Aires",
+                "Features": ServerFeatureEnum.P2P | ServerFeatureEnum.STREAMING
             },
             {
                 "ID": 3,
@@ -55,7 +65,8 @@ def fixture_api_response() -> str:
                 "Score": 2.0,  # Even though it has a better score than CH#9,
                 "Tier": 3,     # it's not in the user tier (2).
                 "ExitCountry": "AR",
-                "City": "Rosario"
+                "City": "Rosario",
+                "Features": ServerFeatureEnum.P2P | ServerFeatureEnum.STREAMING | ServerFeatureEnum.IPV6
             },
             {
                 "ID": 4,
@@ -65,7 +76,8 @@ def fixture_api_response() -> str:
                 "Score": 3.0,  # Even though it has a better score than CH#9,
                 "Tier": 3,     # it's not in the user tier (2).
                 "ExitCountry": "AR",
-                "City": "Rosario"
+                "City": "Rosario",
+                "Features": ServerFeatureEnum.P2P | ServerFeatureEnum.IPV6
             },
             {
                 "ID": 5,
@@ -141,6 +153,91 @@ def test_server_list_get_fastest_in_city(api_response: str):
 
     fastest = server_list.get_fastest_in_city("Rosario")
     assert fastest.name == "AR#13"
+
+
+def test_server_list_get_available_servers(api_response: str):
+    server_list = ServerList(
+        user_tier=2,
+        logicals=[LogicalServer(ls) for ls in api_response["LogicalServers"]]
+    )
+
+    available_servers_generator = \
+        ServerList.get_available_servers(server_list.logicals, user_tier=2)
+
+    for server in available_servers_generator:
+        assert server.tier <= 2 and server.enabled
+
+
+@pytest.mark.parametrize("features_requested, features_excluded", [
+    (ServerFeatureEnum.P2P, 0),
+    (ServerFeatureEnum.IPV6 | ServerFeatureEnum.STREAMING, 0),
+    (ServerFeatureEnum.P2P, ServerFeatureEnum.TOR | ServerFeatureEnum.IPV6),
+    (0, 0),
+    (ServerFeatureEnum.TOR, ServerFeatureEnum.TOR),
+])
+def test_server_list_get_servers_with_features(
+    api_response: str,
+    features_requested: ServerFeatureEnum,
+    features_excluded: ServerFeatureEnum
+):
+    server_list = ServerList(
+        user_tier=2,
+        logicals=[LogicalServer(ls) for ls in api_response["LogicalServers"]]
+    )
+
+    servers_with_features_generator = \
+        ServerList.get_servers_with_features(
+            server_list.logicals,
+            features_requested,
+            features_excluded
+        )
+
+    servers_with_features = list(servers_with_features_generator)
+
+    # test for empty server list when requested and excluded features have an intersection
+    if features_requested & features_excluded != 0:
+        assert len(servers_with_features) == 0
+
+    for server in servers_with_features:
+        assert _compact_features(server.features) & features_excluded == 0 \
+            and _compact_features(server.features) & features_requested == features_requested
+
+
+def test_server_list_get_country_servers(api_response: str):
+    server_list = ServerList(
+        user_tier=2,
+        logicals=[LogicalServer(ls) for ls in api_response["LogicalServers"]]
+    )
+
+    country_servers_generator = \
+        ServerList.get_servers_in_city(server_list.logicals, "AR")
+
+    for server in country_servers_generator:
+        assert server.exit_country == "AR"
+
+
+def test_server_list_get_city_servers(api_response: str):
+    server_list = ServerList(
+        user_tier=2,
+        logicals=[LogicalServer(ls) for ls in api_response["LogicalServers"]]
+    )
+
+    city_servers_generator = \
+        ServerList.get_servers_in_country_code(server_list.logicals, "rosario")
+
+    for server in city_servers_generator:
+        assert server.city == "rosario"
+
+
+def test_server_list_get_fastest_server(api_response: str):
+    server_list = ServerList(
+        user_tier=2,
+        logicals=[LogicalServer(ls) for ls in api_response["LogicalServers"]]
+    )
+
+    fastest_server = ServerList.get_fastest_server(server_list.logicals)
+
+    assert fastest_server.name == "AR#11"
 
 
 def test_sort_servers_alphabetically_by_country_and_server_name():

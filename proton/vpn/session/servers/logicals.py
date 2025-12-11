@@ -18,6 +18,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 
+import functools
 import itertools
 import random
 import time
@@ -200,32 +201,74 @@ class ServerList:  # pylint: disable=R0902, R0904
             ) from error
 
     @staticmethod
-    def __get_fastest_available_server(
+    def get_fastest_server(servers: Iterable[LogicalServer]) -> Optional[LogicalServer]:
+        """
+        :returns: Fastest server from the passed LogicalServer iterable
+        """
+        return min(servers, key=lambda s: s.score, default=None)
+
+    @staticmethod
+    def get_available_servers(
             servers: Iterable[LogicalServer],
             user_tier: TierEnum
-    ) -> Optional[LogicalServer]:
-
-        available_servers = (
+    ) -> Generator[LogicalServer]:
+        """
+        :returns: Generator producing available servers
+        from the passed LogicalServer iterable
+        """
+        return (
             server for server in servers
             if (
                 server.enabled
                 and server.tier <= user_tier
-                and ServerFeatureEnum.SECURE_CORE not in server.features
-                and ServerFeatureEnum.TOR not in server.features
             )
         )
 
-        return min(available_servers, key=lambda s: s.score, default=None)
+    @staticmethod
+    def _compact_features(features: List[ServerFeatureEnum]) -> ServerFeatureEnum:
+        return functools.reduce(lambda f1, f2: f1 | f2, features, 0)
 
-    def _get_servers_in_country_code(self, country_code: str) -> Generator[LogicalServer]:
+    @staticmethod
+    def get_servers_with_features(
+            servers: Iterable[LogicalServer],
+            request_features: ServerFeatureEnum = 0,
+            exclude_features: ServerFeatureEnum = 0,
+    ) -> Generator[LogicalServer]:
+        """
+        :returns: Generator producing servers matching/excluding specified features
+        from the passed LogicalServer iterable
+        """
         return (
-            server for server in self.logicals
+            s for s in servers
+            if (ServerList._compact_features(s.features) & exclude_features) == 0
+            and (ServerList._compact_features(s.features) & request_features) == request_features
+        )
+
+    @staticmethod
+    def get_servers_in_country_code(
+            servers: Iterable[LogicalServer],
+            country_code: str
+    ) -> Generator[LogicalServer]:
+        """
+        :returns: Generator producing servers in the requested country
+        from the passed LogicalServer iterable
+        """
+        return (
+            server for server in servers
             if server.exit_country.lower() == country_code.lower()
         )
 
-    def _get_servers_in_city(self, city_name: str) -> Generator[LogicalServer]:
+    @staticmethod
+    def get_servers_in_city(
+            servers: Iterable[LogicalServer],
+            city_name: str
+    ) -> Generator[LogicalServer]:
+        """
+        :returns: Generator producing servers in the requested city
+        from the passed LogicalServer iterable
+        """
         return (
-            server for server in self.logicals
+            server for server in servers
             if server.city.lower() == city_name.lower()
         )
 
@@ -234,9 +277,15 @@ class ServerList:  # pylint: disable=R0902, R0904
         :returns: the fastest server for the specified country code and the tiers
         the user has access to.
         """
-        country_servers = self._get_servers_in_country_code(country_code)
-        fastest_available_server = \
-            ServerList.__get_fastest_available_server(country_servers, self.user_tier)
+        country_servers = ServerList.get_servers_in_country_code(self.logicals, country_code)
+        available_country_servers =\
+            ServerList.get_available_servers(country_servers, self.user_tier)
+        available_country_servers =\
+            ServerList.get_servers_with_features(
+                available_country_servers,
+                exclude_features=ServerFeatureEnum.SECURE_CORE | ServerFeatureEnum.TOR
+            )
+        fastest_available_server = ServerList.get_fastest_server(available_country_servers)
 
         if not fastest_available_server:
             raise ServerNotFoundError("No server available in the current tier")
@@ -248,9 +297,14 @@ class ServerList:  # pylint: disable=R0902, R0904
         :returns: the fastest server in the specified city and the tiers
         the user has access to.
         """
-        city_servers = self._get_servers_in_city(city_name)
-        fastest_available_server = \
-            ServerList.__get_fastest_available_server(city_servers, self.user_tier)
+        city_servers = ServerList.get_servers_in_city(self.logicals, city_name)
+        available_city_servers = ServerList.get_available_servers(city_servers, self.user_tier)
+        available_city_servers =\
+            ServerList.get_servers_with_features(
+                available_city_servers,
+                exclude_features=ServerFeatureEnum.SECURE_CORE | ServerFeatureEnum.TOR
+            )
+        fastest_available_server = ServerList.get_fastest_server(available_city_servers)
 
         if not fastest_available_server:
             raise ServerNotFoundError("No server available in the current tier")
@@ -259,8 +313,13 @@ class ServerList:  # pylint: disable=R0902, R0904
 
     def get_fastest(self) -> LogicalServer:
         """:returns: the fastest server in the tiers the user has access to."""
-        fastest_available_server = \
-            ServerList.__get_fastest_available_server(self.logicals, self.user_tier)
+        available_servers = ServerList.get_available_servers(self.logicals, self.user_tier)
+        available_servers =\
+            ServerList.get_servers_with_features(
+                available_servers,
+                exclude_features=ServerFeatureEnum.SECURE_CORE | ServerFeatureEnum.TOR
+            )
+        fastest_available_server = ServerList.get_fastest_server(available_servers)
 
         if not fastest_available_server:
             raise ServerNotFoundError("No server available in the current tier")
