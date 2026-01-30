@@ -1,6 +1,8 @@
 variables:
  PROJECT_NAME: "proton-vpn-linux"
- RUST_PROJECT_NAME: "proton_vpn_linux_rs"
+ RUST_PROJECT_NAME: "proton-vpn-linux"
+ RUST_FEATURES_PYTHON: "python,core"
+ RUST_FEATURES_CORE: "core"
  CARGO_REGISTRIES_PROTON_INDEX: "sparse+https://rust.gitlab-pages.protontech.ch/shared/registry/index/"
 include:
  - project: 'ProtonVPN/Linux/integration/ci-libraries-rust'

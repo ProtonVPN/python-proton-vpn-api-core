@@ -1,0 +1,44 @@
+version: 2.0.0
+time: 2025/12/03 15:13
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat!: Added protun service and refactored"
+---
+version: 1.0.1
+time: 2025/12/03 15:13
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: Status key should be StatusID"
+---
+version: 1.0.0
+time: 2025/12/02 09:50
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat!: Update to binary status 1.x"
+---
+version: 0.1.1
+time: 2025/06/05 07:55
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Use setup tools to make the deb file.
+---
+version: 0.1.0
+time: 2024/04/15 11:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Initial release of stub proton-vpn-lib.

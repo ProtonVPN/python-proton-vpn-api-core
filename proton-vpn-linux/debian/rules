@@ -1,0 +1,10 @@
+#!/usr/bin/make -f
+
+export PYBUILD_NAME=python-proton-vpn-linux
+#export PYBUILD_SYSTEM=pyproject
+#export PYBUILD_SYSTEM=setuptools
+
+%:
+	mkdir -p proton/vpn
+	cp {{rust_triplet}}/release/libpython_proton_vpn_linux.so proton/vpn/linux.abi3.so
+	dh $@ --with python3 --buildsystem=pybuild
