@@ -144,7 +144,8 @@ class KillSwitchConnectionHandler:
         interface_name = _get_interface_name(permanent)
         general_config = KillSwitchGeneralConfig(
             human_readable_id=connection_id,
-            interface_name=interface_name
+            interface_name=interface_name,
+            permanent=permanent
         )
 
         kill_switch = KillSwitchConnection(
@@ -174,7 +175,8 @@ class KillSwitchConnectionHandler:
 
         general_config = KillSwitchGeneralConfig(
             human_readable_id=_get_connection_id(self._connection_prefix, permanent, routed=True),
-            interface_name=_get_interface_name(permanent, routed=True)
+            interface_name=_get_interface_name(permanent, routed=True),
+            permanent=permanent
         )
         kill_switch = KillSwitchConnection(
             general_config,
@@ -204,7 +206,8 @@ class KillSwitchConnectionHandler:
         interface_name = _get_interface_name(permanent=False, ipv6=True)
         general_config = KillSwitchGeneralConfig(
             human_readable_id=connection_id,
-            interface_name=interface_name
+            interface_name=interface_name,
+            permanent=False
         )
 
         kill_switch = KillSwitchConnection(

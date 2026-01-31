@@ -24,6 +24,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 
 from dataclasses import dataclass, field
 import uuid
+from getpass import getuser
 
 import gi  # pylint: disable=C0411
 gi.require_version("NM", "1.0")
@@ -37,6 +38,7 @@ DEFAULT_METRIC = -1
 class KillSwitchGeneralConfig:  # pylint: disable=missing-class-docstring
     human_readable_id: str
     interface_name: str
+    permanent: bool
 
 
 @dataclass
@@ -85,6 +87,11 @@ class KillSwitchConnection:  # pylint: disable=too-few-public-methods
         )
         s_con.set_property(NM.SETTING_CONNECTION_UUID, str(uuid.uuid4()))
         s_con.set_property(NM.SETTING_CONNECTION_TYPE, NM.SETTING_DUMMY_SETTING_NAME)
+
+        # Only permanent kill switch needs to be a system connection;
+        # weaker kill switches can be user connections to avoid polkit auth.
+        if not self._general_settings.permanent:
+            s_con.add_permission(NM.SETTING_USER_SETTING_NAME, getuser(), None)
 
         s_dummy = NM.SettingDummy.new()
 
