@@ -115,7 +115,8 @@ class KillSwitchConnectionHandler:
 
         general_config = self._config or KillSwitchGeneralConfig(
             human_readable_id=_get_connection_id(permanent),
-            interface_name=_get_interface_name(permanent)
+            interface_name=_get_interface_name(permanent),
+            permanent=permanent
         )
 
         connection = self.nm_client.get_active_connection(
@@ -246,7 +247,8 @@ class KillSwitchConnectionHandler:
         interface_name = _get_interface_name(permanent=False, ipv6=True)
         general_config = KillSwitchGeneralConfig(
             human_readable_id=connection_id,
-            interface_name=interface_name
+            interface_name=interface_name,
+            permanent=False
         )
 
         kill_switch = KillSwitchConnection(
