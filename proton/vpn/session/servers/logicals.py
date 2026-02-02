@@ -326,9 +326,11 @@ class ServerList:  # pylint: disable=R0902, R0904
 
         return fastest_available_server
 
-    def group_by_country(self) -> List[Country]:
+    def group_by_country(self, cities: bool = False) -> List[Country]:
         """
         Returns the servers grouped by country.
+
+        :param cities: whether to group the servers by cities as well.
 
         Before grouping the servers, they are sorted alphabetically by
         country name and server name.
@@ -336,7 +338,11 @@ class ServerList:  # pylint: disable=R0902, R0904
         :return: The list of countries, each of them containing the servers
         in that country.
         """
-        self.logicals.sort(key=sort_servers_alphabetically_by_country_and_server_name)
+        if cities:
+            self.sort(sort_servers_by_country_and_city_and_enabled_and_load)
+        else:
+            self.sort()
+
         return [
             Country(country_code, list(country_servers))
             for country_code, country_servers in itertools.groupby(
@@ -464,3 +470,11 @@ def sort_servers_alphabetically_by_country_and_server_name(server: LogicalServer
                       f"{server_name.split('#')[1].zfill(10)}"
 
     return f"{country_name}__{server_name}"
+
+
+def sort_servers_by_country_and_city_and_enabled_and_load(server: LogicalServer) -> str:
+    """
+    Returns the comparison key used to sort servers by country name, city name,
+    whether they are enabled or not, and load.
+    """
+    return (server.exit_country_name, server.city, 0 if server.enabled else 1, server.load)

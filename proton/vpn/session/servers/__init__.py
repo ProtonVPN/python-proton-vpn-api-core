@@ -17,13 +17,16 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from proton.vpn.session.servers.logicals import ServerList, Country
+from proton.vpn.session.dataclasses.servers.country import City
 from proton.vpn.session.servers.types import \
-    LogicalServer, PhysicalServer, ServerFeatureEnum
+    LogicalServer, PhysicalServer, ServerFeatureEnum, TierEnum
 
 __all__ = [
     "ServerList",
     "Country",
+    "City",
     "LogicalServer",
     "PhysicalServer",
     "ServerFeatureEnum",
+    "TierEnum"
 ]

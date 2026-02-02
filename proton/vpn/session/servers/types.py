@@ -175,6 +175,11 @@ class LogicalServer:  # pylint: disable=too-many-public-methods
             x.enabled for x in self.physical_servers
         )
 
+    @property
+    def under_maintenance(self) -> bool:
+        """Returns whether this server should be considered under maintenance or not."""
+        return not self.enabled
+
     # Every other propriety is readonly
     @property
     def name(self) -> str:
@@ -210,6 +215,11 @@ class LogicalServer:  # pylint: disable=too-many-public-methods
         return self._data.get("HostCountry")
 
     @property
+    def smart_routing(self) -> bool:
+        """Returns whether this server uses smart routing technology or not."""
+        return self.host_country is not None
+
+    @property
     def features(self) -> List[ServerFeatureEnum]:
         """ List of features supported by this Logical."""
         return self.__unpack_bitmap_features(self._data.get("Features", 0))
@@ -239,6 +249,11 @@ class LogicalServer:  # pylint: disable=too-many-public-methods
             Server-side check is always done, so this is mainly for UI purposes.
         """
         return TierEnum(int(self._data.get("Tier")))
+
+    @property
+    def free(self) -> bool:
+        """Returns whether this server is available to the free tier or not."""
+        return self.tier == TierEnum.FREE
 
     @property
     def latitude(self) -> float:

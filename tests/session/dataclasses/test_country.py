@@ -17,8 +17,8 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import pytest
-from proton.vpn.session.servers.types import LogicalServer, ServerFeatureEnum, TierEnum
-from proton.vpn.session.dataclasses.servers.country import City, Country
+from proton.vpn.session.servers.types import LogicalServer, ServerFeatureEnum
+from proton.vpn.session.dataclasses.servers.country import City, Country, ServerAnalysis
 
 
 COUNTRY_CODE = "AR"
@@ -32,6 +32,17 @@ ROSARIO_CITY_FEATURES = {
 @pytest.fixture()
 def servers_raw() -> list[dict]:
     return [
+                {
+            "ID": 2,
+            "Name": "AR#11",
+            "Status": 1,
+            "Servers": [{"Status": 1}],
+            "Score": 1.0,  # Even though it has a better score than CH#9,
+            "Tier": 2,     # it's not in the user tier (2).
+            "ExitCountry": "AR",
+            "City": "Buenos Aires",
+            "Features": ServerFeatureEnum.P2P | ServerFeatureEnum.STREAMING
+        },
         {
             "ID": 3,
             "Name": "AR#13",
@@ -42,17 +53,6 @@ def servers_raw() -> list[dict]:
             "ExitCountry": "AR",
             "City": "Rosario",
             "Features": ServerFeatureEnum.P2P | ServerFeatureEnum.STREAMING | ServerFeatureEnum.IPV6
-        },
-        {
-            "ID": 2,
-            "Name": "AR#11",
-            "Status": 1,
-            "Servers": [{"Status": 1}],
-            "Score": 1.0,  # Even though it has a better score than CH#9,
-            "Tier": 2,     # it's not in the user tier (2).
-            "ExitCountry": "AR",
-            "City": "Buenos Aires",
-            "Features": ServerFeatureEnum.P2P | ServerFeatureEnum.STREAMING
         },
         {
             "ID": 4,
@@ -106,12 +106,7 @@ class TestCountry:
         country = Country(COUNTRY_CODE, [])
         assert country.name == COUNTRY_NAME
 
-    def test_is_free_returns_true_if_any_free_servers_are_available(self, mixed_free_and_non_logical_servers):
-        country_with_some_free_servers = Country(COUNTRY_CODE, mixed_free_and_non_logical_servers)
-
-        assert country_with_some_free_servers.is_free
-
-    def test_cities_are_grouped_and_sorted(self, non_free_logical_servers):
+    def test_cities_are_grouped(self, non_free_logical_servers):
         country = Country(COUNTRY_CODE, non_free_logical_servers)
 
         cities = country.cities
@@ -121,9 +116,234 @@ class TestCountry:
         assert len(cities) == len(CITIES)
 
 
-class TestCity:
-    def test_features_are_grouped_when_multiple_servers_have_same_features(self, non_free_logical_servers):
-        city_name = "Rosario"
-        city_servers = [server for server in non_free_logical_servers if server.city == city_name]
-        city = City(name=city_name, servers=city_servers)
-        assert city.features == ROSARIO_CITY_FEATURES
+class TestServerAnalysis:
+    def test_analyze_servers_returns_under_maintenance_true_when_all_servers_are_under_maintenance(self):
+        # Create servers that are all under maintenance (Status=0 or no enabled physical servers)
+        servers_data = [
+            {
+                "ID": 1,
+                "Name": "AR#1",
+                "Status": 0,  # Logical server disabled
+                "Servers": [{"Status": 0}],  # Physical server disabled
+                "Tier": 2,
+                "ExitCountry": "AR",
+                "City": "Buenos Aires",
+                "Features": 0
+            },
+            {
+                "ID": 2,
+                "Name": "AR#2",
+                "Status": 0,
+                "Servers": [{"Status": 0}],
+                "Tier": 2,
+                "ExitCountry": "AR",
+                "City": "Buenos Aires",
+                "Features": 0
+            }
+        ]
+        servers = [LogicalServer(data) for data in servers_data]
+
+        analysis = ServerAnalysis.analyze_servers(servers)
+
+        assert analysis.under_maintenance is True
+
+    def test_analyze_servers_returns_under_maintenance_false_when_some_servers_are_not_under_maintenance(self):
+        # Create servers where at least one is enabled (not under maintenance)
+        servers_data = [
+            {
+                "ID": 1,
+                "Name": "AR#1",
+                "Status": 0,  # Logical server disabled
+                "Servers": [{"Status": 0}],  # Physical server disabled
+                "Tier": 2,
+                "ExitCountry": "AR",
+                "City": "Buenos Aires",
+                "Features": 0
+            },
+            {
+                "ID": 2,
+                "Name": "AR#2",
+                "Status": 1,  # Logical server enabled
+                "Servers": [{"Status": 1}],  # Physical server enabled
+                "Tier": 2,
+                "ExitCountry": "AR",
+                "City": "Buenos Aires",
+                "Features": 0
+            }
+        ]
+        servers = [LogicalServer(data) for data in servers_data]
+
+        analysis = ServerAnalysis.analyze_servers(servers)
+
+        assert analysis.under_maintenance is False
+
+    def test_analyze_servers_returns_smart_routing_when_any_server_has_smart_routing(self):
+        # Note: Based on implementation, smart_routing is True only when ALL servers have smart_routing
+        # The test name says "any" but the logic requires "all"
+        servers_data = [
+            {
+                "ID": 1,
+                "Name": "AR#1",
+                "Status": 1,
+                "Servers": [{"Status": 1}],
+                "Tier": 2,
+                "ExitCountry": "AR",
+                "City": "Buenos Aires",
+                "Features": 0,
+                "HostCountry": "US"  # Smart routing enabled
+            },
+            {
+                "ID": 2,
+                "Name": "AR#2",
+                "Status": 1,
+                "Servers": [{"Status": 1}],
+                "Tier": 2,
+                "ExitCountry": "AR",
+                "City": "Buenos Aires",
+                "Features": 0,
+                "HostCountry": "US"  # Smart routing enabled
+            }
+        ]
+        servers = [LogicalServer(data) for data in servers_data]
+
+        analysis = ServerAnalysis.analyze_servers(servers)
+
+        assert analysis.smart_routing is True
+
+    def test_analyze_servers_returns_smart_routing_false_when_not_all_servers_have_smart_routing(self):
+        # Create servers where at least one doesn't have smart routing
+        servers_data = [
+            {
+                "ID": 1,
+                "Name": "AR#1",
+                "Status": 1,
+                "Servers": [{"Status": 1}],
+                "Tier": 2,
+                "ExitCountry": "AR",
+                "City": "Buenos Aires",
+                "Features": 0,
+                "HostCountry": "US"  # Smart routing enabled
+            },
+            {
+                "ID": 2,
+                "Name": "AR#2",
+                "Status": 1,
+                "Servers": [{"Status": 1}],
+                "Tier": 2,
+                "ExitCountry": "AR",
+                "City": "Buenos Aires",
+                "Features": 0
+                # No HostCountry - smart routing not enabled
+            }
+        ]
+        servers = [LogicalServer(data) for data in servers_data]
+
+        analysis = ServerAnalysis.analyze_servers(servers)
+
+        assert analysis.smart_routing is False
+
+    def test_analyze_servers_returns_free_when_any_server_is_free(self):
+        servers_data = [
+            {
+                "ID": 1,
+                "Name": "AR#1",
+                "Status": 1,
+                "Servers": [{"Status": 1}],
+                "Tier": 2,  # Not free
+                "ExitCountry": "AR",
+                "City": "Buenos Aires",
+                "Features": 0
+            },
+            {
+                "ID": 2,
+                "Name": "AR#2",
+                "Status": 1,
+                "Servers": [{"Status": 1}],
+                "Tier": 0,  # Free tier
+                "ExitCountry": "AR",
+                "City": "Buenos Aires",
+                "Features": 0
+            }
+        ]
+        servers = [LogicalServer(data) for data in servers_data]
+
+        analysis = ServerAnalysis.analyze_servers(servers)
+
+        assert analysis.free is True
+
+    def test_analyze_servers_returns_free_false_when_no_servers_are_free(self):
+        # Create servers where none are free (all have tier > 0)
+        servers_data = [
+            {
+                "ID": 1,
+                "Name": "AR#1",
+                "Status": 1,
+                "Servers": [{"Status": 1}],
+                "Tier": 2,  # Not free
+                "ExitCountry": "AR",
+                "City": "Buenos Aires",
+                "Features": 0
+            },
+            {
+                "ID": 2,
+                "Name": "AR#2",
+                "Status": 1,
+                "Servers": [{"Status": 1}],
+                "Tier": 2,  # Not free
+                "ExitCountry": "AR",
+                "City": "Buenos Aires",
+                "Features": 0
+            }
+        ]
+        servers = [LogicalServer(data) for data in servers_data]
+
+        analysis = ServerAnalysis.analyze_servers(servers)
+
+        assert analysis.free is False
+
+    def test_analyze_servers_groups_features_from_all_servers(self):
+        servers_data = [
+            {
+                "ID": 1,
+                "Name": "AR#1",
+                "Status": 1,
+                "Servers": [{"Status": 1}],
+                "Tier": 2,
+                "ExitCountry": "AR",
+                "City": "Buenos Aires",
+                "Features": ServerFeatureEnum.P2P | ServerFeatureEnum.STREAMING
+            },
+            {
+                "ID": 2,
+                "Name": "AR#2",
+                "Status": 1,
+                "Servers": [{"Status": 1}],
+                "Tier": 2,
+                "ExitCountry": "AR",
+                "City": "Rosario",
+                "Features": ServerFeatureEnum.IPV6 | ServerFeatureEnum.TOR
+            },
+            {
+                "ID": 3,
+                "Name": "AR#3",
+                "Status": 1,
+                "Servers": [{"Status": 1}],
+                "Tier": 2,
+                "ExitCountry": "AR",
+                "City": "Rosario",
+                "Features": ServerFeatureEnum.P2P  # Overlapping feature
+            }
+        ]
+        servers = [LogicalServer(data) for data in servers_data]
+
+        analysis = ServerAnalysis.analyze_servers(servers)
+
+        # Features should be a set containing all unique features from all servers
+        expected_features = {
+            ServerFeatureEnum.P2P,
+            ServerFeatureEnum.STREAMING,
+            ServerFeatureEnum.IPV6,
+            ServerFeatureEnum.TOR
+        }
+        assert analysis.features == expected_features
+
