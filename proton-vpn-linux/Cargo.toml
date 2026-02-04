@@ -8,10 +8,10 @@ edition = "2021"
 protun = ["dep:clap", "dep:zbus",
           "dep:shlex", "dep:glob", "sdk", "dep:rtnetlink", "dep:netlink-packet-route", "dep:futures"]
 protun_fwmark = []
-sdk = ["dep:protun", "dep:serde", "dep:libc", "dep:base64", "dep:tokio",
+sdk = ["dep:protun", "dep:serde", "dep:serde_json", "dep:libc", "dep:base64", "dep:tokio",
        "dep:async-trait", "dep:rust-ini", "dep:serini"]
 
-core = ["dep:proton-vpn-binary-status"]
+core = ["dep:proton-vpn-binary-status", "dep:serde", "dep:serde_json"]
 python = ["proton-vpn-binary-status/serde", "dep:pyo3", "dep:pythonize"]
 
 [lib]

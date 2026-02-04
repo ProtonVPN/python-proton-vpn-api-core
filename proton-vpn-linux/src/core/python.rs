@@ -22,7 +22,10 @@
 use pyo3::prelude::*;
 use pyo3::types::PyModule;
 
-pub fn register(py: Python, parent: &Bound<'_, PyModule>) -> pyo3::PyResult<()> {
+pub fn register(
+    py: Python,
+    parent: &Bound<'_, PyModule>,
+) -> pyo3::PyResult<()> {
     use super::ProtonVpnLinuxError;
     let core = PyModule::new(py, "core")?;
     core.add_class::<super::ServerStatus>()?;

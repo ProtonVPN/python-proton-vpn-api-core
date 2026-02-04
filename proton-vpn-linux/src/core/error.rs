@@ -31,15 +31,25 @@ pub enum Error {
 }
 
 #[cfg(feature = "python")]
-pyo3::create_exception!(lib, ProtonVpnLinuxError, pyo3::exceptions::PyException);
+pyo3::create_exception!(
+    lib,
+    ProtonVpnLinuxError,
+    pyo3::exceptions::PyException
+);
 
 #[cfg(feature = "python")]
 impl std::convert::From<Error> for pyo3::PyErr {
     fn from(err: Error) -> pyo3::PyErr {
         match err {
-            Error::ProtonVpnBinaryStatus(e) => ProtonVpnLinuxError::new_err(format!("VpnLib {e}")),
-            Error::Pythonize(e) => ProtonVpnLinuxError::new_err(format!("Pythonize {e}")),
-            Error::PyErr(e) => ProtonVpnLinuxError::new_err(format!("PyErr {e}")),
+            Error::ProtonVpnBinaryStatus(e) => {
+                ProtonVpnLinuxError::new_err(format!("VpnLib {e}"))
+            }
+            Error::Pythonize(e) => {
+                ProtonVpnLinuxError::new_err(format!("Pythonize {e}"))
+            }
+            Error::PyErr(e) => {
+                ProtonVpnLinuxError::new_err(format!("PyErr {e}"))
+            }
         }
     }
 }

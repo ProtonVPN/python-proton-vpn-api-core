@@ -16,22 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-//! NetworkManager VPN plugin binary.
-//!
-//! Entry point for the protun service that integrates ProtonVPN with
-//! NetworkManager via D-Bus.
-//!
-//! This just delegates to the services::protun::run function.
+use crate::proton;
 
-#[cfg(feature = "protun")]
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    python_proton_vpn_linux::services::protun::run().await // TODO remove python_ prefix once local agent is merged in
-}
-
-#[cfg(not(feature = "protun"))]
-fn main() {
-    eprintln!("This binary requires the 'protun' feature to be enabled.");
-    eprintln!("Build with: cargo build --features protun --bin protun");
-    std::process::exit(1);
+impl From<proton::vpn::Error> for zbus::fdo::Error {
+    fn from(err: proton::vpn::Error) -> Self {
+        zbus::fdo::Error::Failed(format!("{}", err))
+    }
 }

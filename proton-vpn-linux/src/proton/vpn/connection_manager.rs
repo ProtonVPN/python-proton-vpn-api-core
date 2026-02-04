@@ -90,7 +90,10 @@ impl ConnectionManager {
         initial_config: InitialConnectionConfig,
         tun_interface: String,
     ) -> Result<ConnectionInfo> {
-        log::info!("connection_manager: starting connection to VPN");
+        log::info!(
+            "connection_manager: starting connection with {:?}",
+            initial_config
+        );
 
         if self.connection.is_some() {
             log::error!("connection_manager: connection attempt while already connected");
@@ -184,7 +187,7 @@ impl ConnectionManager {
 /// A tuple of (file_descriptor, actual_interface_name)
 fn create_tun(name: &str) -> std::io::Result<(i32, String)> {
     let tun_fd =
-        unsafe { open(c"/dev/net/tun".as_ptr(), O_RDWR | O_NONBLOCK, 0) };  # nosemgrep
+        unsafe { open(c"/dev/net/tun".as_ptr(), O_RDWR | O_NONBLOCK, 0) }; // nosemgrep
 
     if tun_fd == -1 {
         return Err(std::io::Error::last_os_error());
@@ -205,10 +208,11 @@ fn create_tun(name: &str) -> std::io::Result<(i32, String)> {
     ifr[17] = ((flags >> 8) & 0xff) as u8;
 
     let result =
-        unsafe { ioctl(tun_fd, TUNSETIFF, ifr.as_mut_ptr() as *mut c_void) };  # nosemgrep
+        unsafe { ioctl(tun_fd, TUNSETIFF, ifr.as_mut_ptr() as *mut c_void) }; // nosemgrep
 
     if result == -1 {
-        unsafe {  # nosemgrep
+        // nosemgrep
+        unsafe {
             libc::close(tun_fd);
         }
         return Err(std::io::Error::last_os_error());

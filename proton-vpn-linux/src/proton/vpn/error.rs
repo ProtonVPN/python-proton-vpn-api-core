@@ -30,12 +30,20 @@ pub enum Error {
     TryFromSlice(#[from] std::array::TryFromSliceError),
     #[error("{0}")]
     InvalidState(String),
+    #[error("Missing setting: {0}")]
+    MissingSetting(String),
     #[error("{0}")]
     ParseIntError(#[from] std::num::ParseIntError),
     #[error("{0}")]
     AddrParseError(#[from] std::net::AddrParseError),
     #[error("{0}")]
     NetlinkError(#[from] rtnetlink::Error),
+    #[error("{0}")]
+    ValueError(String),
+    #[error("{0}")]
+    JsonError(#[from] serde_json::Error),
+    #[error("{0}")]
+    Infallible(#[from] std::convert::Infallible),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

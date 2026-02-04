@@ -103,7 +103,6 @@ impl ServerStatus {
 
 #[cfg_attr(feature = "python", pyo3::pymethods)]
 impl ServerStatus {
-
     #[cfg(feature = "python")]
     #[new]
     pub fn py_new(
@@ -136,10 +135,7 @@ impl ServerStatus {
         py: Python<'py>,
         status_file: &[u8],
     ) -> Result<Bound<'py, PyAny>> {
-        Ok(pythonize::pythonize(
-            py,
-            &self.compute_loads(status_file)?,
-        )?)
+        Ok(pythonize::pythonize(py, &self.compute_loads(status_file)?)?)
     }
 }
 

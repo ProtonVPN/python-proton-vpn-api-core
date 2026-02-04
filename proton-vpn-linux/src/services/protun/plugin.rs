@@ -30,10 +30,17 @@ use zbus::{interface, object_server::SignalEmitter};
 
 use crate::proton;
 
-use super::helpers::{load_connection_params, ConnectionParams};
-use super::types::{
-    Ip4Config, NMConnectionSettings, NMVpnServiceState, VpnConfig,
-};
+pub use super::error::*;
+pub use super::settings::*;
+
+use super::types::{Ip4Config, NMVpnServiceState, VpnConfig};
+
+struct ConfigInfo {
+    interface: InterfaceParams,
+    interface_mtu: u32,
+    external_gateway: std::net::IpAddr,
+    dns: Vec<std::net::IpAddr>,
+}
 
 /// The internal state of our VPN plugin
 #[derive(Debug)]
@@ -83,7 +90,16 @@ impl Plugin {
     async fn establish_connection(
         &self,
         params: ConnectionParams,
-    ) -> proton::vpn::Result<proton::vpn::ConnectionInfo> {
+    ) -> proton::vpn::Result<ConfigInfo> {
+        let ConnectionParams {
+            mut interface,
+            peers,
+            wg_config,
+            dns,
+        } = params;
+
+        let external_gateway = peers[0].server_ip.0.clone(); // TODO LT: This needs to be replaced with a stub IP address.
+
         let mut state = self.state.write().await;
         let connection_info = state
             .sdk
@@ -91,36 +107,49 @@ impl Plugin {
             .connect(
                 proton::vpn::InitialConnectionConfig {
                     wg_private_key: proton::vpn::WgClientPrivateKey(
-                        params.wg_config.interface.get_private_key()?,
+                        wg_config.interface.get_private_key()?,
                     ),
-                    peers: vec![params.peer_info],
+                    peers: peers,
                     network_available: true,
                     capture_packet: None,
                 },
-                params.interface_name,
+                interface.name.clone(),
             )
             .await?;
 
         state.tun_name = Some(connection_info.interface_name.clone());
-        Ok(connection_info)
+
+        interface.name = connection_info.interface_name.clone(); // Update interface name in case it was changed by the SDK
+
+        Ok(ConfigInfo {
+            interface,
+            interface_mtu: connection_info.mtu,
+            external_gateway,
+            dns,
+        })
     }
 
     /// Emit Config and Ip4Config signals to NetworkManager
     async fn emit_nm_config(
         emitter: &SignalEmitter<'_>,
-        connection_info: &proton::vpn::ConnectionInfo,
-        (external_gateway, internal_address, prefix, dns): (
-            u32,
-            u32,
-            u8,
-            Vec<u32>,
-        ),
+        config_info: ConfigInfo,
     ) -> zbus::fdo::Result<()> {
+        fn to_u32(ip: std::net::IpAddr) -> proton::vpn::Result<u32> {
+            match ip {
+                std::net::IpAddr::V4(v4) => Ok(u32::from(v4)),
+                std::net::IpAddr::V6(_) => {
+                    Err(proton::vpn::Error::InvalidState(
+                        "IPv6 addresses not yet supported".to_string(),
+                    ))
+                }
+            }
+        }
+
         Self::config(
             emitter,
             VpnConfig {
-                tundev: connection_info.interface_name.clone(),
-                gateway: external_gateway, // TODO LT: This needs to be replaced
+                tundev: config_info.interface.name.clone(),
+                gateway: to_u32(config_info.external_gateway)?, // TODO LT: This needs to be replaced
                 // with a stub IP address.
                 // We will be changing the
                 // external_gateway dynamically.
@@ -132,10 +161,14 @@ impl Plugin {
         Self::ip4_config(
             emitter,
             Ip4Config {
-                address: internal_address,
-                prefix,
-                dns,
-                mtu: connection_info.mtu,
+                address: to_u32(config_info.interface.address)?,
+                prefix: config_info.interface.prefix,
+                dns: config_info
+                    .dns
+                    .into_iter()
+                    .map(to_u32)
+                    .collect::<proton::vpn::Result<Vec<u32>>>()?,
+                mtu: config_info.interface_mtu,
                 #[cfg(feature = "protun_fwmark")]
                 never_default: true,
                 #[cfg(not(feature = "protun_fwmark"))]
@@ -160,31 +193,23 @@ impl Plugin {
     async fn connect(
         &self,
         #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
-        settings: NMConnectionSettings, // TODO: Check dbus api versioning.
+        settings: ConnectionSettings, // TODO: Check dbus api versioning.
     ) -> zbus::fdo::Result<()> {
         log::info!(
             "Connect called with sections: {:?}",
             settings.keys().collect::<Vec<_>>()
         );
 
-        let params = load_connection_params(&settings)?;
-        log::info!("Using interface name: {}", params.interface_name);
-
-        // Extract NM config values before consuming params
-        let nm_config = (
-            params.external_gateway,
-            params.internal_address,
-            params.prefix,
-            params.dns.clone(),
-        );
+        let params = load_connection_params_from_settings(settings)?;
+        log::info!("Using interface name: {}", params.interface.name);
 
         self.set_state(&emitter, NMVpnServiceState::Starting)
             .await?;
 
-        let connection_info = self.establish_connection(params).await?;
-        log::info!("TUN interface {} created", connection_info.interface_name);
+        let config_info = self.establish_connection(params).await?;
+        log::info!("TUN interface {} created", config_info.interface.name);
 
-        Self::emit_nm_config(&emitter, &connection_info, nm_config).await?; // TODO LT: SUpport ipv6 config
+        Self::emit_nm_config(&emitter, config_info).await?; // TODO LT: SUpport ipv6 config
         log::info!("Sent Config and Ip4Config signals to NetworkManager");
 
         self.set_state(&emitter, NMVpnServiceState::Started).await?;
@@ -197,8 +222,8 @@ impl Plugin {
     async fn connect_interactive(
         &self,
         #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
-        settings: NMConnectionSettings,
-        _details: HashMap<String, OwnedValue>,
+        settings: ConnectionSettings,
+        _details: ConnectionSettingsSection,
     ) -> zbus::fdo::Result<()> {
         log::info!("ConnectInteractive called");
         self.connect(emitter, settings).await
@@ -207,7 +232,7 @@ impl Plugin {
     /// Called by NetworkManager to check if secrets are needed before connecting.
     async fn need_secrets(
         &self,
-        settings: NMConnectionSettings,
+        settings: ConnectionSettings,
     ) -> zbus::fdo::Result<String> {
         log::info!(
             "NeedSecrets called with sections: {:?}",
@@ -219,7 +244,7 @@ impl Plugin {
     /// Called to provide additional secrets needed for connection.
     async fn new_secrets(
         &self,
-        settings: NMConnectionSettings,
+        settings: ConnectionSettings,
     ) -> zbus::fdo::Result<()> {
         log::info!(
             "NewSecrets called with sections: {:?}",
@@ -260,7 +285,7 @@ impl Plugin {
     /// Called by NetworkManager to set generic configuration options.
     async fn set_config(
         &self,
-        config: HashMap<String, OwnedValue>,
+        config: ConnectionSettings,
     ) -> zbus::fdo::Result<()> {
         log::info!("SetConfig called: {:?}", config);
         Ok(())
@@ -269,7 +294,7 @@ impl Plugin {
     /// Called by NetworkManager to set IPv4 configuration.
     async fn set_ip4_config(
         &self,
-        config: HashMap<String, OwnedValue>,
+        config: ConnectionSettings,
     ) -> zbus::fdo::Result<()> {
         log::info!("SetIp4Config called: {:?}", config);
         Ok(())
@@ -278,7 +303,7 @@ impl Plugin {
     /// Called by NetworkManager to set IPv6 configuration.
     async fn set_ip6_config(
         &self,
-        config: HashMap<String, OwnedValue>,
+        config: ConnectionSettings,
     ) -> zbus::fdo::Result<()> {
         log::info!("SetIp6Config called: {:?}", config);
         Ok(())
@@ -328,7 +353,7 @@ impl Plugin {
     #[zbus(signal)]
     async fn ip6_config(
         emitter: &SignalEmitter<'_>,
-        ip6config: HashMap<String, OwnedValue>,
+        ip6config: ConnectionSettingsSection,
     ) -> zbus::Result<()>;
 
     #[zbus(signal)]

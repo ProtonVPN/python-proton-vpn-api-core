@@ -22,9 +22,10 @@
 //! The service provides a VPN connection to the ProtonVPN network and is
 //! configured via the NetworkManager D-Bus API.
 
-mod helpers;
+mod error;
 mod plugin;
 mod run;
+mod settings;
 mod types;
 
 pub use run::run;

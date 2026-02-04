@@ -29,7 +29,10 @@ pub mod services;
 #[cfg(feature = "python")]
 #[pyo3::pymodule]
 #[pyo3(name = "linux")]
-fn py_init_linux(py: pyo3::prelude::Python, m: &pyo3::prelude::Bound<'_, pyo3::prelude::PyModule>) -> pyo3::PyResult<()> {
+fn py_init_linux(
+    py: pyo3::prelude::Python,
+    m: &pyo3::prelude::Bound<'_, pyo3::prelude::PyModule>,
+) -> pyo3::PyResult<()> {
     env_logger::init();
     #[cfg(feature = "core")]
     core::python::register(py, m)?;

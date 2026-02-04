@@ -20,6 +20,7 @@
 //! Types for the NetworkManager VPN Plugin these adhere to the NetworkManager D-Bus API.
 
 use std::collections::HashMap;
+use std::net::{IpAddr, SocketAddr};
 
 use zbus::zvariant::{OwnedValue, SerializeDict, Type};
 
@@ -75,7 +76,7 @@ pub struct Ip4Config {
     /// Internal VPN address (network byte order)
     pub address: u32,
     /// Network prefix length
-    pub prefix: u8,
+    pub prefix: u32,
     /// DNS servers (network byte order)
     pub dns: Vec<u32>,
     /// MTU for the tunnel interface
@@ -83,9 +84,4 @@ pub struct Ip4Config {
     /// If true, don't set this VPN as the default route
     #[zvariant(rename = "never-default")]
     pub never_default: bool,
-    //#[zvariant(rename = "ignore-auto-routes")]
-    //pub ignore_auto_routes: bool,
 }
-
-/// Raw connection settings from NetworkManager - D-Bus signature `a{sa{sv}}`
-pub type NMConnectionSettings = HashMap<String, HashMap<String, OwnedValue>>;
