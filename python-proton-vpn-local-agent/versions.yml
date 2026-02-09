@@ -1,0 +1,338 @@
+version: 1.6.0
+time: 2025/09/29 14:38
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- "chore!: Debug info for expired certificate"
+---
+version: 1.5.0
+time: 2025/09/17 16:06
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat!: Support hard-jailing for Two factor authentication"
+---
+version: 1.4.8
+time: 2025/09/05 11:20
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: Explicitly validate the certificate expiration time"
+---
+version: 1.4.7
+time: 2025/09/03 07:58
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: Handle UnexpectedEof in tls connect"
+---
+version: 1.4.6
+time: 2025/07/29 10:52
+author: Mateusz Markowicz
+email: mateusz.markowicz@proton.ch
+urgency: low
+stability: unstable
+description:
+- Support fetching NetShield statistics in local-agent-rs.
+---
+version: 1.4.5
+time: 2025/04/09 14:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- Merge and adapt community MR proposed by Nilsonfsilva
+---
+version: 1.4.4
+time: 2025/02/18 17:15
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Forward the rust log to python log.
+---
+version: 1.4.3
+time: 2025/01/28 13:55
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: low
+stability: unstable
+description:
+- Handle socket disconnection as a timeout error
+---
+version: 1.4.2
+time: 2025/01/28 13:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- Ensure logger is automatically initialized.
+---
+version: 1.4.1
+time: 2025/01/27 12:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- Handle PF refresh and errors (Alexandru Cheltuitor, Josep Llaneras).
+---
+version: 1.4.0
+time: 2025/01/21 14:44
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: low
+stability: unstable
+description:
+- Integrate port forwarding into listener
+---
+version: 1.3.0
+time: 2025/01/16 12:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- Refactor API (Alexandru Cheltuitor, Josep Llaneras).
+---
+version: 1.2.1
+time: 2024/12/17 21:34
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Added port forwarding module to local-agent-rs
+---
+version: 1.2.0
+time: 2024/11/19 13:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- Drop Ubuntu 20.04 support.
+---
+version: 1.1.5
+time: 2024/11/13 16:49
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Added semgrep scanning to CI
+---
+version: 1.1.4
+time: 2024/10/21 13:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+  - Build rpm package.spec file from a template.
+---
+version: 1.1.3
+time: 2024/10/14 13:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+  - Fixes for building with rpmbuild on fedora 41.
+---
+version: 1.1.2
+time: 2024/10/09 13:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+  - Build changelog automatically
+---
+version: 1.1.1
+time: 2024/10/03 13:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+  - Truncate IP.
+---
+version: 1.1.0
+time: 2024/10/02 13:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+  - Implement and expose connection details.
+---
+version: 1.0.0
+time: 2024/09/17 17:47
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+  - Introduced the APIError, SyntaxAPIError and PolicyAPIError exceptions.
+  - Reworked the error handling at the same time.
+---
+version: 0.10.0
+time: 2024/08/12 17:47
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+  - Fix deadlock when doing requests and reads at the same time.
+---
+version: 0.9.0
+time: 2024/08/9 19:26
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+  - AgentConnection::read now also returns what features have been set.
+  - Python ErrorMessage exception is raised when reading responses from Local Agent (Josep Llaneras)
+---
+version: 0.8.0
+time: 2024/08/9 09:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+  - Adds support for AgentConnection::request_features, and AgentFeatures object.
+---
+version: 0.7.0
+time: 2024/08/9 09:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Adds a playback mechanism which makes it possible to test responses from the server.
+---
+version: 0.6.0
+time: 2024/08/07 16:00
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: low
+stability: unstable
+description:
+- Configure TCP connection keep alive.
+---
+version: 0.5.0
+time: 2024/08/1 09:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Report an error if certificate is expired during session.
+---
+version: 0.4.0
+time: 2024/07/23 09:00
+author: Josep Llaneras
+email: josep.llaneras@proton.ch
+urgency: low
+stability: unstable
+description:
+- Add method to read asynchronous local agent messages.
+---
+version: 0.3.1
+time: 2024/07/18 12:50
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Add a timeout for the tls handshake
+---
+version: 0.3.0
+time: 2024/07/17 11:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Add timeouts to the API.
+- Make AgentConnection::get_status async.
+- Added AgentConnection::close to allow us to explicitly close a connection.
+---
+version: 0.2.0
+time: 2024/07/17 09:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- Make AgentConnector::connect raise exception when establishing a new LA connection with an expired certificate.
+---
+version: 0.1.2
+time: 2024/07/11 15:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Make AgentConnection::get_status async in the python bindings.
+---
+version: 0.1.1
+time: 2024/07/11 15:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Add unit test framework for rust.
+---
+version: 0.1.0
+time: 2024/07/5 10:00
+author: Alexandru Cheltuitor
+email: alexandru.cheltuitor@proton.ch
+urgency: low
+stability: unstable
+description:
+- Implement get_status() so that it returns connection status.
+---
+version: 0.0.3
+time: 2024/07/2 16:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Add LocalAgentConnectionError and LocalAgentBaseError. Currently all errors 'except panics' are LocalAgentConnectionErrors.
+---
+version: 0.0.2
+time: 2024/06/28 17:30
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Support for asyncio
+---
+version: 0.0.1
+time: 2024/05/31 11:00
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- Initial release of stub local agent.
+
+
