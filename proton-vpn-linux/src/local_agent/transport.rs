@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2024 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -16,18 +16,15 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
+use super::{Request, Response, Result};
+use async_trait::async_trait;
 
-// TODO LT: Split this error into runtime errors and handlable errors.
-#[derive(thiserror::Error, Debug)]
-pub enum Error {
-    #[error("{0}")]
-    ProtonVpnBinaryStatus(#[from] proton_vpn_binary_status::Error),
-    #[cfg(feature = "python")]
-    #[error("{0}")]
-    Pythonize(#[from] pythonize::PythonizeError),
-    #[cfg(feature = "python")]
-    #[error("{0}")]
-    PyErr(#[from] pyo3::PyErr),
+/// Represents a transport layer, such as a TCP stream or a Unix domain socket,
+/// or a file.
+
+#[async_trait]
+pub trait Transport: Send + Sync {
+    async fn send(&self, request: Request) -> Result<()>;
+    async fn recv(&self) -> Result<Response>;
+    async fn close(&self) -> Result<()>;
 }
-
-pub type Result<T> = std::result::Result<T, Error>;

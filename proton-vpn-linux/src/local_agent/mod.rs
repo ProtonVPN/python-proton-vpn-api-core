@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2024 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -17,17 +17,31 @@
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
 
-// TODO LT: Split this error into runtime errors and handlable errors.
-#[derive(thiserror::Error, Debug)]
-pub enum Error {
-    #[error("{0}")]
-    ProtonVpnBinaryStatus(#[from] proton_vpn_binary_status::Error),
-    #[cfg(feature = "python")]
-    #[error("{0}")]
-    Pythonize(#[from] pythonize::PythonizeError),
-    #[cfg(feature = "python")]
-    #[error("{0}")]
-    PyErr(#[from] pyo3::PyErr),
-}
+const DEFAULT_TIMEOUT_IN_SECONDS: u64 = 10;
 
-pub type Result<T> = std::result::Result<T, Error>;
+mod agent_connection;
+mod agent_connector;
+mod agent_features;
+mod error;
+mod listener;
+mod message;
+mod port_forwarding;
+mod reason_code;
+mod transport;
+mod transport_playback;
+mod transport_stream;
+
+// -----------------------------------------------------------------------------
+pub use agent_connection::AgentConnection;
+pub use agent_connector::{AgentConnector, ConnectParams};
+pub use agent_features::AgentFeatures;
+pub use transport_stream::TransportStream;
+pub use transport_playback::TransportPlayback;
+pub use error::{Error, Result};
+pub use listener::Listener;
+pub use message::*;
+pub use port_forwarding::request_tcp_port_forwarding;
+pub use reason_code::*;
+
+#[cfg(feature = "python")]
+pub mod python;

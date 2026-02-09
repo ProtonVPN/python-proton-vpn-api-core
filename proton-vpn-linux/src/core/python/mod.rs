@@ -17,17 +17,14 @@
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
 
-// TODO LT: Split this error into runtime errors and handlable errors.
-#[derive(thiserror::Error, Debug)]
-pub enum Error {
-    #[error("{0}")]
-    ProtonVpnBinaryStatus(#[from] proton_vpn_binary_status::Error),
-    #[cfg(feature = "python")]
-    #[error("{0}")]
-    Pythonize(#[from] pythonize::PythonizeError),
-    #[cfg(feature = "python")]
-    #[error("{0}")]
-    PyErr(#[from] pyo3::PyErr),
-}
+mod exceptions;
 
-pub type Result<T> = std::result::Result<T, Error>;
+use pyo3::prelude::*;
+use pyo3::types::PyModule;
+
+pub fn register(py: pyo3::Python<'_>) -> pyo3::PyResult<pyo3::Bound<'_, PyModule>> {
+    let core = PyModule::new(py, "core")?;
+    exceptions::register(&core)?;
+    core.add_class::<super::ServerStatus>()?;
+    Ok(core)
+}

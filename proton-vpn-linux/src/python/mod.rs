@@ -17,17 +17,31 @@
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
 
-// TODO LT: Split this error into runtime errors and handlable errors.
-#[derive(thiserror::Error, Debug)]
-pub enum Error {
-    #[error("{0}")]
-    ProtonVpnBinaryStatus(#[from] proton_vpn_binary_status::Error),
-    #[cfg(feature = "python")]
-    #[error("{0}")]
-    Pythonize(#[from] pythonize::PythonizeError),
-    #[cfg(feature = "python")]
-    #[error("{0}")]
-    PyErr(#[from] pyo3::PyErr),
-}
+mod exceptions;
+mod logger;
+mod submodule;
 
-pub type Result<T> = std::result::Result<T, Error>;
+use pyo3::prelude::*;
+
+pub use submodule::SubModule;
+
+#[pyo3::pymodule]
+#[pyo3(name = "linux")]
+fn py_init_linux(
+    py: pyo3::prelude::Python,
+    m: &pyo3::prelude::Bound<'_, pyo3::prelude::PyModule>,
+) -> pyo3::PyResult<()> {
+    use submodule::SubModule as _;
+
+    exceptions::register(m)?;
+
+    m.add_function(wrap_pyfunction!(logger::init_logger, m)?)?;
+
+    #[cfg(feature = "core")]
+    m.add_import_submodule(py, &super::core::python::register(py)?, "proton.vpn.linux.core")?;
+
+    #[cfg(feature = "local_agent")]
+    m.add_import_submodule(py, &super::local_agent::python::register(py)?, "proton.vpn.linux.local_agent")?;
+
+    Ok(())
+}

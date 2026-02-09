@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2024 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -16,18 +16,22 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
+use super::super::error::*;
 
-// TODO LT: Split this error into runtime errors and handlable errors.
-#[derive(thiserror::Error, Debug)]
-pub enum Error {
-    #[error("{0}")]
-    ProtonVpnBinaryStatus(#[from] proton_vpn_binary_status::Error),
-    #[cfg(feature = "python")]
-    #[error("{0}")]
-    Pythonize(#[from] pythonize::PythonizeError),
-    #[cfg(feature = "python")]
-    #[error("{0}")]
-    PyErr(#[from] pyo3::PyErr),
+/// Converts a rust future into a python future, making sure to convert errors
+/// into Python exceptions.
+///
+/// This is necessary as async {} blocks in Rust do not have a way to specify
+/// their return type.
+pub fn future<W, R>(
+    py: pyo3::Python,
+    work: W,
+) -> pyo3::PyResult<pyo3::Bound<pyo3::PyAny>>
+where
+    W: std::future::Future<Output = Result<R>> + Send + 'static,
+    R: for<'py> pyo3::IntoPyObject<'py> + Send + 'static,
+{
+    pyo3_async_runtimes::tokio::future_into_py(py, async move {
+        work.await.map_err(pyo3::PyErr::from)
+    })
 }
-
-pub type Result<T> = std::result::Result<T, Error>;
