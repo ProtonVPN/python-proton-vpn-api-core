@@ -21,7 +21,6 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 from concurrent.futures import Future
-import os
 import secrets
 from getpass import getuser
 from ipaddress import IPv4Address, IPv6Address
@@ -103,9 +102,6 @@ reneg-sec 0
 
 remote-cert-tls server
 
-{%- if not certificate_based %}
-auth-user-pass
-{%- endif %}
 
 <ca>
 {{ca_certificate}}
@@ -132,14 +128,12 @@ aeb893d9a96d1f15519bb3c4dcb40ee3
 -----END OpenVPN Static key V1-----
 </tls-crypt>
 
-{%- if certificate_based %}
 <cert>
 {{cert}}
 </cert>
 <key>
 {{priv_key}}
 </key>
-{%- endif %}
 """
 
 
@@ -169,15 +163,13 @@ class OVPNConfig(VPNConfiguration):
             "serverlist": [self._vpnserver.server_ip],
             "openvpn_ports": ports,
             "ca_certificate": CA_CERT,
-            "certificate_based": self.use_certificate,
         }
 
-        if self.use_certificate:
-            j2_values["cert"] =\
-                self._vpncredentials.pubkey_credentials.certificate_pem
-            password = self._private_key_passphrase.encode()
-            j2_values["priv_key"] = self._vpncredentials.pubkey_credentials.\
-                get_ed25519_sk_pem(password=password)
+        j2_values["cert"] =\
+            self._vpncredentials.pubkey_credentials.certificate_pem
+        password = self._private_key_passphrase.encode()
+        j2_values["priv_key"] = self._vpncredentials.pubkey_credentials.\
+            get_ed25519_sk_pem(password=password)
 
         template =\
             (Environment(loader=BaseLoader, autoescape=True)  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
@@ -226,8 +218,7 @@ class OpenVPN(LinuxNetworkManager, LocalAgentMixin):
     def _generate_connection(self, private_key_passphrase):
         vpnconfig = PROTOCOLS[self.protocol](
             private_key_passphrase,
-            self._vpnserver, self._vpncredentials, self._settings,
-            self._use_certificate
+            self._vpnserver, self._vpncredentials, self._settings
         )
 
         self.connection = self._import_vpn_config(vpnconfig)
@@ -243,17 +234,13 @@ class OpenVPN(LinuxNetworkManager, LocalAgentMixin):
         self._set_connection_user_owned()
         self._set_server_certificate_check()
         self._set_dns()
-        if self._use_certificate:
-            self._set_vpn_cert_credentials(private_key_passphrase)
-        else:
-            self._set_vpn_credentials()
+        self._set_vpn_cert_credentials(private_key_passphrase)
 
         self.connection.add_setting(self._connection_settings)
 
     async def update_credentials(self, credentials):
         await super().update_credentials(credentials)
-        if self._use_certificate:
-            await self._start_local_agent_listener()
+        await self._start_local_agent_listener()
 
     def _set_custom_connection_id(self):
         self._connection_settings.set_property(NM.SETTING_CONNECTION_ID, self._get_servername())
@@ -308,33 +295,19 @@ class OpenVPN(LinuxNetworkManager, LocalAgentMixin):
             nm_setting.set_property(NM.SETTING_IP_CONFIG_DNS, ip_addresses)
             nm_setting.set_property(NM.SETTING_IP_CONFIG_IGNORE_AUTO_DNS, True)
 
-    def _set_vpn_credentials(self):
-        """Add OpenVPN credentials to ProtonVPN connection.
-
-        Args:
-            openvpn_username (string): openvpn/ikev2 username
-            openvpn_password (string): openvpn/ikev2 password
-        """
-        # returns NM.SettingVpn if the connection contains one, otherwise None
-        # https://lazka.github.io/pgi-docs/NM-1.0/classes/SettingVpn.html
-        username, password = self._get_user_pass(True)
-
-        self._vpn_settings.add_data_item(
-            "username", username
-        )
-        # Use System wide password if we are root (No Secret Agent)
-        # See https://people.freedesktop.org/~lkundrak/nm-docs/nm-settings.html#secrets-flags
-        # => Allow headless testing
-        if os.getuid() == 0:
-            self._vpn_settings.add_data_item("password-flags", "0")
-        self._vpn_settings.add_secret(SECRET_PASSWORD_FIELD, password)
-
     def _set_vpn_cert_credentials(self, private_key_passphrase: str):
         """
         Add passphrase to decrypt the private key.
         """
         self._vpn_settings.add_secret(SECRET_CERT_PASS_FIELD,
                                       private_key_passphrase)
+
+    def _initialize_persisted_connection(self, connection_id: str) -> states.State:
+        state = super()._initialize_persisted_connection(connection_id)
+
+        if isinstance(state, states.Connected):
+            self._async_start_local_agent_listener()
+        return state
 
     # pylint: disable=unused-argument
     def _on_state_changed(
@@ -373,12 +346,10 @@ class OpenVPN(LinuxNetworkManager, LocalAgentMixin):
         )
 
         def start_local_agent():
-            if self._use_certificate:
-                self._async_start_local_agent_listener()
+            self._async_start_local_agent_listener()
 
         def stop_local_agent():
-            if self._use_certificate:
-                self._async_stop_local_agent_listener()
+            self._async_stop_local_agent_listener()
 
         if state is NM.VpnConnectionState.ACTIVATED:
             start_local_agent()
@@ -448,20 +419,10 @@ class OpenVPN(LinuxNetworkManager, LocalAgentMixin):
         else:
             logger.debug("Ignoring VPN state change: %s", state.value_name)
 
-    def _initialize_persisted_connection(
-            self, connection_id: str
-    ) -> states.State:
-        state = super()._initialize_persisted_connection(connection_id)
-
-        if isinstance(state, states.Connected):
-            if self._use_certificate:
-                self._async_start_local_agent_listener()
-        return state
-
     async def update_settings(self, settings: Settings):
         """Update features on the active agent connection."""
         await super().update_settings(settings)
-        if self._use_certificate and self._agent_listener.is_running:  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
+        if self._agent_listener.is_running:  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
             await self._request_connection_features(settings.features)
 
 

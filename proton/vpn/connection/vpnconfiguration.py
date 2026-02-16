@@ -32,14 +32,12 @@ class VPNConfiguration:
     PROTOCOL = None
     EXTENSION = None
 
-    def __init__(self, vpnserver, vpncredentials, settings,
-                 use_certificate=False):
+    def __init__(self, vpnserver, vpncredentials, settings):
         self._configfile = None
         self._configfile_enter_level = None
         self._vpnserver = vpnserver
         self._vpncredentials = vpncredentials
         self._settings = settings
-        self._use_certificate = use_certificate
 
     def __enter__(self):
         # We create the configuration file when we enter,
@@ -81,14 +79,6 @@ class VPNConfiguration:
         Generates the configuration file content.
         """
         raise NotImplementedError
-
-    @property
-    def use_certificate(self):
-        """
-        Returns True if the configuration uses a certificate, and False
-        otherwise.
-        """
-        return self._use_certificate
 
     @property
     def __base_path(self):

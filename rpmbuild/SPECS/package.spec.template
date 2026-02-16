@@ -51,7 +51,7 @@ Requires: gobject-introspection
 Requires: python3-proton-vpn-local-agent >= 1.5.0
 Requires: python3-jinja2
 
-Conflicts: proton-vpn-gtk-app < 4.11.0~b0
+Conflicts: proton-vpn-gtk-app < 4.14.3~rc3
 Conflicts: python3-proton-vpn-network-manager < 0.13.5
 
 Obsoletes: python3-proton-vpn-session

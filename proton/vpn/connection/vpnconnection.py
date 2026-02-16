@@ -57,7 +57,6 @@ class VPNConnection(ABC):
         connection_id: str = None,
         connection_persistence: ConnectionPersistence = None,
         publisher: Publisher = None,
-        use_certificate: bool = False,
     ):
         """Initialize a VPNConnection object.
 
@@ -81,7 +80,6 @@ class VPNConnection(ABC):
 
         self._connection_persistence = connection_persistence or ConnectionPersistence()
         self._publisher = publisher or Publisher()
-        self._use_certificate = use_certificate
 
         if connection_id:
             self._unique_id = connection_id
@@ -117,13 +115,6 @@ class VPNConnection(ABC):
     @abstractmethod
     async def stop(self):
         """Stops the VPN connection."""
-
-    @property
-    def use_certificate(self) -> bool:
-        """
-        Returns True if the connection uses a certificate, and False
-        otherwise."""
-        return self._use_certificate
 
     @property
     def are_feature_updates_applied_when_active(self) -> bool:
@@ -175,8 +166,7 @@ class VPNConnection(ABC):
 
     @staticmethod
     def create(server: VPNServer, credentials: VPNCredentials, settings: Settings = None,
-               protocol: str = None, backend: str = None,
-               use_certificate: bool = False):  # pylint: disable=too-many-arguments
+               protocol: str = None, backend: str = None):  # pylint: disable=too-many-arguments
         """
         Creates a new VPN connection object. Note the VPN connection won't be initiated. For that
         to happen, see the `start` method.
@@ -191,8 +181,7 @@ class VPNConnection(ABC):
         backend = Loader.get("backend", class_name=backend)
         protocol = protocol.lower() if protocol else None
         protocol_class = backend.factory(protocol)
-        return protocol_class(server, credentials, settings,
-                              use_certificate=use_certificate)
+        return protocol_class(server, credentials, settings)
 
     @property
     def server(self) -> VPNServer:

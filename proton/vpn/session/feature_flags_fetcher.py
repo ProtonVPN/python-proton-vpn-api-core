@@ -35,61 +35,7 @@ FF_ENV_VAR = "PROTON_VPN_FEATURE_FLAG_{flag}"
 DEFAULT = {
     "toggles": [
         {
-            "name": "DisplayPortForwarding",
-            "enabled": False,
-            "impressionData": False,
-            "variant": {
-                "name": "disabled",
-                "enabled": False
-            }
-        },
-        {
-            "name": "CertificateBasedOpenVPNWithLocalAgent",
-            "enabled": False,
-            "impressionData": False,
-            "variant": {
-                "name": "disabled",
-                "enabled": False
-            }
-        },
-        {
-            "name": "CertificateBasedOpenVPN",
-            "enabled": False,
-            "impressionData": False,
-            "variant": {
-                "name": "disabled",
-                "enabled": False
-            }
-        },
-        {
-            "name": "CustomDNS",
-            "enabled": False,
-            "impressionData": False,
-            "variant": {
-                "name": "disabled",
-                "enabled": False
-            }
-        },
-        {
-            "name": "SwitchDefaultProtocolToWireguard",
-            "enabled": False,
-            "impressionData": False,
-            "variant": {
-                "name": "disabled",
-                "enabled": False
-            }
-        },
-        {
             "name": "BinaryServerStatus",
-            "enabled": False,
-            "impressionData": False,
-            "variant": {
-                "name": "disabled",
-                "enabled": False
-            }
-        },
-        {
-            "name": "DisplaySplitTunneling",
             "enabled": False,
             "impressionData": False,
             "variant": {

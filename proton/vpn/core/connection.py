@@ -130,11 +130,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
     @property
     def is_split_tunneling_available(self) -> bool:
         """Returns if split tunneling is available or not."""
-        split_tunneling_ff = self._get_split_tunneling_feature_flag()
-        return bool(self._split_tunneling) and split_tunneling_ff
-
-    def _get_split_tunneling_feature_flag(self):
-        return self._session_holder.session.feature_flags.get("DisplaySplitTunneling")
+        return bool(self._split_tunneling)
 
     async def get_settings(self) -> Settings:
         """Returns the user's settings."""
@@ -143,8 +139,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         loop = asyncio.get_running_loop()
         settings = await loop.run_in_executor(
             None, self._settings_persistence.get,
-            user_tier,
-            self._session_holder.session.feature_flags
+            user_tier
         )
 
         return settings
@@ -233,13 +228,6 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
                 st_settings.get_config()
             )
 
-    def get_certificate_based_openvpn(self):
-        """
-        Returns whether the certificate based OpenVPN should be used or not.
-        """
-        feature_flags = self._session_holder.session.feature_flags
-        return feature_flags.get("CertificateBasedOpenVPNWithLocalAgent")
-
     async def _get_current_connection(self) -> Optional[VPNConnection]:
         """
         :return: the current VPN connection or None if there isn't one.
@@ -261,14 +249,11 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         for protocol in all_protocols:
             if protocol.cls.protocol == persisted_parameters.protocol:
 
-                use_certificate = self.get_certificate_based_openvpn()
-
                 vpn_connection = protocol.cls(
                     server=persisted_parameters.server,
                     credentials=self.credentials,
                     settings=settings,
-                    connection_id=persisted_parameters.connection_id,
-                    use_certificate=use_certificate
+                    connection_id=persisted_parameters.connection_id
                 )
                 if not isinstance(vpn_connection.initial_state, states.Disconnected):
                     return vpn_connection
@@ -410,14 +395,8 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
         protocol = protocol or settings.protocol
 
-        use_certificate = self.get_certificate_based_openvpn()
-
-        logger.info("Using certificate based authentication"
-                    f" for openvpn: {use_certificate}")
-
         connection = VPNConnection.create(
-            server, self.credentials, settings, protocol, backend,
-            use_certificate=use_certificate
+            server, self.credentials, settings, protocol, backend
         )
 
         connection.register(self._on_connection_event)
@@ -587,14 +566,12 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         StateContext.kill_switch = self._kill_switch or kill_switch_backend()
 
     def _set_split_tunneling_setting(self, st_setting: SplitTunnelingSetting):
-        split_tunneling_ff = self._get_split_tunneling_feature_flag()
 
         st_setting = deepcopy(st_setting)
         st_setting.enabled = (
             self._split_tunneling
             and st_setting.enabled
             and not self._is_free_tier()
-            and split_tunneling_ff
         )
 
         StateContext.split_tunneling_setting = st_setting

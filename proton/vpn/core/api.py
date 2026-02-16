@@ -87,8 +87,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         loop = asyncio.get_running_loop()
         settings = await loop.run_in_executor(
             None, self._settings_persistence.get,
-            user_tier,
-            self.feature_flags
+            user_tier
         )
         self._usage_reporting.enabled = settings.anonymous_crash_reports
 

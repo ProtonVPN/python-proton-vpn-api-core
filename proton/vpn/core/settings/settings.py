@@ -29,7 +29,6 @@ from proton.vpn import logging
 from proton.utils.environment import VPNExecutionEnvironment
 from proton.vpn.core.cache_handler import CacheHandler
 from proton.vpn.killswitch.interface import KillSwitchState
-from proton.vpn.session.feature_flags_fetcher import FeatureFlags
 from proton.vpn.core.settings.custom_dns import CustomDNS
 from proton.vpn.core.settings.features import Features
 
@@ -43,7 +42,7 @@ SETTINGS = os.path.join(
 )
 
 
-DEFAULT_PROTOCOL = "openvpn-udp"
+DEFAULT_PROTOCOL = "wireguard"
 DEFAULT_KILLSWITCH = KillSwitchState.OFF.value
 DEFAULT_ANONYMOUS_CRASH_REPORTS = True
 
@@ -114,31 +113,21 @@ class SettingsPersistence:
         self._settings = None
         self._settings_are_default = True
 
-    def get(self, user_tier: int, feature_flags: "FeatureFlags" = None) -> Settings:
+    def get(self, user_tier: int) -> Settings:
         """Load the user settings, either the ones stored on disk or getting
         default based on tier"""
-        feature_flags = feature_flags or FeatureFlags.default()
 
         if self._settings is not None:
-            if self._settings_are_default:
-                self._update_default_settings_based_on_feature_flags(
-                    feature_flags)
-
             return self._settings
 
         raw_settings = self._cache_handler.load()
         if raw_settings is None:
             self._settings = Settings.default(user_tier)
-            self._update_default_settings_based_on_feature_flags(feature_flags)
         else:
             self._settings = Settings.from_dict(raw_settings, user_tier)
             self._settings_are_default = False
 
         return self._settings
-
-    def _update_default_settings_based_on_feature_flags(self, feature_flags: "FeatureFlags"):
-        if feature_flags.get("SwitchDefaultProtocolToWireguard"):
-            self._settings.protocol = "wireguard"
 
     def save(self, settings: Settings):
         """Store settings to disk."""

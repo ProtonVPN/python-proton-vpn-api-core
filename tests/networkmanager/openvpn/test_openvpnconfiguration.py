@@ -65,8 +65,7 @@ def test_ovpnconfig_with_settings(protocol, modified_exec_env, vpn_server):
 @pytest.mark.parametrize("protocol", ["udp", "tcp"])
 def test_ovpnconfig_with_certificate(protocol, modified_exec_env, vpn_server):
     credentials = MockVpnCredentials()
-    ovpn_cfg = OVPNConfig("", vpn_server, MockVpnCredentials(), MockSettings(),
-                          use_certificate=True)
+    ovpn_cfg = OVPNConfig("", vpn_server, MockVpnCredentials(), MockSettings())
     ovpn_cfg._protocol = protocol
     output = ovpn_cfg.generate()
 
