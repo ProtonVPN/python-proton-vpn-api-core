@@ -34,6 +34,7 @@ pub async fn run(
     // Extract values from config
     let endpoint = config.peer.get_endpoint()?;
     let public_key = BASE64_STANDARD.encode(config.peer.get_public_key()?);
+    let private_key = BASE64_STANDARD.encode(config.interface.get_private_key()?);
     let (address, prefix) = config.interface.get_address_and_prefix()?;
     let dns: Vec<String> = config
         .interface
@@ -62,11 +63,14 @@ pub async fn run(
     con-name proton0 \
     ipv4.addresses '{}/{}' \
     ipv4.dns '{}' \
-    vpn.data 'peers = {}'"#,
+    vpn.data "private-key-flags=1" \
+    +vpn.data 'peers = {}' \
+    vpn.secrets 'private-key = {}'"#,
         address,
         prefix,
         dns.join(","),
-        peers_json
+        peers_json,
+        private_key
     );
 
     Ok(())

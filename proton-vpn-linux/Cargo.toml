@@ -1,15 +1,17 @@
 [package]
 name = "proton-vpn-linux"
 # TODO LT: Flip this back down to 0.x.x because the lib is not yet released, get .deb and rpms removed from repos
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 
 [features]
 protun = ["dep:clap", "dep:zbus",
-          "dep:shlex", "dep:glob", "sdk", "dep:rtnetlink", "dep:netlink-packet-route", "dep:futures"]
+          "dep:shlex", "dep:glob", "sdk", "dep:rtnetlink", "dep:netlink-packet-route", "dep:futures",
+          "auth-dialog"]
 protun_fwmark = []
 sdk = ["dep:protun", "dep:serde", "dep:serde_json", "dep:libc", "dep:base64", "dep:tokio",
        "dep:async-trait", "dep:rust-ini", "dep:serini"]
+auth-dialog = ["dep:clap", "dep:oo7", "dep:tokio"]
 
 core = ["dep:proton-vpn-binary-status", "dep:serde", "dep:serde_json"]
 python = ["proton-vpn-binary-status/serde", "dep:pyo3", "dep:pythonize",
@@ -25,6 +27,10 @@ crate-type = ["cdylib", "rlib"]
 [[bin]]
 name = "protun"
 required-features = ["protun"]
+
+[[bin]]
+name = "protun-auth-dialog"
+required-features = ["auth-dialog"]
 
 [dependencies]
 thiserror = "1.0.60"
@@ -49,6 +55,7 @@ serde_json = { version = "1.0.145", optional=true }
 libc = { version ="0.2.178", optional=true }
 base64 = { version="0.22.1", optional=true }
 clap = { version="4.5.53", features=["derive"], optional=true }
+oo7 = { version = "0.5", default-features = false, features = ["tokio", "native_crypto"], optional = true }
 zbus = { version = "5", default-features = false, features = ["tokio"], optional = true }
 rust-ini = { version = "0.21.3", optional = true }
 shlex = { version = "1.3.0", optional = true }

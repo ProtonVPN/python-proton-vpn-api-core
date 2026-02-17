@@ -4,3 +4,8 @@ service=org.freedesktop.NetworkManager.protun
 program=$PWD/target/debug/protun
 supports-multiple-connections=false
 SystemdService=nm-protun.service
+
+[GNOME]
+auth-dialog=$PWD/target/debug/protun-auth-dialog
+supports-external-ui-mode=true
+supports-hints=false

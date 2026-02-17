@@ -94,7 +94,7 @@ impl Plugin {
         let ConnectionParams {
             mut interface,
             peers,
-            wg_config,
+            private_key,
             dns,
         } = params;
 
@@ -106,9 +106,7 @@ impl Plugin {
             .connection_manager()
             .connect(
                 proton::vpn::InitialConnectionConfig {
-                    wg_private_key: proton::vpn::WgClientPrivateKey(
-                        wg_config.interface.get_private_key()?,
-                    ),
+                    wg_private_key: proton::vpn::WgClientPrivateKey(private_key),
                     peers: peers,
                     network_available: true,
                     capture_packet: None,
@@ -136,7 +134,7 @@ impl Plugin {
     ) -> zbus::fdo::Result<()> {
         fn to_u32(ip: std::net::IpAddr) -> proton::vpn::Result<u32> {
             match ip {
-                std::net::IpAddr::V4(v4) => Ok(u32::from(v4)),
+                std::net::IpAddr::V4(v4) => Ok(u32::from(v4).to_be()), // Network byte order
                 std::net::IpAddr::V6(_) => {
                     Err(proton::vpn::Error::InvalidState(
                         "IPv6 addresses not yet supported".to_string(),
@@ -234,11 +232,13 @@ impl Plugin {
         &self,
         settings: ConnectionSettings,
     ) -> zbus::fdo::Result<String> {
-        log::info!(
-            "NeedSecrets called with sections: {:?}",
-            settings.keys().collect::<Vec<_>>()
-        );
-        Ok(String::new())
+        if needs_secrets(settings)? {
+            log::info!("Secrets are needed for this connection");
+            Ok("vpn".to_string()) // Request secrets from the "vpn" section
+        } else {
+            log::info!("No secrets needed for this connection");
+            Ok(String::new()) // No secrets needed
+        }
     }
 
     /// Called to provide additional secrets needed for connection.

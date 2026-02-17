@@ -21,7 +21,6 @@
 //! NetworkManager connection settings.
 
 use std::net::{IpAddr, SocketAddr};
-use std::path::PathBuf;
 
 use base64::prelude::*;
 use std::collections::HashMap;
@@ -46,7 +45,7 @@ pub struct InterfaceParams {
 pub struct ConnectionParams {
     pub interface: InterfaceParams,
     pub dns: Vec<std::net::IpAddr>,
-    pub wg_config: proton::vpn::wireguard_utils::WireguardConfig,
+    pub private_key: [u8; 32],
     pub peers: Vec<protun::api::connection::PeerInfo>,
 }
 
@@ -167,33 +166,20 @@ fn extract_ipv4_config(
     Ok((ip, prefix, dns_servers))
 }
 
-/// Get the path to the WireGuard config file.
-/// Currently finds it relative to the executable (dev/debug mode).
-fn get_config_path() -> PathBuf {
-    let exe_path =
-        std::env::current_exe().expect("Failed to get current exe path"); // nosemgrep - TODO LT: Remove this before shipping to beta
-    exe_path
-        .parent()
-        .expect("Failed to get debug dir")
-        .parent()
-        .expect("Failed to get target dir")
-        .parent()
-        .expect("Failed to get project root")
-        .join("configs")
-        .join("current.conf")
-}
-
 /// Load connection parameters from NM settings directly.
 ///
 /// Reads public fields (endpoint, public key, address, DNS) from the "vpn" section
-/// of the settings. Private key is still read from the config file.
+/// and private key from "vpn.secrets" section.
 ///
-/// Expected "vpn" section keys:
-/// - "endpoint": Server endpoint as "IP:port" (required)
-/// - "server-public-key": Base64-encoded server public key (required)
-/// - "local-address": Client VPN address (optional, defaults to 10.2.0.2)
-/// - "prefix": Address prefix length (optional, defaults based on IP version)
-/// - "dns": Comma-separated DNS servers (optional, defaults to 10.2.0.1)
+/// Expected "vpn.data" keys:
+/// - "peers": JSON array of peer objects with id, endpoint, public-key
+///
+/// Expected "vpn.secrets" keys:
+/// - "private-key": Base64-encoded WireGuard private key
+///
+/// Expected "ipv4" keys:
+/// - "addresses": Array of [address, prefix, gateway]
+/// - "dns": Array of DNS server addresses
 pub fn load_connection_params_from_settings(
     mut settings: ConnectionSettings,
 ) -> proton::vpn::Result<ConnectionParams> {
@@ -205,6 +191,7 @@ pub fn load_connection_params_from_settings(
     // Extract WireGuard settings from NM connection settings
     let vpn = settings.get_section("vpn")?;
     let mut data: ConnectionSettingsSection = vpn.take_value("data")?;
+    let mut secrets: ConnectionSettingsSection = vpn.take_value("secrets")?;
     let (internal_address, internal_prefix, dns) =
         extract_ipv4_config(settings.get_section("ipv4")?)?;
 
@@ -218,11 +205,8 @@ pub fn load_connection_params_from_settings(
         .map(|peer| peer.try_into())
         .collect::<Result<Vec<protun::api::connection::PeerInfo>, _>>()?;
 
-    // Still read private key from config file for now
-    let config_path = get_config_path();
-    let wg_config = proton::vpn::wireguard_utils::WireguardConfig::try_from(
-        std::fs::read_to_string(&config_path)?.as_str(),
-    )?;
+    // Get private key from vpn.secrets section
+    let private_key = get_private_key_from_secrets(&mut secrets)?;
 
     Ok(ConnectionParams {
         interface: InterfaceParams {
@@ -231,7 +215,7 @@ pub fn load_connection_params_from_settings(
             prefix: internal_prefix,
         },
         peers,
-        wg_config,
+        private_key,
         dns,
     })
 }
@@ -242,6 +226,27 @@ fn get_interface_name(settings: &ConnectionSettings) -> Option<String> {
     conn.get("interface-name")
         .or_else(|| conn.get("id"))
         .and_then(|v| v.clone().try_into().ok())
+}
+
+/// Extract the WireGuard private key from the vpn.secrets section.
+///
+/// The private key is expected to be base64-encoded in the "private-key" field
+/// of the "vpn.secrets" section.
+pub fn get_private_key_from_secrets(
+    secrets: &mut ConnectionSettingsSection,
+) -> proton::vpn::Result<[u8; 32]> {
+
+    let private_key_bytes : [u8;32] = BASE64_STANDARD
+        .decode(secrets.take_value::<String>("private-key")?.as_bytes())
+        .map_err(|e| {
+            proton::vpn::Error::ValueError(format!("Failed to decode private key: {}", e))
+        })?.try_into().map_err(|_| {
+            proton::vpn::Error::ValueError("Private key must be 32 bytes".into())
+        })?;
+
+    private_key_bytes.as_slice().try_into().map_err(|_| {
+        proton::vpn::Error::ValueError("Private key must be 32 bytes".into())
+    })
 }
 
 /// Sanitize a connection name to be a valid Linux network interface name.
@@ -267,4 +272,12 @@ fn sanitize_interface_name(name: &str) -> String {
     } else {
         sanitized
     }
+}
+
+pub fn needs_secrets(
+    mut settings: ConnectionSettings,
+) -> proton::vpn::Result<bool> {
+    let vpn = settings.get_section("vpn")?;
+    let secrets: ConnectionSettingsSection = vpn.take_value("secrets")?;
+    Ok(!secrets.contains_key("private-key"))
 }
