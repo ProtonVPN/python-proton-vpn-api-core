@@ -32,6 +32,7 @@ setup(
         "proton.vpn.backend.networkmanager.core*",
         "proton.vpn.backend.networkmanager.protocol.openvpn*",
         "proton.vpn.backend.networkmanager.protocol.wireguard*",
+        "proton.vpn.backend.networkmanager.protocol.protun*",
         "proton.vpn.backend.networkmanager.killswitch.default*",
         "proton.vpn.backend.networkmanager.killswitch.wireguard*",
     ]),
@@ -43,6 +44,7 @@ setup(
             "openvpn-tcp = proton.vpn.backend.networkmanager.protocol.openvpn:OpenVPNTCP",
             "openvpn-udp = proton.vpn.backend.networkmanager.protocol.openvpn:OpenVPNUDP",
             "wireguard = proton.vpn.backend.networkmanager.protocol.wireguard:Wireguard",
+            "protun = proton.vpn.backend.networkmanager.protocol.protun:Protun",
         ],
         "proton_loader_killswitch": [
             "default = proton.vpn.backend.networkmanager.killswitch.default:NMKillSwitch",

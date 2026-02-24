@@ -368,7 +368,11 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
         raises RuntimeError:  if no backends could be found."""
         backend_class = Loader.get("backend", class_name=backend_name)
-        supported_protocols = Loader.get_all(backend_class.backend)
+
+        # This loader implementation is not ideal. We need to filter the
+        # protocols by their validate methods.
+        supported_protocols = [p for p in Loader.get_all(backend_class.backend)
+                               if p.cls._validate()]  # pylint: disable=W0212
 
         return supported_protocols
 
