@@ -4,7 +4,7 @@
 
 Prefix: %{{_prefix}}
 
-Name: python3-%{{unmangled_name}}
+Name: %{{unmangled_name}}
 Version: %{{version}}
 Release: %{{release}}%{{?dist}}
 Summary: %{{unmangled_name}} library
@@ -33,9 +33,20 @@ python3 setup.py build
 
 %install
 python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
+install -D -m 755 nm-protun-service $RPM_BUILD_ROOT/usr/libexec/nm-protun-service
+install -D -m 755 nm-protun-auth-dialog $RPM_BUILD_ROOT/usr/libexec/nm-protun-auth-dialog
+install -d $RPM_BUILD_ROOT/usr/lib/NetworkManager/VPN
+sed -e 's|program=.*|program=/usr/libexec/nm-protun-service|' \
+    -e 's|auth-dialog=.*|auth-dialog=/usr/libexec/nm-protun-auth-dialog|' \
+    nm-protun.name > $RPM_BUILD_ROOT/usr/lib/NetworkManager/VPN/nm-protun.name
+install -D -m 644 nm-protun-service.conf $RPM_BUILD_ROOT/usr/share/dbus-1/system.d/nm-protun-service.conf
 
 
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
+/usr/libexec/nm-protun-service
+/usr/libexec/nm-protun-auth-dialog
+/usr/lib/NetworkManager/VPN/nm-protun.name
+/usr/share/dbus-1/system.d/nm-protun-service.conf
 
 %changelog

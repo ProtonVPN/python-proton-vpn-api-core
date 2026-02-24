@@ -22,7 +22,7 @@ use std::path::PathBuf;
 
 use base64::prelude::*;
 
-use python_proton_vpn_linux::proton::vpn::wireguard_utils::WireguardConfig;
+use proton_vpn_linux::proton::vpn::wireguard_utils::WireguardConfig;
 
 /// Generate and print nmcli command from a WireGuard config file
 pub async fn run(

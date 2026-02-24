@@ -6,3 +6,6 @@ target
 *.pyc
 **/venv
 tests/*.json
+*.pcap
+sourceme*.sh
+configs/*.conf

@@ -1,0 +1,4 @@
+usr/libexec/nm-protun-service  usr/libexec/
+usr/libexec/nm-protun-auth-dialog  usr/libexec/
+nm-protun.name  usr/lib/NetworkManager/VPN/
+nm-protun-service.conf  usr/share/dbus-1/system.d/

@@ -12,20 +12,18 @@ import re
 import sys
 import pathlib
 # ------------------------------------------------------------------------------
-PROJECT_DIR = (pathlib.Path(__file__).parent / ".." / "..").resolve()
+PROJECT_DIR = (pathlib.Path(__file__).parent / "..").resolve()
 NAME = 'linux'
 PROTON_VPN_NAMESPACE = 'proton-vpn'
 # ------------------------------------------------------------------------------
-PROTON_PREFIX = f'python-{PROTON_VPN_NAMESPACE}-'
-MODULE_NAME = f'{PROTON_PREFIX}{NAME}'
-MODULE_PATH = pathlib.Path(PROJECT_DIR) / MODULE_NAME
+MODULE_PATH = PROJECT_DIR
 OS = "linux"                                          # The operating system we're building for
 
 CPYTHON_MAJOR = sys.version_info.major
 CPYTHON_MINOR = sys.version_info.minor
 
-PYTHON_MODULE_NAME = MODULE_NAME.removeprefix(PROTON_PREFIX).replace("-", "_")
-PACKAGE_NAME = MODULE_NAME.replace("python", f"python{CPYTHON_MAJOR}")
+PYTHON_MODULE_NAME = NAME.replace("-", "_")
+PACKAGE_NAME = f'{PROTON_VPN_NAMESPACE}-{NAME}'
 
 BUILD_DIR = MODULE_PATH / "target"
 CARGO = MODULE_PATH / "Cargo.toml"
@@ -52,7 +50,7 @@ def get_lib_path(triplet: str):
     """
 
     return os.path.join(
-        PROJECT_DIR, MODULE_NAME, "target", triplet, 'release', f'lib{MODULE_NAME.replace("-", "_")}.so'
+        PROJECT_DIR, "target", triplet, 'release', 'libproton_vpn_linux.so'
     )
 
 

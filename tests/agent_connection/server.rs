@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-use python_proton_vpn_linux::local_agent::{Request, Response, Result, State, StatusMessage};
+use proton_vpn_linux::local_agent::{Request, Response, Result, State, StatusMessage};
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;

@@ -56,7 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match args.command {
         Some(Command::Cli { read_config }) => cli::run(read_config).await,
-        None => python_proton_vpn_linux::services::protun::run().await,
+        None => proton_vpn_linux::services::protun::run().await,
     }
 }
 

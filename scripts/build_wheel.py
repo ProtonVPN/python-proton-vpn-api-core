@@ -12,9 +12,9 @@ import hashlib
 import os
 import zipfile
 # ------------------------------------------------------------------------------
-from package_info import MODULE_NAME, get_lib_path, CPYTHON_MIN, CPYTHON_MAX, OS, VERSION, BUILD_DIR, PYTHON_EXTENSION_PATH
+from package_info import PACKAGE_NAME, get_lib_path, CPYTHON_MIN, CPYTHON_MAX, OS, VERSION, BUILD_DIR, PYTHON_EXTENSION_PATH
 
-PYTHON_PACKAGE_NAME = MODULE_NAME.removeprefix("python-").replace("-", "_")
+PYTHON_PACKAGE_NAME = PACKAGE_NAME.replace("-", "_")
 # Since the wheel is only used for dev purposes, it's only built for x86_64.
 ARCH = "x86_64"
 LIB_PATH = get_lib_path("x86_64-unknown-linux-gnu")

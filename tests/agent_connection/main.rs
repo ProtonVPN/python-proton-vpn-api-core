@@ -25,9 +25,9 @@ use tokio::net::TcpStream;
 #[cfg(feature = "local_agent")]
 #[tokio::test]
 async fn test_request_status() {
-    use python_proton_vpn_linux::local_agent::AgentConnection;
-    use python_proton_vpn_linux::local_agent::State;
-    use python_proton_vpn_linux::local_agent::TransportStream;
+    use proton_vpn_linux::local_agent::AgentConnection;
+    use proton_vpn_linux::local_agent::State;
+    use proton_vpn_linux::local_agent::TransportStream;
     use server::Server;
 
     // The server address

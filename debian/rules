@@ -1,0 +1,18 @@
+#!/usr/bin/make -f
+
+export PYBUILD_NAME=proton-vpn-linux
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_build:
+	mkdir -p proton/vpn
+	cp {{rust_triplet}}/release/libproton_vpn_linux.so proton/vpn/linux.abi3.so
+	mkdir -p usr/libexec
+	cp {{rust_triplet}}/release/nm-protun-service usr/libexec/nm-protun-service
+	cp {{rust_triplet}}/release/nm-protun-auth-dialog usr/libexec/nm-protun-auth-dialog
+	sed -e 's|program=.*|program=/usr/libexec/nm-protun-service|' \
+		-e 's|auth-dialog=.*|auth-dialog=/usr/libexec/nm-protun-auth-dialog|' \
+		$(CURDIR)/../resources/nm-protun.name > $(CURDIR)/nm-protun.name
+	cp $(CURDIR)/../resources/nm-protun-service.conf nm-protun-service.conf
+	dh_auto_build

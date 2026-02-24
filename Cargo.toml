@@ -7,11 +7,11 @@ edition = "2021"
 [features]
 protun = ["dep:clap", "dep:zbus",
           "dep:shlex", "dep:glob", "sdk", "dep:rtnetlink", "dep:netlink-packet-route", "dep:futures",
-          "auth-dialog"]
+          "nm_protun_auth_dialog"]
 protun_fwmark = []
 sdk = ["dep:protun", "dep:serde", "dep:serde_json", "dep:libc", "dep:base64", "dep:tokio",
        "dep:async-trait", "dep:rust-ini", "dep:serini"]
-auth-dialog = ["dep:clap", "dep:oo7", "dep:tokio"]
+nm_protun_auth_dialog = ["dep:clap", "dep:oo7", "dep:tokio"]
 
 core = ["dep:proton-vpn-binary-status", "dep:serde", "dep:serde_json"]
 python = ["proton-vpn-binary-status/serde", "dep:pyo3", "dep:pythonize",
@@ -21,16 +21,15 @@ local_agent = ["dep:serde", "dep:serde_json", "dep:async-trait",
                "dep:bincode", "dep:rustls-pemfile", "dep:x509-parser", "dep:socket2"]
 
 [lib]
-name= "python_proton_vpn_linux" # TODO LT: Remove once local agent is merged in
 crate-type = ["cdylib", "rlib"]
 
 [[bin]]
-name = "protun"
+name = "nm-protun-service"
 required-features = ["protun"]
 
 [[bin]]
-name = "protun-auth-dialog"
-required-features = ["auth-dialog"]
+name = "nm-protun-auth-dialog"
+required-features = ["nm_protun_auth_dialog"]
 
 [dependencies]
 thiserror = "1.0.60"

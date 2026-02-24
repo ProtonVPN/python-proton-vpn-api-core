@@ -1,13 +1,11 @@
-Source: python3-proton-vpn-linux
+Source: proton-vpn-linux
 Maintainer: Proton AG <opensource@proton.me>
 Build-Depends: debhelper (>= 9), dh-python, python3-setuptools,
     python3-distro, python3-all
 
-# python3-nacl, python3-all
-
-Package: python3-proton-vpn-linux
+Package: proton-vpn-linux
 Architecture: {{architecture}}
-Depends: python3 (>= 3.9), libc6 (>= 2.31), libgcc-s1 (>= 4.2)
+Depends:  ${python3:Depends}, ${shlibs:Depends}, ${misc:Depends}
 Section: utils
 Priority: optional
 Description: Proton VPN linux client Module
