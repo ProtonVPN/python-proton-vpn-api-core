@@ -16,8 +16,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from proton.vpn.session.servers.logicals import ServerList, Country
-from proton.vpn.session.dataclasses.servers.country import City
+from proton.vpn.session.servers.logicals import ServerList
+from proton.vpn.session.dataclasses.servers.country import \
+    Country, City, SecureCoreGroup
 from proton.vpn.session.servers.types import \
     LogicalServer, PhysicalServer, ServerFeatureEnum, TierEnum
 
@@ -28,5 +29,6 @@ __all__ = [
     "LogicalServer",
     "PhysicalServer",
     "ServerFeatureEnum",
-    "TierEnum"
+    "TierEnum",
+    "SecureCoreGroup"
 ]

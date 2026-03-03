@@ -16,6 +16,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from proton.vpn.session.dataclasses.servers.country import Country
+from proton.vpn.session.dataclasses.servers.country import (
+    Country,
+    SecureCoreGroup
+)
 
-__all__ = ["Country"]
+__all__ = ["Country", "SecureCoreGroup"]
