@@ -1,3 +1,12 @@
+version: 4.17.1
+time: 2026/03/09 17:50
+author: Richard Paterson 
+email: richard.paterson@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat: Add option to deactivate console logging"
+---
 version: 4.17.0
 time: 2026/03/05 11:11
 author: Luke Titley

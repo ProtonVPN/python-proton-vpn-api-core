@@ -107,13 +107,15 @@ def getLogger(name):  # noqa # pylint: disable=C0103
     return ProtonAdapter(logging.getLogger(name), extra={})
 
 
-def config(filename, logdirpath=None):
+def config(filename, logdirpath=None, log_to_console=True):
     """Configure root logger.
 
         param filename: Log filename without extension.
         :type filename: string
         param logdirpath: Path to log file (optional).
         :type logdirpath: string
+        param log_to_console: Determines whether logs will output to console (optional)
+        :type log_to_console: bool
     """
     logger = logging.getLogger()
     logging_level = logging.INFO
@@ -143,20 +145,15 @@ def config(filename, logdirpath=None):
     )
     _handler_file.setFormatter(_formatter)
 
-    # Handler to log to console
-    _handler_console = logging.StreamHandler()
-    _handler_console.setFormatter(_formatter)
+    if log_to_console:
+        # Handler to log to console
+        _handler_console = logging.StreamHandler()
+        _handler_console.setFormatter(_formatter)
+        logger.addHandler(_handler_console)
 
     # Only log debug when using PROTON_VPN_DEBUG=true
     if os.environ.get("PROTON_VPN_DEBUG", "false").lower() == "true":
         logging_level = logging.DEBUG
-
-    # Only log to terminal when using PROTON_VPN_LIVE=true
-    if not _handler_console:
-        logger.warning("Console logger is not set.")
-
-    # By default log to terminal
-    logger.addHandler(_handler_console)
 
     logger.setLevel(logging_level)
     if _handler_file:
