@@ -85,12 +85,12 @@ sudo journalctl -u NetworkManager.service -f -o cat
 
 Custom routing is where we want to be before the public release.
 
-Currently we avoid routing loop by epecial casing packets destined for the
+Currently we avoid routing loop by special casing packets destined for the
 vpn server, in the future we dont want to do this. Instead we want to support
 an fwmark. All traffic that is the from vpn network interface should have the
 fwmark.
 
-This is not ready for testing yet, but while development this feature needs
+This is not ready for testing yet, but during development this feature needs
 to be enabled.
 
 ### Building

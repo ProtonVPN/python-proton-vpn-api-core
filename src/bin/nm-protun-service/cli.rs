@@ -51,8 +51,12 @@ pub async fn run(
 
     // Build peers JSON with escaped commas for nmcli
     let peers_json = format!(
-        r#"[{{"id": "{}"\, "endpoint": "{}"\, "public-key": "{}"}}]"#,
-        peer_id, endpoint, public_key
+        concat!(
+            r#"[{{"id": "{}"\, "endpoint": "{}"\, "public-key": "{}"\,"#,
+            r#" "udp-ports": [{}]\, "tcp-ports": []\, "tls-ports": []\,"#,
+            r#" "priority" : 0}}]"#
+        ),
+        peer_id, endpoint.ip(), public_key, endpoint.port()
     );
 
     // Print nmcli command

@@ -20,7 +20,7 @@
 //! Everything for obtaining the settings for a VPN connection from the
 //! NetworkManager connection settings.
 
-use std::net::{IpAddr, SocketAddr};
+use std::net::IpAddr;
 
 use base64::prelude::*;
 use std::collections::HashMap;
@@ -37,14 +37,14 @@ const DEFAULT_TUN_PREFIX: &str = "protun";
 #[derive(Debug, Clone)]
 pub struct InterfaceParams {
     pub name: String,
-    pub address: std::net::IpAddr,
+    pub address: IpAddr,
     pub prefix: u32,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConnectionParams {
     pub interface: InterfaceParams,
-    pub dns: Vec<std::net::IpAddr>,
+    pub dns: Vec<IpAddr>,
     pub private_key: [u8; 32],
     pub peers: Vec<protun::api::connection::PeerInfo>,
 }
@@ -55,42 +55,48 @@ pub struct ConnectionParams {
 struct PeerInfo {
     /// Peer identifier
     pub id: String,
-    /// Server endpoint as "IP:port"
+    /// Server endpoint ip address
     pub endpoint: String,
     /// Base64-encoded server public key
     pub public_key: String,
+    /// udp ports to connect on
+    pub udp_ports: Vec<u16>,
+    /// tcp ports to connect on
+    pub tcp_ports: Vec<u16>,
+    /// tls ports to connect on
+    pub tls_ports: Vec<u16>,
+    /// Peer priority
+    pub priority: i32,
 }
 
 impl TryFrom<PeerInfo> for protun::api::connection::PeerInfo {
     type Error = proton::vpn::Error;
 
     fn try_from(peer: PeerInfo) -> proton::vpn::Result<Self> {
-        let endpoint: SocketAddr = peer.endpoint.parse()?;
+        let server_ip: IpAddr = peer.endpoint.parse()?;
 
         let public_key: [u8; 32] = BASE64_STANDARD
             .decode(peer.public_key.as_bytes())?
             .as_slice()
             .try_into()?;
 
+        // Double check the address is not ipv6 address
+        if let IpAddr::V6(address) = &server_ip {
+            return Err(proton::vpn::Error::InvalidState(
+                format!("IPv6 endpoint not supported {address}"),
+            ))
+        };
+
         Ok(Self {
-            peer_id: peer.id.clone(),
-            server_ip: protun::api::connection::IpAddress(IpAddr::V4(
-                match endpoint.ip() {
-                    IpAddr::V4(v4) => v4,
-                    IpAddr::V6(_) => {
-                        return Err(proton::vpn::Error::InvalidState(
-                            "IPv6 endpoint not supported".into(),
-                        ))
-                    }
-                },
-            )),
+            peer_id: peer.id,
+            server_ip: protun::api::connection::IpAddress(server_ip),
             server_public_key: protun::api::connection::WgPeerPublicKey(
                 public_key,
             ),
-            udp_ports: vec![endpoint.port()],
-            tcp_ports: vec![],
-            tls_ports: vec![],
-            priority: 0,
+            udp_ports: peer.udp_ports,
+            tcp_ports: peer.tcp_ports,
+            tls_ports: peer.tls_ports,
+            priority: peer.priority,
         })
     }
 }
