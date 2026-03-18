@@ -244,7 +244,8 @@ class LinuxNetworkManager(VPNConnection):
 
     def _import_vpn_config(
             self,
-            vpnconfig: VPNConfiguration
+            plugin_name: str,
+            vpnconfig: VPNConfiguration,
     ) -> NM.SimpleConnection:
         """
             Imports the vpn connection configurations into NM
@@ -258,15 +259,15 @@ class LinuxNetworkManager(VPNConnection):
         connection = None
         with vpnconfig as filename:
             for plugin in vpn_plugin_list:
-                plugin_editor = plugin.load_editor_plugin()
-                # return a NM.SimpleConnection (NM.Connection)
-                # https://lazka.github.io/pgi-docs/NM-1.0/classes/SimpleConnection.html
-                try:
-                    # plugin_name = plugin.props.name
-                    connection = plugin_editor.import_(filename)
-                    break
-                except GLib.Error:
-                    continue
+                if plugin.get_name() == plugin_name:
+                    plugin_editor = plugin.load_editor_plugin()
+                    # return a NM.SimpleConnection (NM.Connection)
+                    # https://lazka.github.io/pgi-docs/NM-1.0/classes/SimpleConnection.html
+                    try:
+                        connection = plugin_editor.import_(filename)
+                        break
+                    except GLib.Error:
+                        continue
 
         if connection is None:
             raise NotImplementedError(

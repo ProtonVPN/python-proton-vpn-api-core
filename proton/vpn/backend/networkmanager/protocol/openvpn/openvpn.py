@@ -197,6 +197,7 @@ PROTOCOLS = {
 class OpenVPN(LinuxNetworkManager, LocalAgentMixin):
     """Base class for the backends implementing the OpenVPN protocols."""
     VIRTUAL_DEVICE_NAME = "proton0"
+    PLUGIN_NAME = "openvpn"
     connection = None
 
     def __init__(self, *args, **kwargs):
@@ -221,7 +222,7 @@ class OpenVPN(LinuxNetworkManager, LocalAgentMixin):
             self._vpnserver, self._vpncredentials, self._settings
         )
 
-        self.connection = self._import_vpn_config(vpnconfig)
+        self.connection = self._import_vpn_config(self.PLUGIN_NAME, vpnconfig)
 
         self._unique_id = self.connection.get_uuid()
         self._vpn_settings = self.connection.get_setting_vpn()

@@ -1,3 +1,12 @@
+version: 4.17.2
+time: 2026/03/18 09:56
+author: Luke Titley
+email: luke.titley@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: Ensures a VPN connection specifies the correct plugin to import its config"
+---
 version: 4.17.1
 time: 2026/03/09 17:50
 author: Richard Paterson 
