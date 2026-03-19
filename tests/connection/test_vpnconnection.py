@@ -45,8 +45,10 @@ def vpn_server():
         server_ip="10.10.1.1",
         domain="com.test-domain.www",
         x25519pk="wg_public_key",
-        openvpn_ports=ProtocolPorts(tcp=[80, 1194], udp=[445, 5995]),
-        wireguard_ports=ProtocolPorts(tcp=[443, 88], udp=[445]),
+        openvpn_ports=ProtocolPorts(
+            tcp=[80, 1194], udp=[445, 5995], tls=[8080]),
+        wireguard_ports=ProtocolPorts(
+            tcp=[443, 88], udp=[445], tls=[8080]),
         server_name="TestServer#10",
         server_id="OYB-3pMQQA2Z2Qnp5s5nIvTVO2...lRjxhx9DCAUM9uXfM2ZUFjzPXw==",
         has_ipv6_support=False,

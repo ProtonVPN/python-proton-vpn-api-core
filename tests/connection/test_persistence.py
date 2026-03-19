@@ -106,11 +106,13 @@ def test_save_(temp_dir: str):
             server_ip="1.2.3.4",
             openvpn_ports=ProtocolPorts(
                 udp=[12345],
-                tcp=[80]
+                tcp=[80],
+                tls=[8080],
             ),
             wireguard_ports=ProtocolPorts(
                 udp=[54321],
-                tcp=[81]
+                tcp=[81],
+                tls=[8080],
             ),
             domain="server.domain",
             x25519pk="public_key",

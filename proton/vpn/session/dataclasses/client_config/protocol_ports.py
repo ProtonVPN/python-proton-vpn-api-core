@@ -28,6 +28,7 @@ class ProtocolPorts:
     """
     udp: List
     tcp: List
+    tls: List
 
     @staticmethod
     def from_dict(ports: dict) -> ProtocolPorts:
@@ -35,5 +36,6 @@ class ProtocolPorts:
         # The lists are copied to avoid side effects if the dict is modified.
         return ProtocolPorts(
             udp=ports["UDP"].copy(),
-            tcp=ports["TCP"].copy()
+            tcp=ports["TCP"].copy(),
+            tls=ports.get("TLS", []).copy()
         )

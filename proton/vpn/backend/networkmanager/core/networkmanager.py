@@ -242,6 +242,14 @@ class LinuxNetworkManager(VPNConnection):
         # FIX ME: This should do a validation to ensure that NM can be used
         return True
 
+    @classmethod
+    def _plugin_exists(cls, plugin_name: str) -> bool:
+        """Checks if there is a NetworkManager plugin with the given name."""
+        for i in NM.VpnPluginInfo.list_load():
+            if i.get_name() == plugin_name:
+                return True
+        return False
+
     def _import_vpn_config(
             self,
             plugin_name: str,

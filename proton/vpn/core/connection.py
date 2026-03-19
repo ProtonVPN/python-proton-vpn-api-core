@@ -349,11 +349,13 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             x25519pk=physical_server.x25519_pk,
             openvpn_ports=ProtocolPorts(
                 udp=client_config.openvpn_ports.udp,
-                tcp=client_config.openvpn_ports.tcp
+                tcp=client_config.openvpn_ports.tcp,
+                tls=client_config.openvpn_ports.tls
             ),
             wireguard_ports=ProtocolPorts(
                 udp=client_config.wireguard_ports.udp,
-                tcp=client_config.wireguard_ports.tcp
+                tcp=client_config.wireguard_ports.tcp,
+                tls=client_config.wireguard_ports.tls
             ),
             server_id=logical_server.id,
             server_name=logical_server.name,

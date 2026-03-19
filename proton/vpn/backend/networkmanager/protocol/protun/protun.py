@@ -23,7 +23,6 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 
 from __future__ import annotations
 
-import os
 import json
 import socket
 import uuid
@@ -31,7 +30,7 @@ import logging
 from concurrent.futures import Future
 from getpass import getuser
 from ipaddress import IPv4Address, IPv6Address
-from typing import Optional, Union
+from typing import Dict, Optional, Union, List
 
 import gi
 
@@ -65,9 +64,9 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
 
     SIGNAL_NAME: str = "vpn-state-changed"
     VIRTUAL_DEVICE_NAME: str = "proton0"
-    protocol: str = "protun"
-    ui_protocol: str = "Protun"
+    PLUGIN_NAME: str = "protun"
     connection: Optional[NM.SimpleConnection] = None
+    plugin_exists: Optional[bool] = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -176,16 +175,27 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
             nm_setting.add_dns(_INTERNAL_IPV4_DNS)
             nm_setting.add_dns_search(_INTERNAL_IPV4_DNS_SEARCH)
 
+    def _protun_ports(self) -> Dict[str, List[int]]:
+        """Returns the protun ports as a dict."""
+        raise NotImplementedError(
+            "This method should be implemented by ProtunUDP, ProtunTCP, etc. subclasses.")
+
     def _set_vpn_settings(self):
         vpn_settings = NM.SettingVpn.new()
         vpn_settings.set_property(NM.SETTING_VPN_SERVICE_TYPE, SERVICE_TYPE)
 
         # Build the peers array expected by the protun plugin (settings.rs)
-        peers = [{
+        peer = {
             "id": self._vpnserver.server_name or self._vpnserver.server_ip,
-            "endpoint": f"{self._vpnserver.server_ip}:{self._vpnserver.wireguard_ports.udp[0]}",
+            "endpoint": f"{self._vpnserver.server_ip}",
             "public-key": self._vpnserver.x25519pk,
-        }]
+            "udp-ports": [],
+            "tcp-ports": [],
+            "tls-ports": [],
+            "priority": 0,
+        }
+        peer.update(self._protun_ports())
+        peers = [peer]
         vpn_settings.add_data_item("peers", json.dumps(peers))
 
         # The WireGuard private key is stored as a VPN secret.
@@ -307,4 +317,45 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
 
     @classmethod
     def _validate(cls):
-        return os.environ.get("PROTON_VPN_FEATURE_FLAG_ProTunV1") == "1"
+        if cls.plugin_exists is None:
+            cls.plugin_exists = cls._plugin_exists(cls.PLUGIN_NAME)
+        return cls.plugin_exists
+
+
+class ProtunUDP(Protun):
+    """Protun UDP protocol implementation."""
+
+    protocol = "protun-udp"
+    ui_protocol = "Protun (UDP)"
+
+    def _protun_ports(self) -> Dict[str, List[int]]:
+        """Returns the protun ports as a dict."""
+        return {
+            "udp-ports": self._vpnserver.wireguard_ports.udp
+        }
+
+
+class ProtunTCP(Protun):
+    """Protun TCP protocol implementation."""
+
+    protocol = "protun-tcp"
+    ui_protocol = "Protun (TCP)"
+
+    def _protun_ports(self) -> Dict[str, List[int]]:
+        """Returns the protun ports as a dict."""
+        return {
+            "tcp-ports": self._vpnserver.wireguard_ports.tcp
+        }
+
+
+class ProtunTLS(Protun):
+    """Protun TLS protocol implementation."""
+
+    protocol = "protun-tls"
+    ui_protocol = "Protun (Stealth)"
+
+    def _protun_ports(self) -> Dict[str, List[int]]:
+        """Returns the protun ports as a dict."""
+        return {
+            "tls-ports": self._vpnserver.wireguard_ports.tls
+        }

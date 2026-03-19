@@ -31,6 +31,7 @@ class ProtocolPorts:  # pylint: disable=R0801
     """
     udp: List
     tcp: List
+    tls: List
 
     @staticmethod
     def from_dict(ports: dict) -> ProtocolPorts:
@@ -38,7 +39,8 @@ class ProtocolPorts:  # pylint: disable=R0801
         # The lists are copied to avoid side effects if the dict is modified.
         return ProtocolPorts(
             udp=ports["udp"].copy(),
-            tcp=ports["tcp"].copy()
+            tcp=ports["tcp"].copy(),
+            tls=ports.get("tls", []).copy()
         )
 
     def to_dict(self) -> dict:
@@ -47,7 +49,8 @@ class ProtocolPorts:  # pylint: disable=R0801
         """
         return {
             "udp": self.udp.copy(),
-            "tcp": self.tcp.copy()
+            "tcp": self.tcp.copy(),
+            "tls": self.tls.copy()
         }
 
 
