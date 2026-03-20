@@ -23,10 +23,12 @@ use std::path::PathBuf;
 use base64::prelude::*;
 
 use proton_vpn_linux::proton::vpn::wireguard_utils::WireguardConfig;
+use proton_vpn_linux::services::protun as protun_service;
 
 /// Generate and print nmcli command from a WireGuard config file
 pub async fn run(
     config_path: PathBuf,
+    pcap_file: Option<protun_service::settings::PcapFileInfo>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let config_str = std::fs::read_to_string(&config_path)?;
     let config = WireguardConfig::try_from(config_str.as_str())?;
@@ -49,32 +51,38 @@ pub async fn run(
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_else(|| "peer0".to_string());
 
-    // Build peers JSON with escaped commas for nmcli
-    let peers_json = format!(
-        concat!(
-            r#"[{{"id": "{}"\, "endpoint": "{}"\, "public-key": "{}"\,"#,
-            r#" "udp-ports": [{}]\, "tcp-ports": []\, "tls-ports": []\,"#,
-            r#" "priority" : 0}}]"#
-        ),
-        peer_id, endpoint.ip(), public_key, endpoint.port()
-    );
+    use protun_service::settings::ProtunSetting as _;
+    use protun_service::settings::SETTINGS_KEY;
+
+    let dns = dns.join(",");
+
+    let settings_str = protun_service::settings::Settings {
+        version : protun_service::settings::VERSION,
+        peers : vec![protun_service::settings::PeerInfo {
+                        id: peer_id,
+                        endpoint: endpoint.ip().to_string(),
+                        public_key,
+                        udp_ports: vec![endpoint.port()],
+                        tcp_ports: vec![],
+                        tls_ports: vec![],
+                        priority: 0,
+                    }],
+        pcap_file,
+    }.to_settings_string()?;
 
     // Print nmcli command
     println!(
-        r#"nmcli connection add \
-    type vpn \
-    vpn-type protun \
-    con-name proton0 \
-    ipv4.addresses '{}/{}' \
-    ipv4.dns '{}' \
-    vpn.data "private-key-flags=1" \
-    +vpn.data 'peers = {}' \
-    vpn.secrets 'private-key = {}'"#,
-        address,
-        prefix,
-        dns.join(","),
-        peers_json,
-        private_key
+        r#"
+            nmcli connection add \
+            type vpn \
+            vpn-type protun \
+            con-name proton0 \
+            ipv4.addresses '{address}/{prefix}' \
+            ipv4.dns '{dns}' \
+            vpn.data 'private-key-flags=1' \
+            +vpn.data '{SETTINGS_KEY} = {settings_str}' \
+            vpn.secrets 'private-key = {private_key}'
+        "#
     );
 
     Ok(())

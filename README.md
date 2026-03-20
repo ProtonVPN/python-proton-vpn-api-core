@@ -1,3 +1,7 @@
+# proton-vpn-linux
+
+**proton-vpn-linux** is the Rust backend for ProtonVPN's Linux client. It implements a NetworkManager VPN plugin for WireGuard-based connections (protun), a local agent communication layer, and server scoring — exposing functionality to higher-level ProtonVPN tooling via both native Rust and Python (PyO3) interfaces.
+
 # Core
 
 ## Building the python extensions
@@ -21,57 +25,19 @@ Grant the plugin rights to the D-Bus namespace:
 
 ## Creating a connection
 
-Use the `protun cli` command to generate the nmcli command from a WireGuard config file:
+Use the `cli` command to generate and apply the nmcli command from a WireGuard config file:
 
 ```bash
-cargo run --bin nm-protun-service --features protun -- cli --read-config /path/to/wireguard.conf
+cargo run --bin nm-protun-service --features protun -- cli --read-config /path/to/wireguard.conf | bash
+nmcli connection up proton0
 ```
 
-This prints the `nmcli connection add` command to stdout. Run the output to create the connection, then bring it up:
-
-> nmcli connection up proton0
-
-## VPN Connection Settings
-
-The connection settings are split across two sections:
-
-### vpn.data section
-
-| Key | Description | Example |
-|-----|-------------|---------|
-| `peers` | JSON array of peer objects | `[{"id": "peer0", "endpoint": "192.168.1.100:51820", "public-key": "xTIBA..."}]` |
-
-Each peer object in the `peers` array contains:
-
-| Key | Description |
-|-----|-------------|
-| `id` | Unique identifier for the peer |
-| `endpoint` | Server endpoint (IP:port) |
-| `public-key` | Base64-encoded server public key |
-
-### ipv4 section
-
-| Key | Description | Example |
-|-----|-------------|---------|
-| `ipv4.addresses` | Client VPN address with prefix | `10.2.0.2/32` |
-| `ipv4.dns` | DNS servers | `10.2.0.1` |
-
-### Example using nmcli
-
-Note: Commas in vpn.data values must be escaped with a backslash (`\,`) because nmcli uses commas as separators.
+To also capture packets for debugging:
 
 ```bash
-# Create the VPN connection
-nmcli connection add \
-    type vpn \
-    vpn-type protun \
-    con-name proton0 \
-    ipv4.addresses "10.2.0.2/32" \
-    ipv4.dns "10.2.0.1" \
-    ipv4.method manual \
-    vpn.data 'peers = [{"id": "peer0"\, "endpoint": "192.168.1.100:51820"\, "public-key": "xTIBA5rboUvnH4htodjb60Y7YAf21J7YQMlNGC8HQ14="}]'
-
-# Activate the connection
+cargo run --bin nm-protun-service --features protun -- cli \
+    --read-config /path/to/wireguard.conf \
+    --pcap-file /tmp/capture.pcap | bash
 nmcli connection up proton0
 ```
 

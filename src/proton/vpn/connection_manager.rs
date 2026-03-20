@@ -32,6 +32,7 @@ use protun::api::connection::*;
 pub use protun::api::{
     connection::{InitialConnectionConfig, PeerInfo, WgClientPrivateKey},
     state::State,
+    events::Event,
 };
 
 /// MTU for the VPN tunnel interface
@@ -44,13 +45,11 @@ pub struct ConnectionInfo {
 
 struct ConnectionHandle {
     pub connection: Connection,
-    pub thread: JoinHandle<()>,
 }
 
-impl From<(Connection, JoinHandle<()>)> for ConnectionHandle {
-    fn from(src: (Connection, JoinHandle<()>)) -> Self {
-        let (connection, thread) = src;
-        ConnectionHandle { connection, thread }
+impl From<(Connection)> for ConnectionHandle {
+    fn from(connection: Connection) -> Self {
+        ConnectionHandle { connection }
     }
 }
 
@@ -109,11 +108,12 @@ impl ConnectionManager {
         let (tun_fd, actual_name) = create_tun(&tun_interface)?;
 
         // Start the WireGuard connection
-        let (connection, thread) = Connection::connect_with_fd(
+        let connection = Connection::unix_connect(
             initial_config,
             tun_fd,
             Box::new(on_state_changed),
-            None,
+            None, // TODO LT: Not sure if we'll need the socket_fd_available_callback on Linux, but we can add it later if needed
+            Box::new(on_event),
         );
 
         // TODO LT: Remember local agent
@@ -121,7 +121,7 @@ impl ConnectionManager {
         // Configure interface: UP + MTU
         nl.configure_interface(&actual_name, VPN_MTU).await?;
 
-        self.connection = Some(ConnectionHandle { connection, thread });
+        self.connection = Some(ConnectionHandle { connection });
 
         log::info!(
             "connection_manager: connected to VPN on interface {}",
@@ -136,11 +136,10 @@ impl ConnectionManager {
 
     /// Disconnect from VPN.
     pub async fn disconnect(&mut self) {
-        if let Some(ConnectionHandle { connection, thread }) =
+        if let Some(ConnectionHandle { connection }) =
             self.connection.take()
         {
-            connection.disconnect();
-            let _ = thread.join();
+            connection.disconnect_and_wait();
             log::info!(
                 "connection_manager: disconnected and joined connection thread"
             );
@@ -155,7 +154,6 @@ impl ConnectionManager {
     ) -> Result<()> {
         if let Some(ConnectionHandle {
             connection,
-            thread: _,
         }) = &self.connection
         {
             connection.update_wg_private_key(PrivateKeyUpdateInfo {
@@ -168,7 +166,6 @@ impl ConnectionManager {
     pub fn update_peers(&mut self, peers: Vec<PeerInfo>) -> Result<()> {
         if let Some(ConnectionHandle {
             connection,
-            thread: _,
         }) = &self.connection
         {
             connection.update_peers(peers);
@@ -237,13 +234,16 @@ fn on_state_changed(state: State) {
     log::info!("Connection state changed: {:?}", state);
 }
 
+fn on_event(event: Event) {
+    log::info!("Connection event: {:?}", event);
+}
+
 impl Drop for ConnectionManager {
     fn drop(&mut self) {
-        if let Some(ConnectionHandle { connection, thread }) =
+        if let Some(ConnectionHandle { connection }) =
             self.connection.take()
         {
-            connection.disconnect();
-            let _ = thread.join();
+            connection.disconnect_and_wait();
         }
     }
 }

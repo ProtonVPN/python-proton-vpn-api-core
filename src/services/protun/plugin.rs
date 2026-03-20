@@ -96,6 +96,7 @@ impl Plugin {
             peers,
             private_key,
             dns,
+            pcap_file,
         } = params;
 
         let external_gateway = peers[0].server_ip.0.clone(); // TODO LT: This needs to be replaced with a stub IP address.
@@ -109,7 +110,7 @@ impl Plugin {
                     wg_private_key: proton::vpn::WgClientPrivateKey(private_key),
                     peers: peers,
                     network_available: true,
-                    capture_packet: None,
+                    pcap_file,
                 },
                 interface.name.clone(),
             )

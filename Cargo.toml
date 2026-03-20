@@ -1,7 +1,7 @@
 [package]
 name = "proton-vpn-linux"
 # TODO LT: Flip this back down to 0.x.x because the lib is not yet released, get .deb and rpms removed from repos
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 
 [features]

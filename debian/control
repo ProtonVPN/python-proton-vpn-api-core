@@ -6,6 +6,7 @@ Build-Depends: debhelper (>= 9), dh-python, python3-setuptools,
 Package: proton-vpn-linux
 Architecture: {{architecture}}
 Depends:  ${python3:Depends}, ${shlibs:Depends}, ${misc:Depends}
+Breaks: python3-proton-vpn-api-core (<< 5.0.0)
 Section: utils
 Priority: optional
 Description: Proton VPN linux client Module

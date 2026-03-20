@@ -21,6 +21,7 @@ BuildRequires: python3-setuptools
 BuildRequires: python3-distro
 
 Requires: python3 >= {CPYTHON_VERSION}
+Conflicts: python3-proton-vpn-api-core < 5.0.0
 
 %description
 Package %{{unmangled_name}} library.

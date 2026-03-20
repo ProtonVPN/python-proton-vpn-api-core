@@ -31,8 +31,13 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 
 #[cfg(feature = "protun")]
+use proton_vpn_linux::services::protun::settings::PcapFileInfo;
+
+#[cfg(feature = "protun")]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    use proton_vpn_linux::services::protun as protun_service;
+
     /// ProtonVPN NetworkManager plugin
     #[derive(Parser, Debug)]
     #[command(name = "protun")]
@@ -49,16 +54,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             /// Path to WireGuard config file
             #[arg(long)]
             read_config: PathBuf,
+            /// Path to pcap file path for debugging (optional)
+            #[arg(long)]
+            pcap_file: Option<PathBuf>,
+            /// Max size of pcap file in bytes (optional, default: 10 MB)
+            #[arg(long)]
+            pcap_max_bytes: Option<u64>,
         },
     }
 
     let args = Args::parse();
 
+    fn get_pcap_file(pcap_file: Option<PathBuf>, pcap_max_bytes: Option<u64>) -> Option<PcapFileInfo> {
+        if let Some(file_path) = pcap_file {
+            return Some(PcapFileInfo {
+                file_path: file_path,
+                max_bytes: pcap_max_bytes,
+                mode: protun_service::settings::FileWriteMode::Overwrite,
+            });
+        }
+        return None;
+    }
+
     match args.command {
-        Some(Command::Cli { read_config }) => cli::run(read_config).await,
-        None => proton_vpn_linux::services::protun::run().await,
+        Some(Command::Cli { read_config, pcap_file, pcap_max_bytes }) => {
+            let pcap_file = get_pcap_file(pcap_file, pcap_max_bytes);
+
+            cli::run(read_config, pcap_file).await
+        },
+        None => protun_service::run().await,
     }
 }
+
 
 #[cfg(not(feature = "protun"))]
 fn main() {

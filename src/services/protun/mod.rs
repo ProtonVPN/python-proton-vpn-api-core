@@ -25,7 +25,7 @@
 mod error;
 mod plugin;
 mod run;
-mod settings;
 mod types;
 
+pub mod settings;
 pub use run::run;
