@@ -25,7 +25,7 @@ from unittest.mock import Mock
 from proton.vpn.session.servers import LogicalServer, ServerFeatureEnum
 from proton.vpn.session.servers.logicals import (
     sort_servers_alphabetically_by_country_and_server_name,
-    sort_servers_by_country_and_city_and_enabled_and_load,
+    sort_servers_by_country_and_location_and_enabled_and_load,
     ServerList
 )
 
@@ -375,7 +375,7 @@ def test_sort_servers_by_country_and_city_and_enabled_and_load():
     }
 
     logicals = [LogicalServer(server_dict) for server_dict in api_response["LogicalServers"]]
-    logicals.sort(key=sort_servers_by_country_and_city_and_enabled_and_load)
+    logicals.sort(key=sort_servers_by_country_and_location_and_enabled_and_load)
 
     # Expected order:
     # Enabled servers should come first (True sorts after False, but the function should invert this)

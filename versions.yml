@@ -1,3 +1,12 @@
+version: 4.19.0
+time: 2026/03/23 15:00
+author: Pep Llaneras
+email: josep.llaneras@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat: Group country servers by state or city"
+---
 version: 4.18.0
 time: 2026/03/19 10:54
 author: Luke Titley
@@ -18,7 +27,7 @@ description:
 ---
 version: 4.17.1
 time: 2026/03/09 17:50
-author: Richard Paterson 
+author: Richard Paterson
 email: richard.paterson@proton.ch
 urgency: low
 stability: unstable
@@ -81,7 +90,7 @@ description:
 ---
 version: 4.14.2
 time: 2025/12/09 09:43
-author: Richard Paterson 
+author: Richard Paterson
 email: richard.paterson@proton.ch
 urgency: low
 stability: unstable

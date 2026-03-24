@@ -23,7 +23,7 @@ import itertools
 import random
 import time
 from enum import Enum
-from typing import Callable, Generator, Iterable, List, Optional
+from typing import Callable, Generator, Iterable, List, Optional, Tuple
 
 from proton.vpn import logging
 from proton.vpn.session.dataclasses.servers import Country
@@ -326,25 +326,28 @@ class ServerList:  # pylint: disable=R0902, R0904
 
         return fastest_available_server
 
-    def group_by_country(self, cities: bool = False) -> List[Country]:
+    def group_by_country(
+        self,
+        group_by_location: bool = False,
+        include_free_servers: bool = True
+    ) -> List[Country]:
         """
         Returns the servers grouped by country.
 
-        :param cities: whether to group the servers by cities as well.
+        :param group_by_location: whether to group the servers by city/state as well.
 
-        Before grouping the servers, they are sorted alphabetically by
-        country name and server name.
+        The server list is also sorted to facilitate grouping.
 
-        :return: The list of countries, each of them containing the servers
+        :return: The list of countries, each of them containing the locations/servers
         in that country.
         """
-        if cities:
-            self.sort(sort_servers_by_country_and_city_and_enabled_and_load)
+        if group_by_location:
+            self.sort(sort_servers_by_country_and_location_and_enabled_and_load)
         else:
             self.sort()
 
         return [
-            Country(country_code, list(country_servers))
+            Country(country_code, list(country_servers), group_by_location, include_free_servers)
             for country_code, country_servers in itertools.groupby(
                 self.logicals, lambda server: server.exit_country.lower()
             )
@@ -472,9 +475,9 @@ def sort_servers_alphabetically_by_country_and_server_name(server: LogicalServer
     return f"{country_name}__{server_name}"
 
 
-def sort_servers_by_country_and_city_and_enabled_and_load(server: LogicalServer) -> str:
+def sort_servers_by_country_and_location_and_enabled_and_load(server: LogicalServer) -> Tuple:
     """
     Returns the comparison key used to sort servers by country name, city name,
     whether they are enabled or not, and load.
     """
-    return (server.exit_country_name, server.city, 0 if server.enabled else 1, server.load)
+    return (server.exit_country_name, server.location, 0 if server.enabled else 1, server.load)

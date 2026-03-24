@@ -94,8 +94,8 @@ class SecureCoreGroup(ServerGroup):
         return filter(lambda server: not server.free, self._servers)
 
 
-class City(ServerGroup):
-    """A city that belongs to a country."""
+class Location(ServerGroup):
+    """A location (e.g. a city or a state) that belongs to a country."""
 
     def __init__(self, name: str, servers: list[LogicalServer]):
         self._name = name
@@ -104,32 +104,32 @@ class City(ServerGroup):
 
     @property
     def name(self) -> str:
-        """Returns the city name."""
+        """Returns the location name."""
         return self._name
 
     @property
     def servers(self) -> list[LogicalServer]:
-        """Returns the list of logical servers in this city."""
+        """Returns the list of logical servers in this location."""
         return self._servers
 
     @property
     def free(self) -> bool:
-        """Returns whether the city has servers available to the free tier or not."""
+        """Returns whether the location has servers available to the free tier or not."""
         return self._analysis.free
 
     @property
     def features(self) -> set[ServerFeatureEnum]:
-        """Returns the set of features available in this city."""
+        """Returns the set of features available in this location."""
         return self._analysis.features
 
     @property
     def under_maintenance(self) -> bool:
-        """Returns whether all servers in this city are under maintenance."""
+        """Returns whether all servers in this location are under maintenance."""
         return self._analysis.under_maintenance
 
     @property
     def smart_routing(self) -> bool:
-        """Returns whether all servers in this city use smart routing."""
+        """Returns whether all servers in this location use smart routing."""
         return self._analysis.smart_routing
 
     @property
@@ -146,15 +146,26 @@ class City(ServerGroup):
 class Country(ServerGroup):  # pylint: disable=too-many-instance-attributes
     """Group of servers belonging to a country."""
 
-    def __init__(self, code: str, servers: List[LogicalServer]):
+    def __init__(
+        self,
+        code: str, servers: List[LogicalServer],
+        group_by_location: bool = False,
+        include_free_servers: bool = True
+    ):
         """
         :param code: The country code (ISO 3166-1 alpha-2).
         :param servers: List of logical servers in this country sorted by city name.
+        :param group_by_location: When True, servers are grouped by location.
+            Servers must be pre-sorted by location for grouping to work correctly
+            (itertools.groupby only groups consecutive elements).
+        :param include_free_servers: Whether to include free servers or to exclude them.
         """
         self._code = code
         self._servers = servers
         self._analysis = ServerAnalysis.analyze_servers(servers)
-        self._cities = self._build_cities(servers)
+        self._locations = []
+        if group_by_location:
+            self._locations = self._build_locations(servers, include_free_servers)
         self._secure_core_group = self._build_secure_core_group(servers)
 
     @property
@@ -173,9 +184,9 @@ class Country(ServerGroup):  # pylint: disable=too-many-instance-attributes
         return self._servers
 
     @property
-    def cities(self) -> list[City]:
-        """Returns the list of cities available in the country."""
-        return self._cities
+    def locations(self) -> list[Location]:
+        """Returns the list of locations available in the country."""
+        return self._locations
 
     @property
     def free(self) -> bool:
@@ -198,36 +209,41 @@ class Country(ServerGroup):  # pylint: disable=too-many-instance-attributes
         return self._analysis.smart_routing
 
     @property
-    def free_cities(self) -> Iterable[City]:
-        """Returns the free cities only."""
-        return filter(lambda city: city.free, self.cities)
+    def free_locations(self) -> Iterable[Location]:
+        """Returns the free locations only."""
+        return filter(lambda location: location.free, self.locations)
 
     @property
-    def paid_cities(self) -> Iterable[City]:
-        """Returns the paid cities only."""
-        return filter(lambda city: not city.free, self.cities)
+    def paid_locations(self) -> Iterable[Location]:
+        """Returns the paid locations only."""
+        return filter(lambda location: not location.free, self.locations)
 
     @property
     def secure_core_group(self) -> Optional[SecureCoreGroup]:
         """Returns the secure core servers group."""
         return self._secure_core_group
 
-    def _build_cities(self, servers: List[LogicalServer]) -> list[City]:
-        """Returns the list of cities available in the country."""
-        non_secure_core_servers = filter(
-            lambda servers: ServerFeatureEnum.SECURE_CORE not in servers.features, servers
+    def _build_locations(
+        self, servers: List[LogicalServer], include_free_servers: bool
+    ) -> list[Location]:
+        """Returns the list of locations available in the country."""
+        filtered_servers = filter(
+            lambda server: (
+                ServerFeatureEnum.SECURE_CORE not in server.features
+                and (not server.free or include_free_servers)
+            ),
+            servers
         )
         return [
-            City(city_name, list(city_servers))
-            for city_name, city_servers in itertools.groupby(
-                non_secure_core_servers,
-                key=lambda server: server.city
+            Location(location_name, list(location_servers))
+            for location_name, location_servers in itertools.groupby(
+                filtered_servers, key=lambda server: server.location
             )
         ]
 
     def _build_secure_core_group(self, servers: List[LogicalServer]) -> SecureCoreGroup:
         secure_core_servers = list(filter(
-            lambda server: ServerFeatureEnum.SECURE_CORE in server.features, self.servers
+            lambda server: ServerFeatureEnum.SECURE_CORE in server.features, servers
         ))
 
         if not secure_core_servers:

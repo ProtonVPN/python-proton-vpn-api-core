@@ -18,7 +18,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import pytest
 from proton.vpn.session.servers.types import LogicalServer, ServerFeatureEnum
-from proton.vpn.session.dataclasses.servers.country import City, Country, ServerAnalysis
+from proton.vpn.session.dataclasses.servers.country import Location, Country, ServerAnalysis
 
 
 COUNTRY_CODE = "AR"
@@ -106,14 +106,43 @@ class TestCountry:
         country = Country(COUNTRY_CODE, [])
         assert country.name == COUNTRY_NAME
 
-    def test_cities_are_grouped(self, non_free_logical_servers):
-        country = Country(COUNTRY_CODE, non_free_logical_servers)
+    def test_locations_are_grouped(self, non_free_logical_servers):
+        country = Country(COUNTRY_CODE, non_free_logical_servers, group_by_location=True)
 
-        cities = country.cities
+        locations = country.locations
 
-        assert cities[0].name == CITIES[0]
-        assert cities[1].name == CITIES[1]
-        assert len(cities) == len(CITIES)
+        assert locations[0].name == CITIES[0]
+        assert locations[1].name == CITIES[1]
+        assert len(locations) == len(CITIES)
+
+    def test_locations_are_grouped_by_state_when_state_is_present(self):
+        """When servers have a State field it takes priority over City for grouping."""
+        servers = [
+            LogicalServer({
+                "ID": 1, "Name": "US#1", "Status": 1, "Servers": [{"Status": 1}],
+                "Tier": 2, "ExitCountry": "US",
+                "State": "California", "City": "Los Angeles", "Features": 0,
+            }),
+            LogicalServer({
+                "ID": 2, "Name": "US#2", "Status": 1, "Servers": [{"Status": 1}],
+                "Tier": 2, "ExitCountry": "US",
+                "State": "California", "City": "San Francisco", "Features": 0,
+            }),
+            LogicalServer({
+                "ID": 3, "Name": "US#3", "Status": 1, "Servers": [{"Status": 1}],
+                "Tier": 2, "ExitCountry": "US",
+                "State": "Texas", "City": "Houston", "Features": 0,
+            }),
+        ]
+        country = Country("US", servers, group_by_location=True)
+
+        locations = country.locations
+
+        assert len(locations) == 2
+        assert locations[0].name == "California"
+        assert locations[1].name == "Texas"
+        assert len(locations[0].servers) == 2
+        assert len(locations[1].servers) == 1
 
 
 class TestServerAnalysis:

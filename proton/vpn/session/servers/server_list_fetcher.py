@@ -57,7 +57,7 @@ class MixinEndpointV1:  # pylint: disable=R0903
     """
     Mixin class for the v1 endpoints of the Proton VPN REST API.
     """
-    LOGICALS = "/vpn/v1/logicals?SecureCoreFilter=all"
+    LOGICALS = "/vpn/v1/logicals?SecureCoreFilter=all&WithState=true"
     LOADS = "/vpn/v1/loads"
 
     async def _v1_fetch_logicals(self) -> Tuple[Dict, str]:
@@ -89,7 +89,7 @@ class MixinEndpointV2:  # pylint: disable=R0903
     """
     Mixin class for the v2 endpoints of the Proton VPN REST API.
     """
-    LOGICALS = "/vpn/v2/logicals?SecureCoreFilter=all"
+    LOGICALS = "/vpn/v2/logicals?SecureCoreFilter=all&WithState=true"
     STATUS = "/vpn/v2/status/{token}/binary"
 
     def _convert_load(self, load: Dict) -> Dict:

@@ -51,7 +51,7 @@ ENTRYCOUNTRY = "CA"
 EXITCOUNTRY = "CA"
 TIER = 0
 FEATURES = 0
-REGION = None
+STATE = None
 CITY = "Toronto"
 SCORE = 2.4273928
 HOSTCOUNTRY = None
@@ -69,7 +69,7 @@ MOCK_LOGICAL = {
     "Domain": DOMAIN,
     "Tier": TIER,
     "Features": FEATURES,
-    "Region": REGION,
+    "State": STATE,
     "City": CITY,
     "Score": SCORE,
     "HostCountry": HOSTCOUNTRY,
@@ -111,8 +111,9 @@ class TestLogicalServer:
         assert server.exit_country_name == get_country_name_by_code(server.exit_country)
         assert server.host_country == HOSTCOUNTRY
         assert server.features == []
-        assert server.region == REGION
+        assert server.location == (STATE or CITY)
         assert server.city == CITY
+        assert server.state == STATE
         assert server.tier == TIER
         assert server.latitude == LAT
         assert server.longitude == LONG

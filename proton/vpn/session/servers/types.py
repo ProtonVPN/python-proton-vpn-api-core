@@ -234,14 +234,20 @@ class LogicalServer:  # pylint: disable=too-many-public-methods
         return server_features
 
     @property
-    def region(self) -> str:
-        """Returns the region of the server."""
-        return self._data.get("Region")
+    def location(self) -> str:
+        """Returns the location of the server, which is its
+        state if available, otherwise its city"""
+        return self._data.get("State") or self._data.get("City")
 
     @property
     def city(self) -> str:
         """Returns the city of the server."""
         return self._data.get("City")
+
+    @property
+    def state(self) -> str:
+        """Returns the state of the server."""
+        return self._data.get("State")
 
     @property
     def tier(self) -> int:

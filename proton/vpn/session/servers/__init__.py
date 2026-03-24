@@ -18,14 +18,14 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.dataclasses.servers.country import \
-    Country, City, SecureCoreGroup
+    Country, Location, SecureCoreGroup
 from proton.vpn.session.servers.types import \
     LogicalServer, PhysicalServer, ServerFeatureEnum, TierEnum
 
 __all__ = [
     "ServerList",
     "Country",
-    "City",
+    "Location",
     "LogicalServer",
     "PhysicalServer",
     "ServerFeatureEnum",
