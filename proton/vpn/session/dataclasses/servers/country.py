@@ -146,10 +146,12 @@ class Location(ServerGroup):
 class Country(ServerGroup):  # pylint: disable=too-many-instance-attributes
     """Group of servers belonging to a country."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self,
         code: str, servers: List[LogicalServer],
         group_by_location: bool = False,
+        group_by_city: bool = False,
         include_free_servers: bool = True
     ):
         """
@@ -165,7 +167,9 @@ class Country(ServerGroup):  # pylint: disable=too-many-instance-attributes
         self._analysis = ServerAnalysis.analyze_servers(servers)
         self._locations = []
         if group_by_location:
-            self._locations = self._build_locations(servers, include_free_servers)
+            self._locations = self._build_locations(servers, False, include_free_servers)
+        elif group_by_city:
+            self._locations = self._build_locations(servers, True, include_free_servers)
         self._secure_core_group = self._build_secure_core_group(servers)
 
     @property
@@ -224,7 +228,10 @@ class Country(ServerGroup):  # pylint: disable=too-many-instance-attributes
         return self._secure_core_group
 
     def _build_locations(
-        self, servers: List[LogicalServer], include_free_servers: bool
+        self,
+        servers: List[LogicalServer],
+        group_by_city: bool,
+        include_free_servers: bool
     ) -> list[Location]:
         """Returns the list of locations available in the country."""
         filtered_servers = filter(
@@ -237,7 +244,8 @@ class Country(ServerGroup):  # pylint: disable=too-many-instance-attributes
         return [
             Location(location_name, list(location_servers))
             for location_name, location_servers in itertools.groupby(
-                filtered_servers, key=lambda server: server.location
+                filtered_servers,
+                key=lambda server: server.city if group_by_city else server.location
             )
         ]
 

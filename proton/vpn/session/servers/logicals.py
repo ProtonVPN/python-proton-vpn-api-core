@@ -329,6 +329,7 @@ class ServerList:  # pylint: disable=R0902, R0904
     def group_by_country(
         self,
         group_by_location: bool = False,
+        group_by_city: bool = False,
         include_free_servers: bool = True
     ) -> List[Country]:
         """
@@ -343,11 +344,19 @@ class ServerList:  # pylint: disable=R0902, R0904
         """
         if group_by_location:
             self.sort(sort_servers_by_country_and_location_and_enabled_and_load)
+        elif group_by_city:
+            self.sort(sort_servers_by_country_and_city_and_enabled_and_load)
         else:
             self.sort()
 
         return [
-            Country(country_code, list(country_servers), group_by_location, include_free_servers)
+            Country(
+                country_code,
+                list(country_servers),
+                group_by_location,
+                group_by_city,
+                include_free_servers
+            )
             for country_code, country_servers in itertools.groupby(
                 self.logicals, lambda server: server.exit_country.lower()
             )
@@ -477,7 +486,15 @@ def sort_servers_alphabetically_by_country_and_server_name(server: LogicalServer
 
 def sort_servers_by_country_and_location_and_enabled_and_load(server: LogicalServer) -> Tuple:
     """
-    Returns the comparison key used to sort servers by country name, city name,
+    Returns the comparison key used to sort servers by country name, location name,
     whether they are enabled or not, and load.
     """
     return (server.exit_country_name, server.location, 0 if server.enabled else 1, server.load)
+
+
+def sort_servers_by_country_and_city_and_enabled_and_load(server: LogicalServer) -> Tuple:
+    """
+    Returns the comparison key used to sort servers by country name, city name,
+    whether they are enabled or not, and load.
+    """
+    return (server.exit_country_name, server.city, 0 if server.enabled else 1, server.load)
