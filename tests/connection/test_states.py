@@ -372,7 +372,7 @@ async def test_disconnecting_run_tasks_stops_connection():
 
     connection_calls = connection.method_calls
     assert len(connection_calls) == 1
-    connection_calls[0].method = connection.stop
+    connection.stop.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -407,3 +407,16 @@ async def test_disconnected_run_tasks_swallows_split_tunneling_errors():
 
     # The split tunneling exception shouldn't have bubbled up when clearing ST config
     context.split_tunneling.clear_config.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_error_state_run_tasks_persists_connection():
+    """The only task to be run while in the error state is to persist the connection."""
+    connection = AsyncMock()
+    error_state = states.Error(states.StateContext(connection=connection))
+
+    await error_state.run_tasks()
+
+    connection_calls = connection.method_calls
+    assert len(connection_calls) == 1
+    connection.add_persistence.assert_called_once()

@@ -6,6 +6,7 @@ urgency: low
 stability: unstable
 description:
 - "fix: Reintroduces grouping country servers by only city (for CLI)"
+- "fix: Persist connection in error state to avoid leaking the active connection"
 ---
 version: 4.19.0
 time: 2026/03/23 15:00

@@ -403,3 +403,7 @@ class Error(State):
             type(self.context.event).__name__,
             self.context.event.context.error
         )
+
+        # we don't disconnect in the error state
+        # so lets persist the connection data to upkeep on a separate run if necessary
+        await self.context.connection.add_persistence()
