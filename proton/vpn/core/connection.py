@@ -174,7 +174,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         ks_setting = KillSwitchSetting(settings.killswitch)
         protocol = settings.protocol
         self._set_ks_setting(ks_setting, protocol)
-        await self._apply_kill_switch_setting(ks_setting)
+        await self._apply_kill_switch_setting(ks_setting, settings)
 
         if self.current_connection:
             await self.current_connection.update_settings(settings)
@@ -185,7 +185,9 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         if self.is_split_tunneling_available and self.is_connected:
             await self._apply_split_tunneling_settings(st_setting, ks_setting)
 
-    async def _apply_kill_switch_setting(self, kill_switch_setting: KillSwitchSetting):
+    async def _apply_kill_switch_setting(
+            self, kill_switch_setting: KillSwitchSetting, settings: Settings = None
+    ):
         """Enables/disables the kill switch depending on the setting value."""
         kill_switch = self._current_state.context.kill_switch
 
@@ -208,7 +210,10 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
                 await kill_switch.disable()
                 await kill_switch.disable_ipv6_leak_protection()
             else:
-                if self.current_connection and self.current_connection.settings.ipv6:
+                ipv6_enabled = settings.ipv6 if settings else (
+                    self.current_connection and self.current_connection.settings.ipv6
+                )
+                if ipv6_enabled:
                     await kill_switch.enable_ipv6_leak_protection()
                 else:
                     await kill_switch.disable_ipv6_leak_protection()

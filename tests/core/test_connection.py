@@ -306,3 +306,35 @@ async def test_apply_kill_switch_setting_disables_ipv6_leak_protection_when_conn
         call.disable_ipv6_leak_protection(),
         call.disable(),
     ]
+
+
+@pytest.mark.asyncio
+async def test_apply_settings_disables_ipv6_leak_protection_when_ipv6_is_turned_off_while_connected():
+    connection = Mock()
+    connection.settings = Mock(ipv6=True)
+    connection.update_settings = AsyncMock(
+        side_effect=lambda settings: setattr(connection, "settings", settings)
+    )
+    state = states.Connected(states.StateContext(connection=connection))
+    state.context.kill_switch = AsyncMock()
+
+    connector = VPNConnector(
+        session_holder=None,
+        settings_persistence=None,
+        usage_reporting=Mock(),
+        state=state,
+    )
+    connector._split_tunneling = None
+
+    settings = Mock()
+    settings.killswitch = KillSwitchSetting.OFF.value
+    settings.protocol = "wireguard"
+    settings.ipv6 = False
+    settings.features = Mock(split_tunneling=Mock(enabled=False))
+
+    await connector.apply_settings(settings)
+
+    assert state.context.kill_switch.method_calls == [
+        call.disable_ipv6_leak_protection(),
+        call.disable(),
+    ]
