@@ -208,7 +208,10 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
                 await kill_switch.disable()
                 await kill_switch.disable_ipv6_leak_protection()
             else:
-                await kill_switch.enable_ipv6_leak_protection()
+                if self.current_connection and self.current_connection.settings.ipv6:
+                    await kill_switch.enable_ipv6_leak_protection()
+                else:
+                    await kill_switch.disable_ipv6_leak_protection()
                 await kill_switch.disable()
 
         else:

@@ -21,7 +21,8 @@ from proton.vpn.session.servers import LogicalServer
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.core.connection import VPNConnector
 from proton.vpn.connection import events, exceptions, states
-from unittest.mock import Mock, AsyncMock
+from proton.vpn.connection.enum import KillSwitchSetting
+from unittest.mock import Mock, AsyncMock, call
 import pytest
 
 
@@ -284,3 +285,24 @@ async def test_connector_updates_connection_credentials_when_certificate_is_refr
 
     if update_credentials_expected:
         current_state.context.connection.update_credentials.assert_called_once_with(session_holder.vpn_credentials)
+
+
+@pytest.mark.asyncio
+async def test_apply_kill_switch_setting_disables_ipv6_leak_protection_when_connection_ipv6_is_disabled():
+    connection = Mock()
+    connection.settings = Mock(ipv6=False)
+    state = states.Connected(states.StateContext(connection=connection))
+    state.context.kill_switch = AsyncMock()
+    connector = VPNConnector(
+        session_holder=None,
+        settings_persistence=None,
+        usage_reporting=Mock(),
+        state=state,
+    )
+
+    await connector._apply_kill_switch_setting(KillSwitchSetting.OFF)
+
+    assert state.context.kill_switch.method_calls == [
+        call.disable_ipv6_leak_protection(),
+        call.disable(),
+    ]
