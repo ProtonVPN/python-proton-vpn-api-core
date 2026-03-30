@@ -21,7 +21,8 @@ from proton.vpn.session.servers import LogicalServer
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.core.connection import VPNConnector
 from proton.vpn.connection import events, exceptions, states
-from unittest.mock import Mock, AsyncMock
+from proton.vpn.connection.enum import KillSwitchSetting
+from unittest.mock import Mock, AsyncMock, call
 import pytest
 
 
@@ -284,3 +285,56 @@ async def test_connector_updates_connection_credentials_when_certificate_is_refr
 
     if update_credentials_expected:
         current_state.context.connection.update_credentials.assert_called_once_with(session_holder.vpn_credentials)
+
+
+@pytest.mark.asyncio
+async def test_apply_kill_switch_setting_disables_ipv6_leak_protection_when_connection_ipv6_is_disabled():
+    connection = Mock()
+    connection.settings = Mock(ipv6=False)
+    state = states.Connected(states.StateContext(connection=connection))
+    state.context.kill_switch = AsyncMock()
+    connector = VPNConnector(
+        session_holder=None,
+        settings_persistence=None,
+        usage_reporting=Mock(),
+        state=state,
+    )
+
+    await connector._apply_kill_switch_setting(KillSwitchSetting.OFF)
+
+    assert state.context.kill_switch.method_calls == [
+        call.disable_ipv6_leak_protection(),
+        call.disable(),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_apply_settings_disables_ipv6_leak_protection_when_ipv6_is_turned_off_while_connected():
+    connection = Mock()
+    connection.settings = Mock(ipv6=True)
+    connection.update_settings = AsyncMock(
+        side_effect=lambda settings: setattr(connection, "settings", settings)
+    )
+    state = states.Connected(states.StateContext(connection=connection))
+    state.context.kill_switch = AsyncMock()
+
+    connector = VPNConnector(
+        session_holder=None,
+        settings_persistence=None,
+        usage_reporting=Mock(),
+        state=state,
+    )
+    connector._split_tunneling = None
+
+    settings = Mock()
+    settings.killswitch = KillSwitchSetting.OFF.value
+    settings.protocol = "wireguard"
+    settings.ipv6 = False
+    settings.features = Mock(split_tunneling=Mock(enabled=False))
+
+    await connector.apply_settings(settings)
+
+    assert state.context.kill_switch.method_calls == [
+        call.disable_ipv6_leak_protection(),
+        call.disable(),
+    ]

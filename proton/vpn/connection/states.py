@@ -300,7 +300,10 @@ class Connected(State):
 
     async def run_tasks(self):
         if self.context.kill_switch_setting == KillSwitchSetting.OFF:
-            await self.context.kill_switch.enable_ipv6_leak_protection()
+            if self.context.connection.settings.ipv6:
+                await self.context.kill_switch.enable_ipv6_leak_protection()
+            else:
+                await self.context.kill_switch.disable_ipv6_leak_protection()
             await self.context.kill_switch.disable()
             if self.context.split_tunneling_setting.enabled:
                 try:

@@ -379,6 +379,7 @@ async def test_disconnecting_run_tasks_stops_connection():
 async def test_connected_run_tasks_swallows_split_tunneling_errors():
     connection = Mock()
     connection.add_persistence = AsyncMock()
+    connection.settings = Mock(ipv6=True)
     context = states.StateContext(connection=connection)
     context.kill_switch = AsyncMock()
     context.kill_switch_setting = KillSwitchSetting.OFF
@@ -391,6 +392,28 @@ async def test_connected_run_tasks_swallows_split_tunneling_errors():
 
     # The split tunneling exception shouldn't have bubbled up when applying ST config
     context.split_tunneling.set_config.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_connected_run_tasks_disables_ipv6_leak_protection_when_connection_ipv6_is_disabled():
+    connection = Mock()
+    connection.add_persistence = AsyncMock()
+    connection.settings = Mock(ipv6=False)
+    context = states.StateContext(connection=connection)
+    context.kill_switch = AsyncMock()
+    context.kill_switch_setting = KillSwitchSetting.OFF
+    context.split_tunneling = AsyncMock()
+    context.split_tunneling_setting = SplitTunnelingSetting(enabled=True)
+    connected = states.Connected(context)
+
+    await connected.run_tasks()
+
+    context.kill_switch.disable_ipv6_leak_protection.assert_called_once()
+    context.kill_switch.disable.assert_called_once()
+    context.split_tunneling.set_config.assert_called_once_with(
+        context.split_tunneling_setting.get_config()
+    )
+    connection.add_persistence.assert_called_once()
 
 
 @pytest.mark.asyncio
