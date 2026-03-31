@@ -1,10 +1,50 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_namespace_packages
+from setuptools.command.install import install
+from setuptools.command.develop import develop
 import re
+import os
+import shutil
+import subprocess
+
 
 VERSIONS = 'versions.yml'
 VERSION = re.search(r'version: (\S+)', open(VERSIONS, encoding='utf-8').readline()).group(1)
+
+NM_CONF_SRC = os.path.join(os.path.dirname(__file__), "config", "10-protonvpn-wireguard.conf")
+NM_CONF_DST = "/etc/NetworkManager/conf.d/10-protonvpn-wireguard.conf"
+
+
+def _install_nm_config():
+    """Install NetworkManager config to manage WireGuard devices."""
+    if os.path.exists(NM_CONF_SRC) and os.path.isdir("/etc/NetworkManager/conf.d"):
+        try:
+            shutil.copy2(NM_CONF_SRC, NM_CONF_DST)
+            subprocess.run(
+                ["systemctl", "reload", "NetworkManager"],
+                check=False, capture_output=True
+            )
+        except PermissionError:
+            print(
+                "\n[proton-vpn-api-core] Could not install NetworkManager config.\n"
+                "Run manually if WireGuard connections fail:\n"
+                f"  sudo cp {NM_CONF_SRC} {NM_CONF_DST}\n"
+                "  sudo systemctl reload NetworkManager\n"
+            )
+
+
+class PostInstall(install):
+    def run(self):
+        super().run()
+        _install_nm_config()
+
+
+class PostDevelop(develop):
+    def run(self):
+        super().run()
+        _install_nm_config()
+
 
 setup(
     name="proton-vpn-api-core",
@@ -36,6 +76,10 @@ setup(
         "proton.vpn.backend.networkmanager.killswitch.default*",
         "proton.vpn.backend.networkmanager.killswitch.wireguard*",
     ]),
+    cmdclass={
+        "install": PostInstall,
+        "develop": PostDevelop,
+    },
     entry_points={
         "proton_loader_backend": [
             "linuxnetworkmanager = proton.vpn.backend.networkmanager.core:LinuxNetworkManager",

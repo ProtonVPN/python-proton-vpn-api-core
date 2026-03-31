@@ -43,6 +43,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_KS_HEADLESS_WARNING = (
+    "Kill switch cleanup could not be completed (NetworkManager/polkit "
+    "not available). This has no effect when kill switch is disabled. "
+    "If you need kill switch support, ensure NetworkManager is running "
+    "with polkit privileges, or use a desktop environment."
+)
+
 
 @dataclass
 class StateContext:
@@ -180,21 +187,31 @@ class Disconnected(State):
         if self.context.reconnection:
             # The Kill switch is enabled to avoid leaks when switching servers, even when
             # the kill switch setting is off.
-            await self.context.kill_switch.enable()
+            try:
+                await self.context.kill_switch.enable()
+            except Exception:  # noqa: BLE001
+                if self.context.kill_switch_setting != KillSwitchSetting.OFF:
+                    raise
+                logger.warning(_KS_HEADLESS_WARNING)
 
             # When a reconnection is expected, an Up event is returned to start a new connection.
             # straight away.
             return events.Up(EventContext(connection=self.context.reconnection))
 
-        if self.context.kill_switch_setting == KillSwitchSetting.PERMANENT:
-            # This is an abstraction leak of the network manager KS.
-            # The only reason for enabling permanent KS here is to switch from the
-            # routed KS to the full KS if the user cancels the connection while in
-            # Connecting state. Otherwise, the full KS should already be there.
-            await self.context.kill_switch.enable(permanent=True)
-        else:
-            await self.context.kill_switch.disable()
-            await self.context.kill_switch.disable_ipv6_leak_protection()
+        try:
+            if self.context.kill_switch_setting == KillSwitchSetting.PERMANENT:
+                # This is an abstraction leak of the network manager KS.
+                # The only reason for enabling permanent KS here is to switch from the
+                # routed KS to the full KS if the user cancels the connection while in
+                # Connecting state. Otherwise, the full KS should already be there.
+                await self.context.kill_switch.enable(permanent=True)
+            else:
+                await self.context.kill_switch.disable()
+                await self.context.kill_switch.disable_ipv6_leak_protection()
+        except Exception:  # noqa: BLE001
+            if self.context.kill_switch_setting != KillSwitchSetting.OFF:
+                raise
+            logger.warning(_KS_HEADLESS_WARNING)
 
         if self.context.split_tunneling:
             # ST config is always cleared independently of if ST is disabled via settings or
@@ -254,10 +271,11 @@ class Connecting(State):
         # is to avoid leaks when switching servers, even with the kill switch turned off.
         # However, when the kill switch setting is off, the kill switch has to be removed when
         # reaching the connected state.
-        await self.context.kill_switch.enable(
-            self.context.connection.server,
-            permanent=permanent_ks
-        )
+        if self.context.kill_switch_setting != KillSwitchSetting.OFF:
+            await self.context.kill_switch.enable(
+                self.context.connection.server,
+                permanent=permanent_ks
+            )
 
         await self.context.connection.start()
 
@@ -299,9 +317,22 @@ class Connected(State):
         return self
 
     async def run_tasks(self):
+        try:
+            if self.context.kill_switch_setting == KillSwitchSetting.OFF:
+                await self.context.kill_switch.enable_ipv6_leak_protection()
+                await self.context.kill_switch.disable()
+            else:
+                # This is specific to the routing table KS implementation and should be removed.
+                # At this point we switch from the routed KS to the full-on KS.
+                await self.context.kill_switch.enable(
+                    permanent=(self.context.kill_switch_setting == KillSwitchSetting.PERMANENT)
+                )
+        except Exception:  # noqa: BLE001
+            if self.context.kill_switch_setting != KillSwitchSetting.OFF:
+                raise
+            logger.warning(_KS_HEADLESS_WARNING)
+
         if self.context.kill_switch_setting == KillSwitchSetting.OFF:
-            await self.context.kill_switch.enable_ipv6_leak_protection()
-            await self.context.kill_switch.disable()
             if self.context.split_tunneling_setting.enabled:
                 try:
                     await self.context.split_tunneling.set_config(
@@ -312,13 +343,6 @@ class Connected(State):
                     # We decided to treat split tunneling error as non-fatal, to prevent they
                     # impact the core VPN functionality.
                     logger.exception("Error setting split tunnel configuration")
-
-        else:
-            # This is specific to the routing table KS implementation and should be removed.
-            # At this point we switch from the routed KS to the full-on KS.
-            await self.context.kill_switch.enable(
-                permanent=(self.context.kill_switch_setting == KillSwitchSetting.PERMANENT)
-            )
 
         await self.context.connection.add_persistence()
 
