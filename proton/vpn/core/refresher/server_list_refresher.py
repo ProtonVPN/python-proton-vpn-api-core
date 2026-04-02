@@ -17,6 +17,7 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from datetime import timedelta
+from http import HTTPStatus
 from typing import Callable, Optional
 
 from proton.session.exceptions import (
@@ -64,7 +65,7 @@ class ServerListRefresher:
             else:
                 next_refresh_delay = self._session.server_list.seconds_until_expiration
         except ProtonAPIError as error:
-            if error.http_code != 429:
+            if error.http_code != HTTPStatus.TOO_MANY_REQUESTS:
                 raise
 
             logger.warning(f"Server list refresh failed: {error}")

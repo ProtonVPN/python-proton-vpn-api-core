@@ -16,6 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+from http import HTTPStatus
 from unittest.mock import Mock, AsyncMock
 
 import pytest
@@ -33,9 +34,9 @@ async def test_refresh_schedules_next_refresh_if_certificate_is_expired_and_api_
     refresher = CertificateRefresher(session_holder=session_holder)
 
     session.fetch_certificate = AsyncMock(side_effect=ProtonAPIError(
-        http_code=429,
+        http_code=HTTPStatus.TOO_MANY_REQUESTS,
         http_headers={},
-        json_data={"Code": 429, "Error": "Error message"}
+        json_data={"Code": HTTPStatus.TOO_MANY_REQUESTS, "Error": "Error message"}
     ))
     new_certificate = Mock()
     new_certificate.remaining_time_to_next_refresh = 600

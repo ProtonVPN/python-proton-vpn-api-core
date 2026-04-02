@@ -69,6 +69,10 @@ class ClientConfigDecodeError(ValueError):
     """The client configuration could not be parsed."""
 
 
+class NotificationDecodeError(ValueError):
+    """Notifications could not be parsed."""
+
+
 class SecurityKeyError(Exception):
     """Base exception for security key errors."""
 

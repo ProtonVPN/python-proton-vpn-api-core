@@ -17,6 +17,7 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from datetime import timedelta
+from http import HTTPStatus
 
 from proton.vpn.core.refresher.scheduler import RunAgain
 from proton.vpn.core.session_holder import SessionHolder
@@ -57,7 +58,7 @@ class FeatureFlagsRefresher:
         try:
             await self._session.fetch_feature_flags()
         except ProtonAPIError as error:
-            if error.http_code != 429:
+            if error.http_code != HTTPStatus.TOO_MANY_REQUESTS:
                 raise
 
             logger.warning(f"Feature flag refresh failed {error}")
@@ -76,7 +77,7 @@ class FeatureFlagsRefresher:
             feature_flags = await self._session.fetch_feature_flags()
             next_refresh_delay = feature_flags.seconds_until_expiration
         except ProtonAPIError as error:
-            if error.http_code != 429:
+            if error.http_code != HTTPStatus.TOO_MANY_REQUESTS:
                 raise
 
             logger.warning(f"Feature flag refresh failed {error}")

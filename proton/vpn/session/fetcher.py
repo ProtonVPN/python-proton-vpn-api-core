@@ -32,6 +32,7 @@ from proton.vpn.session.servers.server_list_fetcher import EndpointVersion
 from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.utils import rest_api_request
 from proton.vpn.session.feature_flags_fetcher import FeatureFlagsFetcher, FeatureFlags
+from proton.vpn.session.notifications_fetcher import NotificationsFetcher, Notifications
 
 from proton.vpn.core.settings.features import Features
 
@@ -54,16 +55,19 @@ class VPNSessionFetcher:
     # Note that the API does not allow intervals shorter than 1 day.
     _CERT_DURATION_IN_MIN = VPNPubkeyCredentials.REFRESH_INTERVAL // 60
 
+    # pylint: disable=too-many-arguments
     def __init__(
             self, session: "VPNSession",
             server_list_fetcher: Optional[ServerListFetcher] = None,
             client_config_fetcher: Optional[ClientConfigFetcher] = None,
             features_fetcher: Optional[FeatureFlagsFetcher] = None,
+            notifications_fetcher: Optional[NotificationsFetcher] = None,
     ):
         self._session = session
         self._server_list_fetcher = server_list_fetcher or ServerListFetcher(session)
         self._client_config_fetcher = client_config_fetcher or ClientConfigFetcher(session)
         self._feature_flags_fetcher = features_fetcher or FeatureFlagsFetcher(session)
+        self._notifications_fetcher = notifications_fetcher or NotificationsFetcher(session)
 
     async def fetch_vpn_info(self) -> VPNSettings:
         """Fetches client VPN information."""
@@ -147,11 +151,27 @@ class VPNSessionFetcher:
         """Fetches general client configuration to connect to VPN servers."""
         return await self._feature_flags_fetcher.fetch()
 
+    def load_notifications_from_cache(self) -> Notifications:
+        """
+        Loads the previously persisted notifications.
+        :returns: the cached notifications, or an empty Notifications instance if none found.
+        """
+        return self._notifications_fetcher.load_from_cache()
+
+    async def fetch_notifications(self) -> Notifications:
+        """Fetches pull notifications from the REST API."""
+        return await self._notifications_fetcher.fetch()
+
+    def set_notification_seen(self, notification_id: str):
+        """Marks a notification as seen and persists the change to disk."""
+        self._notifications_fetcher.set_notification_seen(notification_id)
+
     def clear_cache(self):
         """Discards the cache, if existing."""
         self._server_list_fetcher.clear_cache()
         self._client_config_fetcher.clear_cache()
         self._feature_flags_fetcher.clear_cache()
+        self._notifications_fetcher.clear_cache()
 
     @staticmethod
     def _convert_features(features: Features):

@@ -33,6 +33,7 @@ from proton.vpn.session.dataclasses import LoginResult, BugReportForm, VPNCertif
 from proton.vpn.session.exceptions import VPNAccountDecodeError, ServerListDecodeError
 from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.feature_flags_fetcher import FeatureFlags
+from proton.vpn.session.notifications_fetcher import Notifications
 from proton.vpn.session.u2f_interaction import UserInteraction
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ logger = logging.getLogger(__name__)
 BINARY_SERVER_STATUS = "BinaryServerStatus"
 
 
+# pylint: disable=too-many-public-methods
 class VPNSession(Session):
     """
     Augmented Session that provides helpers to a persistent offline keyring
@@ -73,6 +75,7 @@ class VPNSession(Session):
             server_list: Optional[ServerList] = None,
             client_config: Optional[ClientConfig] = None,
             feature_flags: Optional[FeatureFlags] = None,
+            notifications: Optional[Notifications] = None,
             **kwargs
     ):  # pylint: disable=too-many-arguments
         self._fetcher = fetcher or VPNSessionFetcher(session=self)
@@ -89,6 +92,7 @@ class VPNSession(Session):
         self._server_list = server_list
         self._client_config = client_config
         self._feature_flags = feature_flags
+        self._notifications = notifications
         super().__init__(*args, **kwargs)
 
     @property
@@ -97,7 +101,8 @@ class VPNSession(Session):
         return self._vpn_account \
             and self._server_list \
             and self._client_config \
-            and self._feature_flags
+            and self._feature_flags \
+            and self._notifications
 
     def __setstate__(self, data):
         """This method is called when deserializing the session."""
@@ -116,6 +121,8 @@ class VPNSession(Session):
                 logger.warning("Server list could not be deserialized", exc_info=True)
 
             self._client_config = self._fetcher.load_client_config_from_cache()
+
+            self._notifications = self._fetcher.load_notifications_from_cache()
 
         super().__setstate__(data)
 
@@ -211,6 +218,7 @@ class VPNSession(Session):
         self._server_list = None
         self._client_config = None
         self._feature_flags = None
+        self._notifications = None
         self._fetcher.clear_cache()
         return result
 
@@ -291,6 +299,8 @@ class VPNSession(Session):
             # be retrieved after the feature flags have been fetched, since it
             # depends in them for chosing the fetch method.
             await self.fetch_server_list()
+
+            self._notifications = await self._fetcher.fetch_notifications()
 
         finally:
             # IMPORTANT: apart from releasing the lock, _requests_unlock triggers the
@@ -385,6 +395,20 @@ class VPNSession(Session):
         if self._feature_flags is None:
             return FeatureFlags.default()
         return self._feature_flags
+
+    async def fetch_notifications(self) -> Notifications:
+        """Fetches pull notifications."""
+        self._notifications = await self._fetcher.fetch_notifications()
+        return self._notifications
+
+    @property
+    def notifications(self) -> Notifications:
+        """Returns fetched pull notifications."""
+        return self._notifications
+
+    def set_notification_seen(self, notification_id: str):
+        """Marks a notification as seen and persists the change to disk."""
+        self._fetcher.set_notification_seen(notification_id)
 
     async def submit_bug_report(self, bug_report: BugReportForm):
         """Submits a bug report to customer support."""

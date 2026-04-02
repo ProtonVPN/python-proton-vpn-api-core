@@ -29,11 +29,12 @@ from proton.vpn import logging
 from proton.vpn.core.refresher.certificate_refresher import CertificateRefresher
 from proton.vpn.core.refresher.client_config_refresher import ClientConfigRefresher
 from proton.vpn.core.refresher.feature_flags_refresher import FeatureFlagsRefresher
+from proton.vpn.core.refresher.notifications_refresher import NotificationsRefresher
 from proton.vpn.core.refresher.scheduler import Scheduler
 from proton.vpn.core.refresher.server_list_refresher import ServerListRefresher
 from proton.vpn.core.session_holder import SessionHolder
 from proton.vpn.session.client_config import ClientConfig
-from proton.vpn.session import FeatureFlags
+from proton.vpn.session import FeatureFlags, Notifications
 from proton.vpn.session.servers.logicals import ServerList
 
 logger = logging.getLogger(__name__)
@@ -55,6 +56,7 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
         server_list_refresher: ServerListRefresher = None,
         certificate_refresher: CertificateRefresher = None,
         feature_flags_refresher: FeatureFlagsRefresher = None,
+        notifications_refresher: NotificationsRefresher = None
     ):
         self._session_holder = session_holder
         self._scheduler = scheduler
@@ -70,10 +72,14 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
         self._feature_flags_refresher = feature_flags_refresher or FeatureFlagsRefresher(
             session_holder
         )
+        self._notifications_refresher = notifications_refresher or NotificationsRefresher(
+            session_holder
+        )
         self._client_config_refresh_task_id = None
         self._server_list_refresher_task_id = None
         self._certificate_refresher_task_id = None
         self._feature_flags_refresher_task_id = None
+        self._notifications_refresher_task_id = None
 
     def set_error_callback(self, error_callback: Callable[[Exception], None] = None):
         """Sets the error callback to be called when an error occurs while executing a task."""
@@ -132,6 +138,17 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
 
         return self._session.feature_flags
 
+    async def get_up_to_date_notifications(self) -> Notifications:
+        """
+        Returns the pull notification list, after updating if expired.
+        """
+        await self._refresh_vpn_session_if_necessary()
+        if not self._scheduler.is_started:
+            # only update if scheduler isn't tasked with doing so
+            await self._notifications_refresher.update_if_necessary()
+
+        return self._session.notifications
+
     async def update_certificate_if_necessary(self):
         """
         Updates the API certificate if it has expired, or will soon do so.
@@ -157,6 +174,11 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
     def feature_flags(self) -> FeatureFlags:
         """Returns VPN features."""
         return self._session.feature_flags
+
+    @property
+    def notifications(self) -> Notifications:
+        """Returns VPN notifications."""
+        return self._session.notifications
 
     def force_refresh_certificate(self):
         """Force refresh certificate on demand."""
@@ -189,6 +211,9 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
 
         self._scheduler.cancel_task(self._feature_flags_refresher_task_id)
         self._feature_flags_refresher_task_id = None
+
+        self._scheduler.cancel_task(self._notifications_refresher_task_id)
+        self._notifications_refresher_task_id = None
 
         await self._scheduler.stop()
         logger.info(
@@ -235,6 +260,15 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
         logger.info(
             f"Next feature flags refresh scheduled in "
             f"{timedelta(seconds=self._feature_flags_refresher.initial_refresh_delay)}"
+        )
+
+        self._notifications_refresher_task_id = self._scheduler.run_after(
+            self._notifications_refresher.initial_refresh_delay,
+            self._notifications_refresher.refresh
+        )
+        logger.info(
+            f"Next pull notification refresh scheduled in "
+            f"{timedelta(seconds=self._notifications_refresher.initial_refresh_delay)}"
         )
 
         self._scheduler.start()

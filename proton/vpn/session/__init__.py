@@ -22,6 +22,7 @@ from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.credentials import VPNPubkeyCredentials
 from proton.vpn.session.feature_flags_fetcher import FeatureFlags
+from proton.vpn.session.notifications_fetcher import Notifications
 
 __all__ = [
     "VPNSession",
@@ -29,5 +30,6 @@ __all__ = [
     "ClientConfig",
     "ServerList",
     "VPNPubkeyCredentials",
-    "FeatureFlags"
+    "FeatureFlags",
+    "Notifications"
 ]

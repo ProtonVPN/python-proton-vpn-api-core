@@ -19,6 +19,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 import inspect
 from typing import Optional, Callable
 from datetime import timedelta
+from http import HTTPStatus
 import random
 
 from proton.vpn import logging
@@ -66,7 +67,7 @@ class CertificateRefresher:
             self._number_of_failed_refresh_attempts = 0
             await self._notify()
         except ProtonAPIError as error:
-            if error.http_code != 429:
+            if error.http_code != HTTPStatus.TOO_MANY_REQUESTS:
                 raise
 
             logger.warning(f"Certificate refresh failed {error}")
@@ -105,7 +106,7 @@ class CertificateRefresher:
             await self._session.fetch_certificate()
             await self._notify()
         except ProtonAPIError as error:
-            if error.http_code != 429:
+            if error.http_code != HTTPStatus.TOO_MANY_REQUESTS:
                 raise
 
             logger.warning(f"Certificate refresh failed {error}")
