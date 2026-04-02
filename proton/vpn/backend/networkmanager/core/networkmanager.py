@@ -142,11 +142,6 @@ class LinuxNetworkManager(VPNConnection):
     async def stop(self, connection=None):
         """Stops the VPN connection."""
         # We directly remove the connection to avoid leaking NM connections.
-        if not self._is_nm_connection_active():
-            self._notify_subscribers(
-                events.Disconnected(EventContext(connection=self))
-            )
-
         connection = connection or self._get_nm_connection()
         if not connection:
             # It can happen that a connection is stopped while checking if the server
@@ -156,6 +151,13 @@ class LinuxNetworkManager(VPNConnection):
             self._cancelled = True
         else:
             await self.remove_connection(connection)
+
+        # Always fire Disconnected after cleanup. If the NM callback also fires
+        # one via _on_state_changed, the duplicate is harmless (Disconnected
+        # state ignores redundant Disconnected events).
+        self._notify_subscribers(
+            events.Disconnected(EventContext(connection=self))
+        )
 
     async def remove_connection(self, connection=None):
         """Removes the VPN connection."""
