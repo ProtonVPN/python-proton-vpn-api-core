@@ -189,30 +189,43 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         """Enables/disables the kill switch depending on the setting value."""
         kill_switch = self._current_state.context.kill_switch
 
-        if kill_switch_setting == KillSwitchSetting.PERMANENT:
-            await kill_switch.enable(permanent=True)
-            # Since full KS already prevents IPv6 leaks:
-            await kill_switch.disable_ipv6_leak_protection()
-
-        elif kill_switch_setting == KillSwitchSetting.ON:
-            if isinstance(self._current_state, states.Disconnected):
-                await kill_switch.disable()
-                await kill_switch.disable_ipv6_leak_protection()
-            else:
-                await kill_switch.enable(permanent=False)
+        try:
+            if kill_switch_setting == KillSwitchSetting.PERMANENT:
+                await kill_switch.enable(permanent=True)
                 # Since full KS already prevents IPv6 leaks:
                 await kill_switch.disable_ipv6_leak_protection()
 
-        elif kill_switch_setting == KillSwitchSetting.OFF:
-            if isinstance(self._current_state, states.Disconnected):
-                await kill_switch.disable()
-                await kill_switch.disable_ipv6_leak_protection()
-            else:
-                await kill_switch.enable_ipv6_leak_protection()
-                await kill_switch.disable()
+            elif kill_switch_setting == KillSwitchSetting.ON:
+                if isinstance(self._current_state, states.Disconnected):
+                    await kill_switch.disable()
+                    await kill_switch.disable_ipv6_leak_protection()
+                else:
+                    await kill_switch.enable(permanent=False)
+                    # Since full KS already prevents IPv6 leaks:
+                    await kill_switch.disable_ipv6_leak_protection()
 
-        else:
-            raise RuntimeError(f"Unexpected kill switch setting: {kill_switch_setting}")
+            elif kill_switch_setting == KillSwitchSetting.OFF:
+                if isinstance(self._current_state, states.Disconnected):
+                    await kill_switch.disable()
+                    await kill_switch.disable_ipv6_leak_protection()
+                else:
+                    await kill_switch.enable_ipv6_leak_protection()
+                    await kill_switch.disable()
+
+            else:
+                raise RuntimeError(f"Unexpected kill switch setting: {kill_switch_setting}")
+        except RuntimeError:
+            raise
+        except Exception:  # noqa: BLE001
+            if kill_switch_setting != KillSwitchSetting.OFF:
+                raise
+            logger.warning(
+                "Kill switch cleanup could not be completed "
+                "(NetworkManager/polkit not available). This has no effect "
+                "when kill switch is disabled. If you need kill switch "
+                "support, ensure NetworkManager is running with polkit "
+                "privileges, or use a desktop environment."
+            )
 
     async def _apply_split_tunneling_settings(
             self, st_settings: SplitTunnelingSetting, ks_setting: KillSwitchSetting

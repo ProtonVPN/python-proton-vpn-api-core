@@ -1,0 +1,1 @@
+config/10-protonvpn-wireguard.conf /etc/NetworkManager/conf.d/
