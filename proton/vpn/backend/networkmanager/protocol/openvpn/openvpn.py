@@ -29,16 +29,18 @@ import logging
 
 from jinja2 import Environment, BaseLoader
 
-from gi.repository import NM
 import gi
+
+gi.require_version("NM", "1.0")  # noqa: required before importing NM module
+# pylint: disable=wrong-import-position
+from gi.repository import NM
+
 from proton.vpn.backend.networkmanager.core import (LinuxNetworkManager, LocalAgentMixin)
 from proton.vpn.connection.vpnconfiguration import VPNConfiguration
 from proton.vpn.connection.constants import CA_CERT
 from proton.vpn.connection import events, states
 from proton.vpn.connection.events import EventContext
 from proton.vpn.connection.interfaces import Settings
-
-gi.require_version("NM", "1.0")
 
 logger = logging.getLogger(__name__)
 
