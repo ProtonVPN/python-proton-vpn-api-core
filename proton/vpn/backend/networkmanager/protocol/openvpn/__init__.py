@@ -21,4 +21,11 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from .openvpn import OpenVPNTCP, OpenVPNUDP
 
-__all__ = ["OpenVPNTCP", "OpenVPNUDP"]
+
+def register(registry):
+    """Registers the OpenVPN protocol implementations in the given registry."""
+    registry.register(OpenVPNUDP)
+    registry.register(OpenVPNTCP)
+
+
+__all__ = ["register"]

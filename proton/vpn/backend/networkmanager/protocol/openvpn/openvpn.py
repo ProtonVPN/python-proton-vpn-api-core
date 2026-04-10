@@ -433,13 +433,25 @@ class OpenVPNTCP(OpenVPN):
     ui_protocol = "OpenVPN (TCP)"
 
     @classmethod
-    def _get_priority(cls):
-        return 1
+    def get_key(cls):
+        """Returns the protocol name."""
+        return cls.protocol
 
     @classmethod
-    def _validate(cls):
+    def get_priority(cls):
+        """Returns the priority of the implementation. Lower values indicate higher priority."""
+        return 3
+
+    @classmethod
+    def validate(cls):
+        """Determines whether the implementation is valid or not."""
         # FIX ME: This should do a validation to ensure that NM can be used
         return True
+
+    @classmethod
+    def get_protocol_group(cls) -> str:
+        """Returns the protocol group."""
+        return "generic"
 
 
 class OpenVPNUDP(OpenVPN):
@@ -448,10 +460,22 @@ class OpenVPNUDP(OpenVPN):
     ui_protocol = "OpenVPN (UDP)"
 
     @classmethod
-    def _get_priority(cls):
-        return 1
+    def get_key(cls):
+        """Returns the protocol name."""
+        return cls.protocol
 
     @classmethod
-    def _validate(cls):
+    def get_priority(cls):
+        """Returns the priority of the implementation. Lower values indicate higher priority."""
+        return 2
+
+    @classmethod
+    def validate(cls):
+        """Determines whether the implementation is valid or not."""
         # FIX ME: This should do a validation to ensure that NM can be used
         return True
+
+    @classmethod
+    def get_protocol_group(cls) -> str:
+        """Returns the protocol group."""
+        return "generic"

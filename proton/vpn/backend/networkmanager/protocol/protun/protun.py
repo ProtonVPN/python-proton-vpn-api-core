@@ -195,8 +195,14 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
             "priority": 0,
         }
         peer.update(self._protun_ports())
-        peers = [peer]
-        vpn_settings.add_data_item("peers", json.dumps(peers))
+
+        settings_str = json.dumps({
+            "version": 1,
+            "peers": [peer],
+            "pcap-file": None
+        }).replace(",", r"\,")  # Escape commas for NetworkManager
+
+        vpn_settings.add_data_item("settings", settings_str)
 
         # The WireGuard private key is stored as a VPN secret.
         # NM passes it to the protun auth-dialog which forwards it to the plugin.
@@ -312,11 +318,7 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
             await self._request_connection_features(settings.features)
 
     @classmethod
-    def _get_priority(cls):
-        return 1
-
-    @classmethod
-    def _validate(cls):
+    def validate(cls):
         if cls.plugin_exists is None:
             cls.plugin_exists = cls._plugin_exists(cls.PLUGIN_NAME)
         return cls.plugin_exists
@@ -326,7 +328,22 @@ class ProtunUDP(Protun):
     """Protun UDP protocol implementation."""
 
     protocol = "protun-udp"
-    ui_protocol = "Protun (UDP)"
+    ui_protocol = "Wireguard UDP"
+
+    @classmethod
+    def get_priority(cls):
+        """Returns the priority of the implementation. Lower values indicate higher priority."""
+        return 2
+
+    @classmethod
+    def get_key(cls):
+        """Returns the protocol name."""
+        return cls.protocol
+
+    @classmethod
+    def get_protocol_group(cls) -> str:
+        """Returns the protocol group."""
+        return "protun"
 
     def _protun_ports(self) -> Dict[str, List[int]]:
         """Returns the protun ports as a dict."""
@@ -339,7 +356,22 @@ class ProtunTCP(Protun):
     """Protun TCP protocol implementation."""
 
     protocol = "protun-tcp"
-    ui_protocol = "Protun (TCP)"
+    ui_protocol = "Wireguard TCP"
+
+    @classmethod
+    def get_priority(cls):
+        """Returns the priority of the implementation. Lower values indicate higher priority."""
+        return 3
+
+    @classmethod
+    def get_key(cls):
+        """Returns the protocol name."""
+        return cls.protocol
+
+    @classmethod
+    def get_protocol_group(cls) -> str:
+        """Returns the protocol group."""
+        return "protun"
 
     def _protun_ports(self) -> Dict[str, List[int]]:
         """Returns the protun ports as a dict."""
@@ -352,10 +384,58 @@ class ProtunTLS(Protun):
     """Protun TLS protocol implementation."""
 
     protocol = "protun-tls"
-    ui_protocol = "Protun (Stealth)"
+    ui_protocol = "Stealth"
+
+    @classmethod
+    def get_priority(cls):
+        """Returns the priority of the implementation. Lower values indicate higher priority."""
+        return 4
+
+    @classmethod
+    def get_key(cls):
+        """Returns the protocol name."""
+        return cls.protocol
+
+    @classmethod
+    def get_protocol_group(cls) -> str:
+        """Returns the protocol group."""
+        return "protun"
 
     def _protun_ports(self) -> Dict[str, List[int]]:
         """Returns the protun ports as a dict."""
         return {
+            "tls-ports": self._vpnserver.wireguard_ports.tls
+        }
+
+
+class ProtunAuto(Protun):
+    """
+    Protun protocol implementation, automatically selecting the best
+    available transport protocol.
+    """
+
+    protocol = "protun-auto"
+    ui_protocol = "Auto"
+
+    @classmethod
+    def get_priority(cls):
+        """Returns the priority of the implementation. Lower values indicate higher priority."""
+        return 1
+
+    @classmethod
+    def get_key(cls):
+        """Returns the protocol name."""
+        return cls.protocol
+
+    @classmethod
+    def get_protocol_group(cls) -> str:
+        """Returns the protocol group."""
+        return "protun"
+
+    def _protun_ports(self) -> Dict[str, List[int]]:
+        """Returns the protun ports as a dict."""
+        return {
+            "udp-ports": self._vpnserver.wireguard_ports.udp,
+            "tcp-ports": self._vpnserver.wireguard_ports.tcp,
             "tls-ports": self._vpnserver.wireguard_ports.tls
         }

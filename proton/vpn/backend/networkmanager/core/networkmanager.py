@@ -23,7 +23,6 @@ import asyncio
 import logging
 from typing import Optional
 
-from proton.loader import Loader
 from proton.vpn.connection import VPNConnection, events, states
 from proton.vpn.connection.events import EventContext, Event
 from proton.vpn.connection.vpnconfiguration import VPNConfiguration
@@ -61,12 +60,6 @@ class LinuxNetworkManager(VPNConnection):
             self.__nm_client = NMClient()
 
         return self.__nm_client
-
-    @classmethod
-    def factory(cls, protocol: str = None):
-        """Returns the VPN connection implementation class
-         for the specified protocol."""
-        return Loader.get(LinuxNetworkManager.backend, class_name=protocol)
 
     async def start(self):
         """
@@ -234,11 +227,11 @@ class LinuxNetworkManager(VPNConnection):
         return self._vpnserver.has_ipv6_support and self._settings.ipv6
 
     @classmethod
-    def _get_priority(cls):
+    def get_priority(cls):
         return 100
 
     @classmethod
-    def _validate(cls):
+    def validate(cls):
         # FIX ME: This should do a validation to ensure that NM can be used
         return True
 

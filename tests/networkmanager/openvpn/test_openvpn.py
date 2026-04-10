@@ -26,7 +26,7 @@ from gi.repository import NM
 import pytest
 
 from proton.vpn.backend.networkmanager.protocol.openvpn.openvpn \
-        import OpenVPN
+        import OpenVPN, OpenVPNTCP
 from proton.vpn.connection import events
 from collections import namedtuple
 
@@ -121,7 +121,7 @@ async def test_on_state_changed(_notify_subscribers_threadsafe, nm_client_mock,
                                 vpn_server, state, reason, expected_event):
     _notify_subscribers_threadsafe.return_value = None
 
-    nm_protocol = OpenVPN(
+    nm_protocol = OpenVPNTCP(
         vpn_server, MockVpnCredentials(), MockSettings(),
         nm_client=nm_client_mock
     )

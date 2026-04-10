@@ -43,6 +43,15 @@ DEFAULT = {
                 "enabled": False
             }
         },
+        {
+            "name": "ProTunV1",
+            "enabled": False,
+            "impressionData": False,
+            "variant": {
+                "name": "disabled",
+                "enabled": False
+            }
+        },
     ],
     "ExpirationTime": 0
 }

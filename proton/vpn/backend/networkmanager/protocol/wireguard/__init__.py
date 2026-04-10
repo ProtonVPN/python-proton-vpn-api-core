@@ -21,4 +21,10 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from .wireguard import Wireguard
 
-__all__ = ["Wireguard"]
+
+def register(registry):
+    """Registers the Wireguard protocol implementation in the given registry."""
+    registry.register(Wireguard)
+
+
+__all__ = ["register"]

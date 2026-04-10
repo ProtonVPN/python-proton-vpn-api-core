@@ -25,7 +25,8 @@ from threading import Event
 from typing import Optional
 
 from proton.vpn import logging
-from proton.vpn.core.connection import VPNConnector
+from proton.vpn.core.vpnconnector import VPNConnector
+from proton.vpn.core.registry import Registry
 from proton.vpn.core.refresher.scheduler import Scheduler
 from proton.vpn.core.refresher.vpn_data_refresher import VPNDataRefresher
 from proton.vpn.core.settings import Settings, SettingsPersistence
@@ -44,7 +45,8 @@ logger = logging.getLogger(__name__)
 
 class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
     """Class exposing the Proton VPN facade."""
-    def __init__(self, client_type_metadata: ClientTypeMetadata):
+    def __init__(self, client_type_metadata: ClientTypeMetadata,
+                 registry: Optional[Registry] = None):
         self._session_holder = SessionHolder(
             client_type_metadata=client_type_metadata
         )
@@ -56,6 +58,26 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
             self._session_holder, Scheduler()
         )
         self._split_tunneling_client = None
+        self._registry = registry or self.create_registry()
+
+    @staticmethod
+    def create_registry() -> Registry:
+        """
+        Creates and returns a VPN registry with the supported VPN
+        protocols registered.
+        """
+        registry = Registry()
+
+        # We stopped using proton.Loader in favor of a simpler approach to load connection
+        # protocol back-ends. For now we don't need dynamic plugin discovery, that's why
+        # we load them explicitly. The day we need dynamic plugin discovery we'll modify
+        # the registry to support it.
+
+        registry.register_from_module('proton.vpn.backend.networkmanager.protocol.openvpn')
+        registry.register_from_module('proton.vpn.backend.networkmanager.protocol.wireguard')
+        registry.register_from_module('proton.vpn.backend.networkmanager.protocol.protun')
+
+        return registry
 
     async def get_vpn_connector(self) -> VPNConnector:
         """Returns an object that wraps around the raw VPN connection object.
@@ -70,6 +92,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
             session_holder=self._session_holder,
             settings_persistence=self._settings_persistence,
             usage_reporting=self._usage_reporting,
+            registry=self._registry,
         )
         self._vpn_connector.subscribe_to_certificate_updates(self.refresher)
 

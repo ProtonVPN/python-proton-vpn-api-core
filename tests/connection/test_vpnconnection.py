@@ -91,11 +91,21 @@ class DummyVPNConnection(VPNConnection):
     def _get_connection(self):
         return None
 
-    def _validate(cls) -> bool:
+    @classmethod
+    def validate(cls) -> bool:
         return True
 
-    def _get_priority(cls) -> int:
+    @classmethod
+    def get_priority(cls) -> int:
         return 100
+
+    @classmethod
+    def get_key(cls) -> str:
+        return cls.protocol
+
+    @classmethod
+    def get_protocol_group(cls) -> str:
+        return "dummy"
 
 
 class InvalidVPNConnection(VPNConnection):

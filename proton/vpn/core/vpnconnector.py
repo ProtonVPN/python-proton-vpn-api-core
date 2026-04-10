@@ -25,10 +25,7 @@ import asyncio
 from copy import deepcopy
 import os
 import threading
-from typing import Optional, runtime_checkable, Protocol
-
-from proton.loader import Loader
-from proton.loader.loader import PluggableComponent
+from typing import Optional, runtime_checkable, Protocol, Iterator
 
 from proton.vpn.connection.persistence import ConnectionPersistence
 from proton.vpn.core.refresher import VPNDataRefresher
@@ -39,9 +36,10 @@ from proton.vpn.killswitch.interface import KillSwitch
 
 from proton.vpn import logging
 from proton.vpn.connection import (
-    events, states, VPNConnection, VPNServer, ProtocolPorts,
-    VPNCredentials, Settings
+    events, states, VPNConnection, VPNServer, ProtocolPorts, VPNCredentials,
+    Settings
 )
+from proton.vpn.core.registry import Registry
 from proton.vpn.connection.enum import KillSwitchSetting, ConnectionStateEnum
 from proton.vpn.connection.publisher import Publisher
 from proton.vpn.connection.states import StateContext
@@ -84,6 +82,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         session_holder: SessionHolder,
         settings_persistence: SettingsPersistence,
         usage_reporting: UsageReporting,
+        registry: Registry,
         kill_switch: KillSwitch = None,
     ):
         """
@@ -95,7 +94,8 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             settings_persistence,
             kill_switch=kill_switch,
             usage_reporting=usage_reporting,
-            split_tunneling=split_tunneling
+            split_tunneling=split_tunneling,
+            registry=registry
         )
         await connector.initialize_state()
         return connector
@@ -105,6 +105,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             session_holder: SessionHolder,
             settings_persistence: SettingsPersistence,
             usage_reporting: UsageReporting,
+            registry: Registry,
             connection_persistence: Optional[ConnectionPersistence] = None,
             state: Optional[states.State] = None,
             kill_switch: Optional[KillSwitch] = None,
@@ -122,6 +123,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         self._lock = asyncio.Lock()
         self._background_tasks = set()
         self._usage_reporting = usage_reporting
+        self._registry = registry
         self._port_forward_file_handler = port_forward_file_handler or PortForwardFileHandler()
 
         self._publisher.register(self._on_state_change_update_location)
@@ -233,30 +235,20 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         :return: the current VPN connection or None if there isn't one.
         """
         loop = asyncio.get_running_loop()
-        persisted_parameters = await loop.run_in_executor(None, self._connection_persistence.load)
+        persisted_parameters = await loop.run_in_executor(None,
+                                                          self._connection_persistence.load)
         if not persisted_parameters:
             return None
 
-        # I'm refraining of refactoring the whole thing but this way of loading
-        # the protocol class is madness.
-        backend_class = Loader.get("backend", persisted_parameters.backend)
-        backend_name = backend_class.backend
-        if persisted_parameters.backend != backend_name:
-            return None
-
-        all_protocols = Loader.get_all(backend_name)
-        settings = await self.get_settings()
-        for protocol in all_protocols:
-            if protocol.cls.protocol == persisted_parameters.protocol:
-
-                vpn_connection = protocol.cls(
-                    server=persisted_parameters.server,
-                    credentials=self.credentials,
-                    settings=settings,
-                    connection_id=persisted_parameters.connection_id
-                )
-                if not isinstance(vpn_connection.initial_state, states.Disconnected):
-                    return vpn_connection
+        if protocol := self._registry.get(persisted_parameters.protocol):
+            vpn_connection = protocol(
+                server=persisted_parameters.server,
+                credentials=self.credentials,
+                settings=await self.get_settings(),
+                connection_id=persisted_parameters.connection_id
+            )
+            if not isinstance(vpn_connection.initial_state, states.Disconnected):
+                return vpn_connection
 
         return None
 
@@ -363,20 +355,12 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             label=physical_server.label
         )
 
-    def get_available_protocols_for_backend(
-            self, backend_name: str
-    ) -> Optional[PluggableComponent]:
-        """Returns available protocols for the `backend_name`
-
-        raises RuntimeError:  if no backends could be found."""
-        backend_class = Loader.get("backend", class_name=backend_name)
-
-        # This loader implementation is not ideal. We need to filter the
-        # protocols by their validate methods.
-        supported_protocols = [p for p in Loader.get_all(backend_class.backend)
-                               if p.cls._validate()]  # pylint: disable=W0212
-
-        return supported_protocols
+    def iter_available_protocols(self, protocol_group) -> Iterator[type[VPNConnection]]:
+        """Returns an iterator over the available VPN connection protocols."""
+        return filter(
+            lambda cls: cls.get_protocol_group() == protocol_group,
+            self._registry.iter(interface=VPNConnection)
+        )
 
     # pylint: disable=too-many-arguments
     async def connect(
@@ -401,9 +385,9 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
         protocol = protocol or settings.protocol
 
-        connection = VPNConnection.create(
-            server, self.credentials, settings, protocol, backend
-        )
+        protocol_type = self._registry.get(protocol)
+
+        connection = protocol_type(server, self.credentials, settings)
 
         connection.register(self._on_connection_event)
 

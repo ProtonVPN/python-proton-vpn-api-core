@@ -37,17 +37,6 @@ setup(
         "proton.vpn.backend.networkmanager.killswitch.wireguard*",
     ]),
     entry_points={
-        "proton_loader_backend": [
-            "linuxnetworkmanager = proton.vpn.backend.networkmanager.core:LinuxNetworkManager",
-        ],
-        "proton_loader_linuxnetworkmanager": [
-            "openvpn-tcp = proton.vpn.backend.networkmanager.protocol.openvpn:OpenVPNTCP",
-            "openvpn-udp = proton.vpn.backend.networkmanager.protocol.openvpn:OpenVPNUDP",
-            "wireguard = proton.vpn.backend.networkmanager.protocol.wireguard:Wireguard",
-            "protun-udp = proton.vpn.backend.networkmanager.protocol.protun:ProtunUDP",
-            "protun-tcp = proton.vpn.backend.networkmanager.protocol.protun:ProtunTCP",
-            "protun-tls = proton.vpn.backend.networkmanager.protocol.protun:ProtunTLS",
-        ],
         "proton_loader_killswitch": [
             "default = proton.vpn.backend.networkmanager.killswitch.default:NMKillSwitch",
             "wireguard = proton.vpn.backend.networkmanager.killswitch.wireguard:WGKillSwitch",

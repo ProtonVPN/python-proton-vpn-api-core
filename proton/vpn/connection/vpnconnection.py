@@ -27,8 +27,6 @@ import sys
 from abc import ABC, abstractmethod
 from typing import Callable, List
 
-from proton.loader import Loader
-
 from proton.vpn.connection.events import Event, EventContext
 from proton.vpn.connection.interfaces import VPNServer, Settings, VPNCredentials
 from proton.vpn.connection.persistence import ConnectionPersistence, ConnectionParameters
@@ -164,25 +162,6 @@ class VPNConnection(ABC):
         """
         self._publisher.notify(event=event)
 
-    @staticmethod
-    def create(server: VPNServer, credentials: VPNCredentials, settings: Settings = None,
-               protocol: str = None, backend: str = None):  # pylint: disable=too-many-arguments
-        """
-        Creates a new VPN connection object. Note the VPN connection won't be initiated. For that
-        to happen, see the `start` method.
-
-        :param server: VPN server to connect to.
-        :param credentials: Credentials used to authenticate to the VPN server.
-        :param settings: VPN settings used to create the connection.
-        :param protocol: protocol to connect with. If None, the default protocol will be used.
-        :param backend: Name of the class implementing the VPNConnection interface.
-            If None, the default implementation will be used.
-        """
-        backend = Loader.get("backend", class_name=backend)
-        protocol = protocol.lower() if protocol else None
-        protocol_class = backend.factory(protocol)
-        return protocol_class(server, credentials, settings)
-
     @property
     def server(self) -> VPNServer:
         """Returns the VPN server of this VPN connection."""
@@ -221,7 +200,7 @@ class VPNConnection(ABC):
 
     @classmethod
     @abstractmethod
-    def _get_priority(cls) -> int:
+    def get_priority(cls) -> int:
         """
         Priority of the VPN connection implementation.
 
@@ -242,7 +221,7 @@ class VPNConnection(ABC):
 
     @classmethod
     @abstractmethod
-    def _validate(cls) -> bool:
+    def validate(cls) -> bool:
         """
         Determines whether the VPN connection implementation is valid or not.
         To be implemented by subclasses.
@@ -253,6 +232,21 @@ class VPNConnection(ABC):
 
         :return: `True` if the implementation is valid or `False` otherwise.
         """
+
+    @classmethod
+    @abstractmethod
+    def get_protocol_group(cls) -> str:
+        """
+        Returns the protocol group of this VPN connection implementation.
+
+        To be implemented by subclasses.
+
+        The protocol group is used to group VPN connection implementations in the UI.
+        For example proton specific implementations can return "proton" as
+        protocol group, while generic implementations can return "generic"
+        as protocol group.
+        """
+        raise NotImplementedError
 
     async def add_persistence(self):
         """

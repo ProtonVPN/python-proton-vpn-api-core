@@ -17,12 +17,31 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from proton.vpn.core.refresher import VPNDataRefresher
+from proton.vpn.core.registry import Registry
 from proton.vpn.session.servers import LogicalServer
 from proton.vpn.session.client_config import ClientConfig
-from proton.vpn.core.connection import VPNConnector
+from proton.vpn.core.vpnconnector import VPNConnector
 from proton.vpn.connection import events, exceptions, states
 from unittest.mock import Mock, AsyncMock
 import pytest
+
+from tests.connection.test_vpnconnection import DummyVPNConnection
+
+
+class _ProtonProtocol(DummyVPNConnection):
+    protocol = "proton_protocol"
+
+    @classmethod
+    def get_protocol_group(cls):
+        return "proton"
+
+
+class _GenericProtocol(DummyVPNConnection):
+    protocol = "generic_protocol"
+
+    @classmethod
+    def get_protocol_group(cls):
+        return "generic"
 
 
 LOGICAL_SERVER_DATA = {
@@ -45,7 +64,8 @@ def test_get_vpn_server_returns_vpn_server_built_from_logical_server_and_client_
     vpn_connector_wrapper = VPNConnector(
       session_holder=None,
       settings_persistence=None,
-      usage_reporting=None
+      usage_reporting=None,
+      registry=Registry()
     )
 
     logical_server = LogicalServer(data=LOGICAL_SERVER_DATA)
@@ -72,6 +92,7 @@ async def test__on_connection_event_swallows_and_does_not_report_policy_errors()
       session_holder=None,
       settings_persistence=None,
       usage_reporting=Mock(),
+      registry=Registry(),
       state=states.Connected(),
     )
 
@@ -93,6 +114,7 @@ async def test__on_connection_event_reports_feature_syntax_errors_but_no_other_f
         session_holder=None,
         settings_persistence=None,
         usage_reporting=Mock(),
+        registry=Registry(),
         state=states.Connected(),
     )
 
@@ -113,6 +135,7 @@ async def test__on_connection_event_reports_unexpected_exceptions_and_bubbles_th
         session_holder=None,
         settings_persistence=None,
         usage_reporting=Mock(),
+        registry=Registry(),
         state=states.Connected(),
     )
 
@@ -138,6 +161,7 @@ def test_on_state_change_stores_new_device_ip_when_successfully_connected_to_vpn
         session_holder=session_holder_mock,
         settings_persistence=None,
         usage_reporting=None,
+        registry=Registry(),
         connection_persistence=Mock(),
         publisher=publisher_mock,
         port_forward_file_handler=Mock()
@@ -175,6 +199,7 @@ def test_on_state_change_notifies_port_forwarding_file_handler_with_new_state():
         session_holder=session_holder_mock,
         settings_persistence=None,
         usage_reporting=None,
+        registry=Registry(),
         connection_persistence=Mock(),
         publisher=publisher_mock,
         port_forward_file_handler=port_forwarding_file_handler_mock
@@ -201,6 +226,7 @@ def test_on_state_change_skip_store_new_device_ip_when_successfully_connected_to
         session_holder=session_holder_mock,
         settings_persistence=None,
         usage_reporting=None,
+        registry=Registry(),
         connection_persistence=Mock(),
         publisher=publisher_mock
     )
@@ -233,6 +259,7 @@ def test_on_state_change_skip_store_new_device_ip_when_successfully_connected_to
         session_holder=session_holder_mock,
         settings_persistence=None,
         usage_reporting=None,
+        registry=Registry(),
         connection_persistence=Mock(),
         publisher=publisher_mock
     )
@@ -270,6 +297,7 @@ async def test_connector_updates_connection_credentials_when_certificate_is_refr
         session_holder=session_holder,
         settings_persistence=Mock(),
         usage_reporting=Mock(),
+        registry=Registry(),
         connection_persistence=Mock(),
         state=current_state
     )
@@ -284,3 +312,37 @@ async def test_connector_updates_connection_credentials_when_certificate_is_refr
 
     if update_credentials_expected:
         current_state.context.connection.update_credentials.assert_called_once_with(session_holder.vpn_credentials)
+
+
+def test_iter_available_protocols_returns_only_protocols_matching_group():
+    registry = Registry()
+    registry.register(_ProtonProtocol)
+    registry.register(_GenericProtocol)
+
+    connector = VPNConnector(
+        session_holder=None,
+        settings_persistence=None,
+        usage_reporting=None,
+        registry=registry,
+    )
+
+    result = list(connector.iter_available_protocols("proton"))
+
+    assert result == [_ProtonProtocol]
+
+
+def test_iter_available_protocols_returns_empty_when_no_protocols_match_group():
+    registry = Registry()
+    registry.register(_ProtonProtocol)
+    registry.register(_GenericProtocol)
+
+    connector = VPNConnector(
+        session_holder=None,
+        settings_persistence=None,
+        usage_reporting=None,
+        registry=registry,
+    )
+
+    result = list(connector.iter_available_protocols("nonexistent"))
+
+    assert result == []

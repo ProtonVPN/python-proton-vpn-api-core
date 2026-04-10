@@ -354,10 +354,22 @@ class Wireguard(LinuxNetworkManager, LocalAgentMixin):
         return state
 
     @classmethod
-    def _get_priority(cls):
+    def get_key(cls):
+        """Returns the protocol name."""
+        return cls.protocol
+
+    @classmethod
+    def get_priority(cls):
+        """Returns the priority of the implementation. Lower values indicate higher priority."""
         return 1
 
     @classmethod
-    def _validate(cls):
+    def validate(cls):
+        """Determines whether the implementation is valid or not."""
         # FIX ME: This should do a validation to ensure that NM can be used
         return True
+
+    @classmethod
+    def get_protocol_group(cls) -> str:
+        """Returns the protocol group."""
+        return "generic"
