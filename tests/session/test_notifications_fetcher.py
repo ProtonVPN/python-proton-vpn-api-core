@@ -158,7 +158,7 @@ def test_load_from_cache_returns_notifications_from_cache(api_data):
     assert notifications.data["Notifications"] == api_data["Notifications"]
 
 
-def test_load_from_cache_returns_empty_notifications_when_no_cache_found():
+def test_load_from_cache_returns_empty_expired_notifications_when_no_cache_found():
     mock_cache_handler = Mock()
     mock_cache_handler.load.return_value = None
 
@@ -166,6 +166,7 @@ def test_load_from_cache_returns_empty_notifications_when_no_cache_found():
     notifications = fetcher.load_from_cache()
 
     assert notifications.get_nps_survey_notifications() == []
+    assert notifications.is_expired
 
 
 # ---------------------------------------------------------------------------

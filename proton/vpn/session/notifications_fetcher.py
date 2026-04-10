@@ -172,11 +172,12 @@ class NotificationsFetcher:
     def load_from_cache(self) -> Notifications:
         """
         Loads notifications from the cache.
-        :returns: the cached notifications, or an empty Notifications
-            instance if no cache was found.
+        :returns: the cached notifications, or an empty and expired Notifications
+                  instance if no cache was found (triggering an immediate fetch).
         """
         cache = self._cache_file.load()
-        self._notifications = Notifications(cache) if cache else Notifications({})
+        self._notifications = \
+            Notifications(cache) if cache else Notifications({"ExpirationTime": 0})
         return self._notifications
 
     def set_notification_seen(self, seen_notification_id: str):

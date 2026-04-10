@@ -154,7 +154,8 @@ class VPNSessionFetcher:
     def load_notifications_from_cache(self) -> Notifications:
         """
         Loads the previously persisted notifications.
-        :returns: the cached notifications, or an empty Notifications instance if none found.
+        :returns: the cached notifications, or an empty and expired Notifications instance
+                  if none found. (triggering an immediate fetch).
         """
         return self._notifications_fetcher.load_from_cache()
 
