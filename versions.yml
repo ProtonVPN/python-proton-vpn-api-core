@@ -1,3 +1,12 @@
+version: 0.5.1
+time: 2026/04/13 10:13
+author: Pep Llaneras
+email: josep.llaneras@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: kill protun service on package upgrade"
+---
 version: 0.5.0
 time: 2026/04/07 16:01
 author: Luke Titley

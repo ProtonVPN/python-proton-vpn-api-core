@@ -1,0 +1,4 @@
+    remove|purge|upgrade)
+        killall nm-protun-service || true
+        ;;
+esac

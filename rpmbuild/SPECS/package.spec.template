@@ -50,4 +50,7 @@ install -D -m 644 nm-protun-service.conf $RPM_BUILD_ROOT/usr/share/dbus-1/system
 /usr/lib/NetworkManager/VPN/nm-protun.name
 /usr/share/dbus-1/system.d/nm-protun-service.conf
 
+%postun
+killall nm-protun-service || true
+
 %changelog
