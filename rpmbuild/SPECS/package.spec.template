@@ -51,6 +51,13 @@ install -D -m 644 nm-protun-service.conf $RPM_BUILD_ROOT/usr/share/dbus-1/system
 /usr/share/dbus-1/system.d/nm-protun-service.conf
 
 %postun
+# Runs after the old package is removed.
+# Restarts the protun service.
+killall nm-protun-service || true
+
+%post
+# Runs after the new package is installed. Only required if the previous package
+# still didn't have the %postun hook to restart the protun service.
 killall nm-protun-service || true
 
 %changelog
