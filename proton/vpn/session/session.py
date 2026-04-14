@@ -29,7 +29,12 @@ from proton.vpn.session.account import VPNAccount
 from proton.vpn.session.fetcher import (VPNSessionFetcher, EndpointVersion)
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.session.credentials import VPNSecrets
-from proton.vpn.session.dataclasses import LoginResult, BugReportForm, VPNCertificate, VPNLocation
+from proton.vpn.session.dataclasses import \
+    BugReportForm, \
+    LoginResult, \
+    NPSSurveyResponse, \
+    VPNCertificate, \
+    VPNLocation
 from proton.vpn.session.exceptions import VPNAccountDecodeError, ServerListDecodeError
 from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.feature_flags_fetcher import FeatureFlags
@@ -67,6 +72,9 @@ class VPNSession(Session):
     """
 
     BUG_REPORT_ENDPOINT = "/core/v4/reports/bug"
+
+    NPS_SURVEY_SUBMIT_ENDPOINT = "/vpn/v1/nps/submit"
+    NPS_SURVEY_DISMISS_ENDPOINT = "/vpn/v1/nps/dismiss"
 
     def __init__(
             self, *args,
@@ -436,4 +444,26 @@ class VPNSession(Session):
 
         return await self.async_api_request(
             endpoint=VPNSession.BUG_REPORT_ENDPOINT, data=data
+        )
+
+    async def submit_nps_response(self, response: NPSSurveyResponse):
+        """Submits an NPS Survey response"""
+        data = {}
+        nps_response_endpoint = self.NPS_SURVEY_DISMISS_ENDPOINT
+        additional_headers = {
+            'x-pm-country': self._vpn_account.location.Country,
+        }
+
+        if response.response_type is NPSSurveyResponse.ResponseType.SUBMIT:
+            data = {
+                "Score": response.user_score,
+                "Comment": response.user_comments
+            }
+            nps_response_endpoint = self.NPS_SURVEY_SUBMIT_ENDPOINT
+
+        return await self.async_api_request(
+            nps_response_endpoint,
+            data,
+            method="post",
+            additional_headers=additional_headers
         )

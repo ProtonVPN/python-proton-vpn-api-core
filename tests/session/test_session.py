@@ -18,16 +18,18 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import tempfile
 from os.path import basename
-from unittest.mock import patch
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, patch, Mock
 
 import pytest
+from proton.session.transports import TransportFactory
 
 from proton.vpn.session import VPNSession
 from proton.vpn.session.dataclasses import BugReportForm
+from proton.vpn.session.dataclasses.notifications.nps_survey_response import NPSSurveyResponse
 
 MOCK_ISP = "Proton ISP"
 MOCK_COUNTRY = "Middle Earth"
+
 
 def create_mock_vpn_account():
     vpn_account = Mock
@@ -35,6 +37,7 @@ def create_mock_vpn_account():
     vpn_account.location.ISP = MOCK_ISP
     vpn_account.location.Country = MOCK_COUNTRY
     return vpn_account
+
 
 @pytest.mark.asyncio
 async def test_submit_report():
@@ -121,4 +124,86 @@ async def test_submit_report():
         assert form_field.name == "Attachment-1"
         assert form_field.value == bug_report.attachments[1]
         assert form_field.filename == basename(form_field.value.name)
+
+
+# ---------------------------------------------------------------------------
+# submit_nps_response
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def mock_transport():
+    transport = Mock()
+    transport.async_api_request = AsyncMock(return_value={"Code": 1000})
+    return transport
+
+
+@pytest.fixture
+def nps_session(mock_transport):
+    s = VPNSession()
+    s.transport_factory = TransportFactory(lambda _: mock_transport)
+    s._vpn_account = create_mock_vpn_account()
+    return s
+
+
+@pytest.mark.asyncio
+async def test_submit_nps_response_submit_uses_submit_endpoint(nps_session, mock_transport):
+    response = NPSSurveyResponse(
+        user_score=9,
+        user_comments="Great service",
+        response_type=NPSSurveyResponse.ResponseType.SUBMIT,
+    )
+    await nps_session.submit_nps_response(response)
+
+    endpoint = mock_transport.async_api_request.call_args.args[0]
+    assert endpoint == VPNSession.NPS_SURVEY_SUBMIT_ENDPOINT
+
+
+@pytest.mark.asyncio
+async def test_submit_nps_response_submit_sends_score_and_comment(nps_session, mock_transport):
+    response = NPSSurveyResponse(
+        user_score=8,
+        user_comments="Very good",
+        response_type=NPSSurveyResponse.ResponseType.SUBMIT,
+    )
+    await nps_session.submit_nps_response(response)
+
+    jsondata = mock_transport.async_api_request.call_args.args[1]
+    assert jsondata["Score"] == 8
+    assert jsondata["Comment"] == "Very good"
+
+
+@pytest.mark.asyncio
+async def test_submit_nps_response_dismiss_uses_dismiss_endpoint(nps_session, mock_transport):
+    response = NPSSurveyResponse(user_score=0, user_comments="")
+    await nps_session.submit_nps_response(response)
+
+    endpoint = mock_transport.async_api_request.call_args.args[0]
+    assert endpoint == VPNSession.NPS_SURVEY_DISMISS_ENDPOINT
+
+
+@pytest.mark.asyncio
+async def test_submit_nps_response_dismiss_sends_empty_data(nps_session, mock_transport):
+    response = NPSSurveyResponse(user_score=0, user_comments="")
+    await nps_session.submit_nps_response(response)
+
+    jsondata = mock_transport.async_api_request.call_args.args[1]
+    assert jsondata == {}
+
+
+@pytest.mark.asyncio
+async def test_submit_nps_response_includes_country_header(nps_session, mock_transport):
+    response = NPSSurveyResponse(user_score=5, user_comments="OK")
+    await nps_session.submit_nps_response(response)
+
+    additional_headers = mock_transport.async_api_request.call_args.args[3]
+    assert additional_headers["x-pm-country"] == MOCK_COUNTRY
+
+
+@pytest.mark.asyncio
+async def test_submit_nps_response_uses_post_method(nps_session, mock_transport):
+    response = NPSSurveyResponse()
+    await nps_session.submit_nps_response(response)
+
+    method = mock_transport.async_api_request.call_args.args[4]
+    assert method == "post"
 

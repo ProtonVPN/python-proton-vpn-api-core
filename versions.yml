@@ -1,3 +1,12 @@
+version: 5.1.0
+time: 2026/04/14 16:35
+author: Richard Paterson
+email: richard.paterson@proton.ch
+urgency: low
+stability: unstable
+description:
+- "feat: NPS survey response submission"
+---
 version: 5.0.1
 time: 2026/04/10 14:39
 author: Luke Titley

@@ -24,11 +24,13 @@ from proton.vpn.session.dataclasses.credentials import (
 )
 from proton.vpn.session.dataclasses.location import VPNLocation
 from proton.vpn.session.dataclasses.login_result import LoginResult
+from proton.vpn.session.dataclasses.notifications.nps_survey_response import NPSSurveyResponse
 from proton.vpn.session.dataclasses.sessions import APIVPNSession, VPNSessions
 from proton.vpn.session.dataclasses.settings import VPNInfo, VPNSettings
 
 __all__ = [
     "BugReportForm",
+    "NPSSurveyResponse",
     "VPNCertificate",
     "VPNUserPassCredentials", "VPNCredentials",
     "VPNLocation",

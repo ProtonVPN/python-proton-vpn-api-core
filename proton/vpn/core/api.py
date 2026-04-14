@@ -31,7 +31,7 @@ from proton.vpn.core.refresher.scheduler import Scheduler
 from proton.vpn.core.refresher.vpn_data_refresher import VPNDataRefresher
 from proton.vpn.core.settings import Settings, SettingsPersistence
 from proton.vpn.core.session_holder import SessionHolder, ClientTypeMetadata
-from proton.vpn.session.dataclasses import LoginResult, BugReportForm
+from proton.vpn.session.dataclasses import LoginResult, BugReportForm, NPSSurveyResponse
 from proton.vpn.session.account import VPNAccount
 from proton.vpn.session import FeatureFlags
 from proton.vpn.core.usage import UsageReporting
@@ -275,6 +275,12 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         Submits the specified bug report to customer support.
         """
         return await self._session_holder.session.submit_bug_report(bug_report)
+
+    async def submit_nps_response(self, response: NPSSurveyResponse):
+        """
+        Submits an NPS survey response.
+        """
+        return await self._session_holder.session.submit_nps_response(response)
 
     async def logout(self):
         """
