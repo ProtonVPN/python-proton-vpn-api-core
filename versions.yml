@@ -1,3 +1,12 @@
+version: 5.1.1
+time: 2026/04/16 15:25
+author: Richard Paterson
+email: richard.paterson@proton.ch
+urgency: low
+stability: unstable
+description:
+- "fix: Notifications can be set as viewed from API"
+---
 version: 5.1.0
 time: 2026/04/14 16:35
 author: Richard Paterson

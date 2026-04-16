@@ -282,6 +282,10 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         """
         return await self._session_holder.session.submit_nps_response(response)
 
+    def set_notification_seen(self, notification_id: str):
+        """Marks a notification as seen and persists the change to disk."""
+        self._session_holder.session.set_notification_seen(notification_id)
+
     async def logout(self):
         """
         Logs the current user out.
