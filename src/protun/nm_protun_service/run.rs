@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2025 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -25,28 +25,29 @@
 
 use zbus::Connection;
 
-use super::plugin::Plugin;
+use super::interfaces::new_interfaces;
 
-/// D-Bus service name for the Proton VPN plugin
-const DBUS_SERVICE_NAME: &str = "org.freedesktop.NetworkManager.protun";
-
-/// D-Bus object path for the plugin
-const DBUS_OBJECT_PATH: &str = "/org/freedesktop/NetworkManager/VPN/Plugin";
+use super::super::core::{DBUS_SERVICE_NAME, DBUS_OBJECT_PATH};
 
 pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::Builder::from_env(
-        env_logger::Env::default().default_filter_or("warn"),
+        env_logger::Env::default().default_filter_or("info"),
     )
     .init();
 
     log::info!("Starting Proton VPN NetworkManager plugin");
 
-    let plugin = Plugin::new();
+    let (plugin, connection_updates) = new_interfaces();
     let zbus_connection = Connection::system().await?;
 
     zbus_connection
         .object_server()
         .at(DBUS_OBJECT_PATH, plugin)
+        .await?;
+
+    zbus_connection
+        .object_server()
+        .at(DBUS_OBJECT_PATH, connection_updates)
         .await?;
 
     zbus_connection.request_name(DBUS_SERVICE_NAME).await?;

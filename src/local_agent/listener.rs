@@ -5,7 +5,7 @@ use super::{
 };
 
 #[cfg(feature = "python")]
-use super::python::future;
+use super::super::python::{future, await_py};
 
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
@@ -168,15 +168,12 @@ impl Listener {
         cert: String,
         timeout_in_seconds: u64,
     ) -> PyResult<Bound<'p, PyAny>> {
-        future(py, async move {
-            Self::connect(ConnectParams {
-                    domain,
-                    key,
-                    cert,
-                    timeout_in_seconds,
-                }
-            ).await
-        })
+        await_py!(py, Self::connect(ConnectParams {
+            domain,
+            key,
+            cert,
+            timeout_in_seconds,
+        }))
     }
 
     #[classmethod]
@@ -186,9 +183,7 @@ impl Listener {
         py: Python<'p>,
         responses: String,
     ) -> PyResult<Bound<'p, PyAny>> {
-        future(py, async move {
-            Self::playback(&responses).await
-        })
+        await_py!(py, Self::playback(&responses))
     }
 
     /// Starts listening for local agent status updates.
@@ -204,7 +199,6 @@ impl Listener {
         status_callback: Py<PyAny>,
         error_callback: Py<PyAny>,
     ) -> PyResult<Bound<'p, PyAny>> {
-        let listener = self.clone();
         let callback = move |result: Result<StatusMessage>| {
             let py_result: PyResult<StatusMessage> = result
                 .map_err(|error| error.into());
@@ -225,10 +219,7 @@ impl Listener {
             Ok(())
         };
 
-        future(py, async move {
-            listener.listen(callback).await?;
-            Ok(())
-        })
+        await_py!(py, self.listen(callback))
     }
 
     /// Requests connection features.
@@ -249,12 +240,6 @@ impl Listener {
         features: AgentFeatures,
         timeout_in_seconds: u64,
     ) -> PyResult<Bound<'p, PyAny>> {
-        let listener = self.clone();
-        future(py, async move {
-            listener
-                .request_features(features, timeout_in_seconds)
-                .await?;
-            Ok(())
-        })
+        await_py!(py, self.request_features(features, timeout_in_seconds))
     }
 }

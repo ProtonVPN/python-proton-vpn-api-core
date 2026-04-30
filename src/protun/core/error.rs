@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2025 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -16,17 +16,24 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-//! VPN connection and tunnel management.
-//!
-//! Provides the SDK interface, connection management.
 
-mod connection_manager;
-mod error;
-pub(crate) mod netlink;
-mod sdk;
+//! Error types for the protun core module.
 
-pub mod wireguard_utils;
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("{0}")]
+    Runtime(String),
+    #[error("{0}")]
+    Zbus(#[from] zbus::Error),
+    #[error("{0}")]
+    Json(#[from] serde_json::Error),
+}
 
-pub use error::*;
-pub use netlink::NetlinkHandle;
-pub use sdk::*;
+#[cfg(feature = "python")]
+impl std::convert::From<Error> for pyo3::PyErr {
+    fn from(err: Error) -> pyo3::PyErr {
+        pyo3::exceptions::PyRuntimeError::new_err(err.to_string())
+    }
+}
+
+pub type Result<T> = std::result::Result<T, Error>;

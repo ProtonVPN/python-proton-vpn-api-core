@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2025 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -17,23 +17,19 @@
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
 
-//! Core VPN plugin types and NetworkManager D-Bus interface implementation
-//!
-//! This is the most important module in the protun service.
-
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
 use zbus::zvariant::OwnedValue;
-use zbus::{interface, object_server::SignalEmitter};
+use zbus::{Connection, interface, message::Header, object_server::SignalEmitter};
 
-use crate::proton;
+pub use super::super::error::*;
+pub use super::super::settings::*;
+use super::super::service::{Service, ServiceHandle, WgClientPrivateKey, InitialConnectionConfig};
 
-pub use super::error::*;
-pub use super::settings::*;
-
-use super::types::{Ip4Config, NMVpnServiceState, VpnConfig};
+use super::super::types::{Ip4Config, NMVpnServiceState, VpnConfig};
+use super::super::error::{Error, Result};
 
 struct ConfigInfo {
     interface: InterfaceParams,
@@ -42,36 +38,17 @@ struct ConfigInfo {
     dns: Vec<std::net::IpAddr>,
 }
 
-/// The internal state of our VPN plugin
-#[derive(Debug)]
-pub struct PluginState {
-    pub service_state: NMVpnServiceState,
-    pub sdk: proton::vpn::Sdk,
-    /// The TUN interface name (e.g., "protun0")
-    pub tun_name: Option<String>,
-}
-
-impl Default for PluginState {
-    fn default() -> Self {
-        Self {
-            service_state: NMVpnServiceState::Init,
-            sdk: proton::vpn::Sdk::new(),
-            tun_name: None,
-        }
-    }
-}
-
 /// The main VPN Plugin D-Bus object
 ///
 /// This implements the org.freedesktop.NetworkManager.VPN.Plugin interface
-pub struct Plugin {
-    pub state: Arc<RwLock<PluginState>>,
+pub struct NetworkManager {
+    pub service: ServiceHandle,
 }
 
-impl Plugin {
-    pub fn new() -> Self {
+impl NetworkManager {
+    pub fn new(service: ServiceHandle) -> Self {
         Self {
-            state: Arc::new(RwLock::new(PluginState::default())),
+            service,
         }
     }
 
@@ -81,7 +58,7 @@ impl Plugin {
         emitter: &SignalEmitter<'_>,
         new_state: NMVpnServiceState,
     ) -> zbus::fdo::Result<()> {
-        self.state.write().await.service_state = new_state;
+        self.service.write().await.service_state = new_state;
         Self::vpn_state_changed(emitter, new_state as u32).await?;
         Ok(())
     }
@@ -90,33 +67,32 @@ impl Plugin {
     async fn establish_connection(
         &self,
         params: ConnectionParams,
-    ) -> proton::vpn::Result<ConfigInfo> {
+    ) -> Result<ConfigInfo> {
         let ConnectionParams {
             mut interface,
             peers,
             private_key,
             dns,
-            pcap_file,
+            user,
         } = params;
 
-        let external_gateway = peers[0].server_ip.0.clone(); // TODO LT: This needs to be replaced with a stub IP address.
+        let external_gateway = peers.first()
+            .ok_or_else(|| Error::InvalidState("no peers in connection params".into()))?
+            .server_ip.0.clone(); // TODO LT: This needs to be replaced with a stub IP address.
 
-        let mut state = self.state.write().await;
-        let connection_info = state
-            .sdk
-            .connection_manager()
+        let mut service = self.service.write().await;
+        service.user = Some(user);
+        let connection_info = service
             .connect(
-                proton::vpn::InitialConnectionConfig {
-                    wg_private_key: proton::vpn::WgClientPrivateKey(private_key),
+                InitialConnectionConfig {
+                    wg_private_key: WgClientPrivateKey(private_key),
                     peers: peers,
                     network_available: true,
-                    pcap_file,
+                    pcap_file : None,
                 },
                 interface.name.clone(),
             )
             .await?;
-
-        state.tun_name = Some(connection_info.interface_name.clone());
 
         interface.name = connection_info.interface_name.clone(); // Update interface name in case it was changed by the SDK
 
@@ -133,11 +109,11 @@ impl Plugin {
         emitter: &SignalEmitter<'_>,
         config_info: ConfigInfo,
     ) -> zbus::fdo::Result<()> {
-        fn to_u32(ip: std::net::IpAddr) -> proton::vpn::Result<u32> {
+        fn to_u32(ip: std::net::IpAddr) -> Result<u32> {
             match ip {
                 std::net::IpAddr::V4(v4) => Ok(u32::from(v4).to_be()), // Network byte order
                 std::net::IpAddr::V6(_) => {
-                    Err(proton::vpn::Error::InvalidState(
+                    Err(Error::InvalidState(
                         "IPv6 addresses not yet supported".to_string(),
                     ))
                 }
@@ -166,7 +142,7 @@ impl Plugin {
                     .dns
                     .into_iter()
                     .map(to_u32)
-                    .collect::<proton::vpn::Result<Vec<u32>>>()?,
+                    .collect::<Result<Vec<u32>>>()?,
                 mtu: config_info.interface_mtu,
                 #[cfg(feature = "protun_fwmark")]
                 never_default: true,
@@ -185,7 +161,7 @@ impl Plugin {
 ///
 /// Interface: org.freedesktop.NetworkManager.VPN.Plugin
 #[interface(name = "org.freedesktop.NetworkManager.VPN.Plugin")]
-impl Plugin {
+impl NetworkManager {
     /// Called by NetworkManager to establish a VPN connection.
     ///
     /// Check openvpn plugin, does it make additional interface
@@ -267,9 +243,8 @@ impl Plugin {
 
         {
             log::info!("Calling disconnect: waiting...");
-            let mut state = self.state.write().await;
-            state.sdk.connection_manager().disconnect().await;
-            state.tun_name = None;
+            let mut state = self.service.write().await;
+            state.disconnect().await;
             log::info!("Calling disconnect: completed");
         }
 
@@ -320,7 +295,7 @@ impl Plugin {
 
     #[zbus(property(emits_changed_signal = "false"))]
     async fn state(&self) -> u32 {
-        self.state.read().await.service_state as u32
+        self.service.read().await.service_state as u32
     }
 
     // ===== Signals =====

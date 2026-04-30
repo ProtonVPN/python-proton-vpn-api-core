@@ -22,7 +22,7 @@ use super::{
 };
 
 #[cfg(feature = "python")]
-use super::{python::future, DEFAULT_TIMEOUT_IN_SECONDS};
+use super::{DEFAULT_TIMEOUT_IN_SECONDS, super::python::{await_py, future}};
 
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
@@ -290,15 +290,12 @@ impl AgentConnector {
         cert: String,
         timeout_in_seconds: u64,
     ) -> PyResult<Bound<'p, PyAny>> {
-        future(py, async move {
-            Self::connect(ConnectParams {
-                    domain,
-                    key,
-                    cert,
-                    timeout_in_seconds,
-                })
-                .await
-        })
+        await_py!(py, Self::connect(ConnectParams {
+            domain,
+            key,
+            cert,
+            timeout_in_seconds,
+        }))
     }
 
     /// Reads a string of json containing responses and returns an
@@ -317,9 +314,7 @@ impl AgentConnector {
         py: Python<'p>,
         responses: String,
     ) -> PyResult<Bound<'p, PyAny>> {
-        future(py, async move {
-            Self::playback(&responses).await
-        })
+        await_py!(py, Self::playback(&responses))
     }
 }
 

@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2025 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -47,3 +47,9 @@ pub enum Error {
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
+
+impl From<Error> for zbus::fdo::Error {
+    fn from(err: Error) -> Self {
+        zbus::fdo::Error::Failed(format!("{}", err))
+    }
+}

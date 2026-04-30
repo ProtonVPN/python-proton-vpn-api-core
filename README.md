@@ -11,7 +11,7 @@
 # Protun
 
 ## Building
-> cargo build --bin nm-protun-service --bin nm-protun-auth-dialog --features 'protun, nm_protun_auth_dialog'
+> cargo build --bin nm-protun-service --bin nm-protun-auth-dialog --lib --features 'protun, nm_protun_auth_dialog, python'
 
 ## Installing
 
@@ -25,19 +25,10 @@ Grant the plugin rights to the D-Bus namespace:
 
 ## Creating a connection
 
-Use the `cli` command to generate and apply the nmcli command from a WireGuard config file:
+Use the `cli nm` command to generate and apply the nmcli command from a WireGuard config file:
 
 ```bash
-cargo run --bin nm-protun-service --features protun -- cli --read-config /path/to/wireguard.conf | bash
-nmcli connection up proton0
-```
-
-To also capture packets for debugging:
-
-```bash
-cargo run --bin nm-protun-service --features protun -- cli \
-    --read-config /path/to/wireguard.conf \
-    --pcap-file /tmp/capture.pcap | bash
+cargo run --bin nm-protun-service --features protun -- cli nm --read-config /path/to/wireguard.conf | bash
 nmcli connection up proton0
 ```
 
@@ -46,6 +37,15 @@ nmcli connection up proton0
 Use this command to see stdout/stderr of the plugin.
 
 sudo journalctl -u NetworkManager.service -f -o cat
+
+### Packet capture
+
+Use the `cli protun` command to send commands to a running protun service. For example, to start and stop a packet capture:
+
+```bash
+cargo run --bin nm-protun-service --features protun -- cli protun pcap-start --file-path /tmp/capture.pcap
+cargo run --bin nm-protun-service --features protun -- cli protun pcap-stop
+```
 
 ## Custom Routing
 

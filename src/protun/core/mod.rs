@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2025 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -16,16 +16,16 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-//! The NetworkManager VPN Plugin for ProtonVPN.
-//!
-//! This module contains the implementation of the protun VPN service.
-//! The service provides a VPN connection to the ProtonVPN network and is
-//! configured via the NetworkManager D-Bus API.
-
+mod command;
+mod command_wire;
+mod connection_manager;
+mod parameters;
 mod error;
-mod plugin;
-mod run;
-mod types;
 
-pub mod settings;
-pub use run::run;
+pub use connection_manager::ConnectionManager;
+pub use command::*;
+pub use parameters::*;
+pub use error::*;
+
+pub const DBUS_SERVICE_NAME: &str = "org.freedesktop.NetworkManager.protun";
+pub const DBUS_OBJECT_PATH: &str = "/org/freedesktop/NetworkManager/VPN/Plugin";

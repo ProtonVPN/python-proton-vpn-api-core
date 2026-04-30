@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2025 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -16,10 +16,15 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-use crate::proton;
 
-impl From<proton::vpn::Error> for zbus::fdo::Error {
-    fn from(err: proton::vpn::Error) -> Self {
-        zbus::fdo::Error::Failed(format!("{}", err))
-    }
+pub mod network_manager;
+pub mod protun;
+
+use super::service::Service;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+pub fn new_interfaces() -> (network_manager::NetworkManager, protun::Protun) {
+    let state = Arc::new(RwLock::new(Service::default()));
+    (network_manager::NetworkManager::new(state.clone()), protun::Protun::new(state))
 }

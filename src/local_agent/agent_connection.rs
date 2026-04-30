@@ -27,7 +27,7 @@ use std::sync::Arc;
 use pyo3::prelude::*;
 
 #[cfg(feature = "python")]
-use super::{python::future, DEFAULT_TIMEOUT_IN_SECONDS};
+use super::{DEFAULT_TIMEOUT_IN_SECONDS, super::python::{await_py, future}};
 
 /// Represents an active connection to the LocalAgent server.
 ///
@@ -68,8 +68,8 @@ impl AgentConnection {
         .await?
     }
 
-    /// Requests the local agent status. This method does not return anything.
-    /// Eventually the local agent server will push the status, which can then
+    /// Sends a features request to the local agent. This method does not return anything.
+    /// Eventually the local agent server will push a status response, which can then
     /// be read via the read() method.
     pub async fn request_features(
         &self,
@@ -139,11 +139,7 @@ impl AgentConnection {
         py: Python<'p>,
         timeout_in_seconds: u64,
     ) -> PyResult<Bound<'p, PyAny>> {
-        let agent_connection = self.clone();
-        future(py, async move {
-            agent_connection.request_status(timeout_in_seconds, None).await?;
-            Ok(())
-        })
+        await_py!(py, self.request_status(timeout_in_seconds, None))
     }
 
     /// Makes a new feature request from the local agent.
@@ -157,13 +153,7 @@ impl AgentConnection {
         features: AgentFeatures,
         timeout_in_seconds: u64,
     ) -> PyResult<Bound<'p, PyAny>> {
-        let agent_connection = self.clone();
-        future(py, async move {
-            agent_connection
-                .request_features(features, timeout_in_seconds)
-                .await?;
-            Ok(())
-        })
+        await_py!(py, self.request_features(features, timeout_in_seconds))
     }
 
     /// Closes the local agent connection.
@@ -173,19 +163,12 @@ impl AgentConnection {
         py: Python<'p>,
         timeout_in_seconds: u64,
     ) -> PyResult<Bound<'p, PyAny>> {
-        let agent_connection = self.clone();
-        future(py, async move {
-            agent_connection.close(timeout_in_seconds).await?;
-            Ok(())
-        })
+        await_py!(py, self.close(timeout_in_seconds))
     }
 
     /// Reads the local agent response.
     #[pyo3(name="read")]
     pub fn py_read<'p>(&self, py: Python<'p>) -> PyResult<Bound<'p, PyAny>> {
-        let agent_connection = self.clone();
-        future(py, async move {
-            Ok(Status::from(agent_connection.read().await?))
-        })
+        await_py!(py, self.read())
     }
 }

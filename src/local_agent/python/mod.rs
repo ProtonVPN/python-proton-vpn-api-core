@@ -20,10 +20,8 @@ use super::{AgentConnector, AgentConnection, AgentFeatures, ConnectionDetails, L
             ReasonCode, State, Status};
 
 mod exception;
-mod future;
 
 pub use exception::*;
-pub use future::future;
 
 use pyo3::types::PyModule;
 

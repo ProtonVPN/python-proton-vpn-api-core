@@ -16,22 +16,55 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-use super::super::error::*;
 
 /// Converts a rust future into a python future, making sure to convert errors
 /// into Python exceptions.
 ///
 /// This is necessary as async {} blocks in Rust do not have a way to specify
 /// their return type.
-pub fn future<W, R>(
+pub fn future<W, R, E>(
     py: pyo3::Python,
     work: W,
 ) -> pyo3::PyResult<pyo3::Bound<pyo3::PyAny>>
 where
-    W: std::future::Future<Output = Result<R>> + Send + 'static,
+    W: std::future::Future<Output = Result<R, E>> + Send + 'static,
     R: for<'py> pyo3::IntoPyObject<'py> + Send + 'static,
+    E: std::error::Error + Send + Into<pyo3::PyErr> + 'static,
 {
     pyo3_async_runtimes::tokio::future_into_py(py, async move {
-        work.await.map_err(pyo3::PyErr::from)
+        work.await.map_err(Into::<pyo3::PyErr>::into)
     })
 }
+
+/// Macro to simplify calling the future function.
+/// 
+/// It can be invoked with a function or a method call and will automatically
+/// clone self to allow the future to own it.
+/// Example usage:
+/// ```
+/// await_py!(py, self.some_method(arg1, arg2))
+/// await_py!(py, some_function(arg1, arg2))
+/// ```
+///
+/// This significantly reduces the boilerplate when wrapping rust async
+/// functions in python.
+macro_rules! await_py {
+    // Matches a method call
+    ($py:ident, $self:ident.$method:ident($($args:expr),*)) => {
+        {
+            let this = $self.clone();
+            future($py, async move {
+                this.$method($($args),*).await
+            })
+        }
+    };
+
+    // Matches a function call
+    ($py:ident, $func_call:expr) => {
+        future($py, async move {
+            $func_call.await
+        })
+    };
+}
+
+pub(crate) use await_py;

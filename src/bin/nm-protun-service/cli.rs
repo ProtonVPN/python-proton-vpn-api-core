@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2025 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -22,14 +22,12 @@ use std::path::PathBuf;
 
 use base64::prelude::*;
 
-use proton_vpn_linux::proton::vpn::wireguard_utils::WireguardConfig;
-use proton_vpn_linux::services::protun as protun_service;
+use proton_vpn_linux::protun::nm_protun_service::wireguard_utils::WireguardConfig;
+use proton_vpn_linux::protun::nm_protun_service as protun_service;
+use proton_vpn_linux::protun::core::PeerInfo;
 
 /// Generate and print nmcli command from a WireGuard config file
-pub async fn run(
-    config_path: PathBuf,
-    pcap_file: Option<protun_service::settings::PcapFileInfo>,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn run(config_path: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let config_str = std::fs::read_to_string(&config_path)?;
     let config = WireguardConfig::try_from(config_str.as_str())?;
 
@@ -58,7 +56,7 @@ pub async fn run(
 
     let settings_str = protun_service::settings::Settings {
         version : protun_service::settings::VERSION,
-        peers : vec![protun_service::settings::PeerInfo {
+        peers : vec![PeerInfo {
                         id: peer_id,
                         endpoint: endpoint.ip().to_string(),
                         public_key,
@@ -67,8 +65,11 @@ pub async fn run(
                         tls_ports: vec![],
                         priority: 0,
                     }],
-        pcap_file,
     }.to_settings_string()?;
+
+    let username = std::env::var("USER")
+        .or_else(|_| std::env::var("LOGNAME"))
+        .map_err(|_| "cannot determine current user (USER/LOGNAME not set)")?;
 
     // Print nmcli command
     println!(
@@ -77,6 +78,7 @@ pub async fn run(
             type vpn \
             vpn-type protun \
             con-name proton0 \
+            connection.permissions 'user:{username}' \
             ipv4.addresses '{address}/{prefix}' \
             ipv4.dns '{dns}' \
             vpn.data 'private-key-flags=1' \

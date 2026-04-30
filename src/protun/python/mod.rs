@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2025 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -16,7 +16,17 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-//! This is where any long running daemon/services are implemented.
+use pyo3::types::PyModule;
 
-#[cfg(feature = "protun")]
-pub mod protun;
+pub fn register(py: pyo3::Python<'_>) -> pyo3::PyResult<pyo3::Bound<'_, PyModule>> {
+    use pyo3::types::PyModuleMethods as _;
+
+    let protun = PyModule::new(py, "protun")?;
+    protun.add_class::<super::core::ConnectionManager>()?;
+    protun.add_class::<super::core::Command>()?;
+    protun.add_class::<super::core::PcapStop>()?;
+    protun.add_class::<super::core::PcapStart>()?;
+    protun.add_class::<super::core::PcapFileInfo>()?;
+    protun.add_class::<super::core::FileWriteMode>()?;
+    Ok(protun)
+}

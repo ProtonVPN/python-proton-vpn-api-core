@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2025 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -17,6 +17,7 @@
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
 
+mod await_py;
 mod exceptions;
 mod logger;
 mod submodule;
@@ -24,6 +25,7 @@ mod submodule;
 use pyo3::prelude::*;
 
 pub use submodule::SubModule;
+pub(crate) use await_py::{future, await_py};
 
 #[pyo3::pymodule]
 #[pyo3(name = "linux")]
@@ -42,6 +44,9 @@ fn py_init_linux(
 
     #[cfg(feature = "local_agent")]
     m.add_import_submodule(py, &super::local_agent::python::register(py)?, "proton.vpn.linux.local_agent")?;
+
+    #[cfg(feature = "protun")]
+    m.add_import_submodule(py, &super::protun::python::register(py)?, "proton.vpn.linux.protun")?;
 
     Ok(())
 }

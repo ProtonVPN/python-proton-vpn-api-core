@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2025 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -16,24 +16,32 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-//! VPN connection lifecycle management.
+
+//! Core VPN plugin types and NetworkManager D-Bus interface implementation
 //!
-//! Handles TUN device creation, WireGuard tunnel setup, and connection
-//! state transitions.
-
+//! This is the most important module in the protun service.
 use libc::{c_void, ioctl, open, O_NONBLOCK, O_RDWR};
-use std::thread::JoinHandle;
 
-use crate::proton::vpn::netlink::NetlinkHandle;
-use crate::proton::vpn::*;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use protun::api::connection::*;
 
+use super::netlink::NetlinkHandle;
+
 pub use protun::api::{
-    connection::{InitialConnectionConfig, PeerInfo, WgClientPrivateKey},
+    connection::{InitialConnectionConfig, PeerInfo, WgClientPrivateKey, PcapFileInfo},
     state::State,
     events::Event,
 };
+
+use tokio::sync::RwLock;
+//use zbus::zvariant::OwnedValue;
+//use zbus::{Connection, interface, message::Header, object_server::SignalEmitter};
+pub use super::error::*;
+pub use super::settings::*;
+
+use super::types::NMVpnServiceState;
 
 /// MTU for the VPN tunnel interface
 pub const VPN_MTU: u32 = 1420;
@@ -43,33 +51,35 @@ pub struct ConnectionInfo {
     pub mtu: u32,
 }
 
-struct ConnectionHandle {
-    pub connection: Connection,
+/// The internal state of our VPN plugin
+pub struct Service {
+    pub service_state: NMVpnServiceState,
+    /// The UID of the user who owns the connection (from connection.permissions)
+    pub user: Option<u32>,
+    /// The active VPN connection, if any
+    connection: Option<Connection>,
 }
 
-impl From<(Connection)> for ConnectionHandle {
-    fn from(connection: Connection) -> Self {
-        ConnectionHandle { connection }
-    }
-}
-
-pub struct ConnectionManager {
-    connection: Option<ConnectionHandle>,
-}
-
-impl std::fmt::Debug for ConnectionManager {
+impl std::fmt::Debug for Service {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ConnectionManager")
-            .field("connection", &self.connection.is_some())
+        f.debug_struct("Service")
+            .field("service_state", &self.service_state)
+            .field("user", &self.user)
             .finish()
     }
 }
 
-impl ConnectionManager {
-    pub(super) fn new() -> Self {
-        ConnectionManager { connection: None }
+impl Default for Service {
+    fn default() -> Self {
+        Self {
+            service_state: NMVpnServiceState::Init,
+            user: None,
+            connection: None,
+        }
     }
+}
 
+impl Service {
     /// Connect to VPN with the specified TUN interface name pattern.
     ///
     /// This async function handles:
@@ -90,12 +100,12 @@ impl ConnectionManager {
         tun_interface: String,
     ) -> Result<ConnectionInfo> {
         log::info!(
-            "connection_manager: starting connection with {:?}",
+            "service: starting connection with {:?}",
             initial_config
         );
 
         if self.connection.is_some() {
-            log::error!("connection_manager: connection attempt while already connected");
+            log::error!("service: connection attempt while already connected");
             return Err(Error::InvalidState(
                 "Connection already established".to_string(),
             ));
@@ -121,10 +131,10 @@ impl ConnectionManager {
         // Configure interface: UP + MTU
         nl.configure_interface(&actual_name, VPN_MTU).await?;
 
-        self.connection = Some(ConnectionHandle { connection });
+        self.connection = Some(connection);
 
         log::info!(
-            "connection_manager: connected to VPN on interface {}",
+            "service: connected to VPN on interface {}",
             actual_name
         );
 
@@ -136,15 +146,13 @@ impl ConnectionManager {
 
     /// Disconnect from VPN.
     pub async fn disconnect(&mut self) {
-        if let Some(ConnectionHandle { connection }) =
-            self.connection.take()
-        {
+        if let Some(connection) = self.connection.take() {
             connection.disconnect_and_wait();
             log::info!(
-                "connection_manager: disconnected and joined connection thread"
+                "service: disconnected and joined connection thread"
             );
         } else {
-            log::info!("connection_manager: disconnect called but no active connection");
+            log::info!("service: disconnect called but no active connection");
         }
     }
 
@@ -152,9 +160,7 @@ impl ConnectionManager {
         &mut self,
         private_key: [u8; 32],
     ) -> Result<()> {
-        if let Some(ConnectionHandle {
-            connection,
-        }) = &self.connection
+        if let Some(connection) = &self.connection
         {
             connection.update_wg_private_key(PrivateKeyUpdateInfo {
                 wg_private_key: WgClientPrivateKey(private_key),
@@ -164,15 +170,30 @@ impl ConnectionManager {
     }
 
     pub fn update_peers(&mut self, peers: Vec<PeerInfo>) -> Result<()> {
-        if let Some(ConnectionHandle {
-            connection,
-        }) = &self.connection
+        if let Some(connection) = &self.connection
         {
             connection.update_peers(peers);
         }
         Ok(())
     }
+
+    pub fn pcap_start(&mut self, pcap_file: PcapFileInfo) -> Result<()> {
+        let connection = self.connection.as_ref()
+            .ok_or_else(|| Error::InvalidState("no active VPN connection".into()))?;
+        connection.start_packet_capture(pcap_file);
+        Ok(())
+    }
+
+    pub fn pcap_stop(&mut self) -> Result<()> {
+        let connection = self.connection.as_ref()
+            .ok_or_else(|| Error::InvalidState("no active VPN connection".into()))?;
+        connection.stop_packet_capture();
+        Ok(())
+    }
 }
+
+pub type ServiceHandle = Arc<RwLock<Service>>;
+
 
 /// Create a TUN interface and return the file descriptor and actual interface name.
 ///
@@ -238,11 +259,9 @@ fn on_event(event: Event) {
     log::info!("Connection event: {:?}", event);
 }
 
-impl Drop for ConnectionManager {
+impl Drop for Service {
     fn drop(&mut self) {
-        if let Some(ConnectionHandle { connection }) =
-            self.connection.take()
-        {
+        if let Some(connection) = self.connection.take() {
             connection.disconnect_and_wait();
         }
     }

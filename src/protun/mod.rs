@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2025 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -16,9 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-//! Proton-specific VPN implementation.
-//!
-//! Contains the VPN SDK and connection management for ProtonVPN services.
+//! This is where any long running daemon/services are implemented.
 
-#[cfg(feature = "protun")]
-pub mod vpn;
+pub mod nm_protun_service;
+pub mod core;
+#[cfg(feature = "python")]
+pub mod python;

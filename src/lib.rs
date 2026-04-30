@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2025 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -20,15 +20,13 @@
 //!
 //! Provides VPN connection management, server load computation, and
 //! NetworkManager integration for Linux.
+pub mod error;
 
 #[cfg(feature = "core")]
 pub mod core;
 #[cfg(feature = "local_agent")]
 pub mod local_agent;
-
-pub mod error;
-pub mod proton;
+#[cfg(feature = "protun")]
+pub mod protun;
 #[cfg(feature = "python")]
 pub mod python;
-
-pub mod services;

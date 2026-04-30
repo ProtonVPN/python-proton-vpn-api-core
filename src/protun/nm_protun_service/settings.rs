@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2025 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -22,11 +22,17 @@
 
 use std::net::IpAddr;
 
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+
 use base64::prelude::*;
 use std::collections::HashMap;
 use zbus::zvariant::OwnedValue;
+use std::mem::ManuallyDrop;
+use std::os::fd::AsRawFd;
+use super::super::core::{FileWriteMode, PcapStart, PeerInfo};
 
-use crate::proton;
+use super::error::{Error, Result};
 
 pub type ConnectionSettingsSection = HashMap<String, OwnedValue>;
 pub type ConnectionSettings = HashMap<String, ConnectionSettingsSection>;
@@ -38,23 +44,7 @@ const DEFAULT_TUN_PREFIX: &str = "protun";
 /// for now we just use this to guard against loading settings that are
 /// using an outdated format.
 pub const VERSION: u32 = 1;
-
 pub const SETTINGS_KEY: &str = "settings";
-
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct PcapFileInfo {
-    pub file_path: std::path::PathBuf,
-    pub max_bytes: Option<u64>,
-    pub mode: FileWriteMode,
-}
-
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum FileWriteMode {
-    Append,
-    Overwrite,
-}
 
 #[derive(Debug, Clone)]
 pub struct InterfaceParams {
@@ -63,48 +53,22 @@ pub struct InterfaceParams {
     pub prefix: u32,
 }
 
-impl TryFrom<PcapFileInfo> for protun::api::connection::PcapFileInfo {
-    type Error = proton::vpn::Error;
-
-    fn try_from(params: PcapFileInfo) -> Result<Self, Self::Error> {
-        Ok(protun::api::connection::PcapFileInfo {
-            file: protun::api::connection::PcapFile::Path{
-                path: params.file_path.to_str().ok_or_else(|| proton::vpn::Error::InvalidState("Invalid file path".into()))?.to_string(),
-                mode: match params.mode {
-                    FileWriteMode::Append => protun::api::connection::FileWriteMode::Append,
-                    FileWriteMode::Overwrite => protun::api::connection::FileWriteMode::Overwrite,
-                },
-            },
-            max_bytes: params.max_bytes,
-        })
+impl From<PcapStart> for protun::api::connection::PcapFileInfo {
+    fn from(params: PcapStart) -> Self {
+        // ManuallyDrop prevents OwnedFd's Drop from closing the fd as we hand
+        // ownership of the raw fd to protun.
+        let raw_fd = ManuallyDrop::new(params.file_info.fd.0).as_raw_fd();
+        protun::api::connection::PcapFileInfo {
+            file: protun::api::connection::PcapFile::Fd(raw_fd),
+            max_bytes: if params.max_bytes == 0 { None } else { Some(params.max_bytes) },
+        }
     }
-}
-
-/// Peer entry in the vpn.data.peers JSON array
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct PeerInfo {
-    /// Peer identifier
-    pub id: String,
-    /// Server endpoint ip address
-    pub endpoint: String,
-    /// Base64-encoded server public key
-    pub public_key: String,
-    /// udp ports to connect on
-    pub udp_ports: Vec<u16>,
-    /// tcp ports to connect on
-    pub tcp_ports: Vec<u16>,
-    /// tls ports to connect on
-    pub tls_ports: Vec<u16>,
-    /// Peer priority
-    pub priority: i32,
 }
 
 #[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Settings {
     pub version : u32,
-    pub pcap_file : Option<PcapFileInfo>,
     pub peers: Vec<PeerInfo>,
 }
 
@@ -114,19 +78,19 @@ pub struct ConnectionParams {
     pub dns: Vec<IpAddr>,
     pub private_key: [u8; 32],
     pub peers: Vec<protun::api::connection::PeerInfo>,
-    pub pcap_file: Option<protun::api::connection::PcapFileInfo>,
+    pub user: u32,
 }
 
 /// Convert a value to a type that can be stored in NM settings (string, int, array, etc).
 /// Any type that implements serde Serialize and Deserialize will be implemented
 /// as a ProtunSetting, which can be easily converted to/from a string for storage in NM settings.
 pub trait ProtunSetting: Sized {
-    fn from_settings_str(s: &str) -> proton::vpn::Result<Self>;
-    fn to_settings_string(&self) -> proton::vpn::Result<String>;
+    fn from_settings_str(s: &str) -> Result<Self>;
+    fn to_settings_string(&self) -> Result<String>;
 }
 
 impl<T: serde::Serialize + serde::de::DeserializeOwned> ProtunSetting for T {
-    fn to_settings_string(&self) -> proton::vpn::Result<String> {
+    fn to_settings_string(&self) -> Result<String> {
         // nmcli does not allow commas in values, so we need to escape them as \.
         // This is fine so long as we are consistent in both directions.
         //
@@ -136,19 +100,19 @@ impl<T: serde::Serialize + serde::de::DeserializeOwned> ProtunSetting for T {
         //
         // The linux client will do the escaping correctly.
         Ok(serde_json::to_string(self)
-            .map_err(|_| proton::vpn::Error::ValueError("Failed to serialize".into()))?
+            .map_err(|_| Error::ValueError("Failed to serialize".into()))?
             .replace(",", r"\,"))
     }
 
-    fn from_settings_str(s: &str) -> proton::vpn::Result<Self> {
+    fn from_settings_str(s: &str) -> Result<Self> {
         Ok(serde_json::from_str::<Self>(&s.replace(r"\,", ","))?)
     }
 }
 
 impl TryFrom<PeerInfo> for protun::api::connection::PeerInfo {
-    type Error = proton::vpn::Error;
+    type Error = Error;
 
-    fn try_from(peer: PeerInfo) -> proton::vpn::Result<Self> {
+    fn try_from(peer: PeerInfo) -> Result<Self> {
         let server_ip: IpAddr = peer.endpoint.parse()?;
 
         let public_key: [u8; 32] = BASE64_STANDARD
@@ -158,7 +122,7 @@ impl TryFrom<PeerInfo> for protun::api::connection::PeerInfo {
 
         // Double check the address is not ipv6 address
         if let IpAddr::V6(address) = &server_ip {
-            return Err(proton::vpn::Error::InvalidState(
+            return Err(Error::InvalidState(
                 format!("IPv6 endpoint not supported {address}"),
             ))
         };
@@ -180,21 +144,21 @@ impl TryFrom<PeerInfo> for protun::api::connection::PeerInfo {
 /// Take a value from a settings section, converting to the requested type.
 /// This takes ownership of the value, avoiding clones.
 trait TakeValue {
-    fn take_value<T>(&mut self, key: &str) -> proton::vpn::Result<T>
+    fn take_value<T>(&mut self, key: &str) -> Result<T>
     where
         T: TryFrom<OwnedValue>;
 }
 
 impl TakeValue for ConnectionSettingsSection {
-    fn take_value<T>(&mut self, key: &str) -> proton::vpn::Result<T>
+    fn take_value<T>(&mut self, key: &str) -> Result<T>
     where
         T: TryFrom<OwnedValue>,
     {
         let value = self
             .remove(key)
-            .ok_or_else(|| proton::vpn::Error::MissingSetting(key.into()))?;
+            .ok_or_else(|| Error::MissingSetting(key.into()))?;
         value.try_into().map_err(|_| {
-            proton::vpn::Error::ValueError(format!("Failed to convert '{}'", key))
+            Error::ValueError(format!("Failed to convert '{}'", key))
         })
     }
 }
@@ -203,52 +167,52 @@ trait GetSection {
     fn get_section(
         &mut self,
         key: &str,
-    ) -> proton::vpn::Result<&mut ConnectionSettingsSection>;
+    ) -> Result<&mut ConnectionSettingsSection>;
 }
 
 impl GetSection for HashMap<String, ConnectionSettingsSection> {
     fn get_section(
         &mut self,
         key: &str,
-    ) -> proton::vpn::Result<&mut ConnectionSettingsSection> {
+    ) -> Result<&mut ConnectionSettingsSection> {
         self.get_mut(key)
-            .ok_or_else(|| proton::vpn::Error::MissingSetting(key.into()))
+            .ok_or_else(|| Error::MissingSetting(key.into()))
     }
 }
 
 /// Extract IPv4 configuration (address, prefix, DNS) from ipv4 settings
 fn extract_ipv4_config(
     ipv4: &mut ConnectionSettingsSection,
-) -> proton::vpn::Result<(IpAddr, u32, Vec<IpAddr>)> {
+) -> Result<(IpAddr, u32, Vec<IpAddr>)> {
     // TODO: LT: Look into address-data, as addresses is deprecated.
     let mut addr_array = ipv4
         .take_value::<Vec<Vec<u32>>>("addresses")?
         .into_iter()
-        .map(|v| -> proton::vpn::Result<(u32, u32)> {
+        .map(|v| -> Result<(u32, u32)> {
             let array = TryInto::<[u32; 3]>::try_into(v).map_err(|_| {
-                proton::vpn::Error::ValueError("Invalid addresses entry".into())
+                Error::ValueError("Invalid addresses entry".into())
             })?;
             Ok((array[0], array[1]))
         });
 
     let (addr_u32, prefix) = addr_array.next().ok_or_else(|| {
-        proton::vpn::Error::MissingSetting("ipv4.addresses[0]".into())
+        Error::MissingSetting("ipv4.addresses[0]".into())
     })??;
 
     // Address is in network byte order
-    let ip = IpAddr::V4(std::net::Ipv4Addr::from_bits(addr_u32));
+    let ip = IpAddr::V4(std::net::Ipv4Addr::from_bits(u32::from_be(addr_u32)));
 
     // dns is au - array of u32 in network byte order
     let dns_servers: Vec<IpAddr> = ipv4
         .take_value::<Vec<u32>>("dns")?
         .into_iter()
-        .map(|ip| IpAddr::V4(std::net::Ipv4Addr::from_bits(ip)))
+        .map(|ip| IpAddr::V4(std::net::Ipv4Addr::from_bits(u32::from_be(ip))))
         .collect();
 
     Ok((ip, prefix, dns_servers))
 }
 
-pub fn read_json_key<T>(key: &str, data: &mut  ConnectionSettingsSection) -> proton::vpn::Result<T>
+pub fn read_json_key<T>(key: &str, data: &mut  ConnectionSettingsSection) -> Result<T>
 where
     T: ProtunSetting,
 {
@@ -271,11 +235,12 @@ where
 /// - "dns": Array of DNS server addresses
 pub fn load_connection_params_from_settings(
     mut connection_settings: ConnectionSettings,
-) -> proton::vpn::Result<ConnectionParams> {
-    // Get interface name (read-only, before we consume settings)
+) -> Result<ConnectionParams> {
+    // Get interface name and user (read-only, before we consume settings)
     let interface_name = get_interface_name(&connection_settings)
         .map(|name| sanitize_interface_name(&name))
         .unwrap_or_else(|| DEFAULT_TUN_PREFIX.to_string());
+    let user = get_user_from_permissions(&connection_settings)?;
 
     // Extract WireGuard settings from NM connection settings
     let vpn = connection_settings.get_section("vpn")?;
@@ -284,7 +249,7 @@ pub fn load_connection_params_from_settings(
     let settings = read_json_key::<Settings>(SETTINGS_KEY, &mut data)?;
 
     if settings.version != VERSION {
-        return Err(proton::vpn::Error::InvalidState(format!(
+        return Err(Error::InvalidState(format!(
             "Settings version mismatch: expected {}, got {}",
             VERSION, settings.version
         )));
@@ -298,7 +263,7 @@ pub fn load_connection_params_from_settings(
     let peers = settings.peers
         .into_iter()
         .map(|peer| peer.try_into())
-        .collect::<Result<Vec<protun::api::connection::PeerInfo>, _>>()?;
+        .collect::<Result<Vec<protun::api::connection::PeerInfo>>>()?;
 
     // Get private key from vpn.secrets section
     let private_key = get_private_key_from_secrets(&mut secrets)?;
@@ -312,8 +277,44 @@ pub fn load_connection_params_from_settings(
         peers,
         private_key,
         dns,
-        pcap_file: settings.pcap_file.map(|file| file.try_into()).transpose()?,
+        user,
     })
+}
+
+/// Resolve a Unix username to a UID.
+fn username_to_uid(username: &str) -> Result<u32> {
+    nix::unistd::User::from_name(username)
+        .map_err(|e| Error::InvalidState(format!("error looking up user {:?}: {}", username, e)))?
+        .ok_or_else(|| Error::InvalidState(format!("user {:?} not found", username)))
+        .map(|u| u.uid.as_raw())
+}
+
+/// Extract the first `user:` entry from `connection.permissions` and resolve it to a UID.
+///
+/// NM permission entries have the form `"user:<username>"` or `"user:<username>:"`.
+/// Returns `Ok(None)` if no user permission entry is present.
+/// Returns `Err` if a username is found but cannot be resolved to a UID.
+fn get_user_from_permissions(settings: &ConnectionSettings) -> Result<u32> {
+    fn find_user_permission_entry(settings: &ConnectionSettings) -> Option<String> {
+        let perms: Vec<String> =
+            settings.get("connection")?
+                    .get("permissions")?
+                    .clone().try_into().ok()?;
+        for p in perms {
+            if let Some((prefix, rest)) = p.split_once(':') {
+                if prefix == "user" {
+                    return Some(rest.trim_end_matches(':').to_string());
+                }
+            }
+        }
+        None
+    }
+
+    let username = find_user_permission_entry(settings).ok_or_else(
+        || Error::InvalidState("No user permission entry found".into())
+    )?;
+
+    username_to_uid(&username)
 }
 
 /// Helper to extract the interface name from NM connection settings (read-only)
@@ -330,19 +331,17 @@ fn get_interface_name(settings: &ConnectionSettings) -> Option<String> {
 /// of the "vpn.secrets" section.
 pub fn get_private_key_from_secrets(
     secrets: &mut ConnectionSettingsSection,
-) -> proton::vpn::Result<[u8; 32]> {
+) -> Result<[u8; 32]> {
 
     let private_key_bytes : [u8;32] = BASE64_STANDARD
         .decode(secrets.take_value::<String>("private-key")?.as_bytes())
         .map_err(|e| {
-            proton::vpn::Error::ValueError(format!("Failed to decode private key: {}", e))
+            Error::ValueError(format!("Failed to decode private key: {}", e))
         })?.try_into().map_err(|_| {
-            proton::vpn::Error::ValueError("Private key must be 32 bytes".into())
+            Error::ValueError("Private key must be 32 bytes".into())
         })?;
 
-    private_key_bytes.as_slice().try_into().map_err(|_| {
-        proton::vpn::Error::ValueError("Private key must be 32 bytes".into())
-    })
+    Ok(private_key_bytes)
 }
 
 /// Sanitize a connection name to be a valid Linux network interface name.
@@ -372,7 +371,7 @@ fn sanitize_interface_name(name: &str) -> String {
 
 pub fn needs_secrets(
     mut settings: ConnectionSettings,
-) -> proton::vpn::Result<bool> {
+) -> Result<bool> {
     let vpn = settings.get_section("vpn")?;
     let secrets: ConnectionSettingsSection = vpn.take_value("secrets")?;
     Ok(!secrets.contains_key("private-key"))
@@ -432,7 +431,6 @@ mod tests {
     fn minimal_settings(tcp_ports: Vec<u16>, tls_ports: Vec<u16>) -> Settings {
         Settings {
             version: VERSION,
-            pcap_file: None,
             peers: vec![PeerInfo {
                 id: "p1".into(),
                 endpoint: "1.2.3.4".into(),
@@ -468,25 +466,6 @@ mod tests {
         assert_eq!(deserialized.peers[0].tls_ports, vec![8443u16]);
     }
 
-    #[test]
-    fn test_settings_round_trip_with_pcap_file() {
-        let original = Settings {
-            version: VERSION,
-            pcap_file: Some(PcapFileInfo {
-                file_path: "/tmp/cap.pcap".into(),
-                max_bytes: Some(1024),
-                mode: FileWriteMode::Overwrite,
-            }),
-            peers: vec![],
-        };
-        let serialized = original.to_settings_string().unwrap();
-        let deserialized = Settings::from_settings_str(&serialized).unwrap();
-        let pcap = deserialized.pcap_file.unwrap();
-        assert_eq!(pcap.file_path, std::path::PathBuf::from("/tmp/cap.pcap"));
-        assert_eq!(pcap.max_bytes, Some(1024));
-        assert!(matches!(pcap.mode, FileWriteMode::Overwrite));
-    }
-
     // ---- TryFrom<PeerInfo> ----
 
     fn valid_peer() -> PeerInfo {
@@ -517,10 +496,10 @@ mod tests {
     fn test_peer_info_rejects_ipv6_endpoint() {
         let mut peer = valid_peer();
         peer.endpoint = "::1".into();
-        let result: crate::proton::vpn::Result<protun::api::connection::PeerInfo> =
+        let result: Result<protun::api::connection::PeerInfo> =
             peer.try_into();
         match result {
-            Err(crate::proton::vpn::Error::InvalidState(msg)) => {
+            Err(Error::InvalidState(msg)) => {
                 assert!(msg.contains("IPv6 endpoint not supported"), "unexpected message: {msg}");
                 assert!(msg.contains("::1"), "message should include the address: {msg}");
             }
@@ -532,7 +511,7 @@ mod tests {
     fn test_peer_info_rejects_invalid_base64_key() {
         let mut peer = valid_peer();
         peer.public_key = "not-valid-base64!!!".into();
-        let result: crate::proton::vpn::Result<protun::api::connection::PeerInfo> =
+        let result: Result<protun::api::connection::PeerInfo> =
             peer.try_into();
         assert!(result.is_err());
     }
@@ -541,60 +520,9 @@ mod tests {
     fn test_peer_info_rejects_wrong_length_key() {
         let mut peer = valid_peer();
         peer.public_key = BASE64_STANDARD.encode([0u8; 16]); // 16 bytes, not 32
-        let result: crate::proton::vpn::Result<protun::api::connection::PeerInfo> =
+        let result: Result<protun::api::connection::PeerInfo> =
             peer.try_into();
-        assert!(matches!(result, Err(crate::proton::vpn::Error::TryFromSlice(_))));
-    }
-
-    // ---- TryFrom<PcapFileInfo> ----
-
-    #[test]
-    fn test_pcap_file_info_append_mode() {
-        let info = PcapFileInfo {
-            file_path: "/tmp/capture.pcap".into(),
-            max_bytes: Some(4096),
-            mode: FileWriteMode::Append,
-        };
-        let converted: protun::api::connection::PcapFileInfo = info.try_into().unwrap();
-        assert_eq!(converted.max_bytes, Some(4096));
-        assert!(matches!(
-            converted.file,
-            protun::api::connection::PcapFile::Path {
-                mode: protun::api::connection::FileWriteMode::Append,
-                ..
-            }
-        ));
-    }
-
-    #[test]
-    fn test_pcap_file_info_overwrite_mode() {
-        let info = PcapFileInfo {
-            file_path: "/tmp/capture.pcap".into(),
-            max_bytes: None,
-            mode: FileWriteMode::Overwrite,
-        };
-        let converted: protun::api::connection::PcapFileInfo = info.try_into().unwrap();
-        assert!(matches!(
-            converted.file,
-            protun::api::connection::PcapFile::Path {
-                mode: protun::api::connection::FileWriteMode::Overwrite,
-                ..
-            }
-        ));
-    }
-
-    #[test]
-    fn test_pcap_file_info_non_utf8_path_returns_error() {
-        use std::ffi::OsString;
-        use std::os::unix::ffi::OsStringExt;
-        let info = PcapFileInfo {
-            file_path: std::path::PathBuf::from(OsString::from_vec(vec![0xFF, 0xFE])),
-            max_bytes: None,
-            mode: FileWriteMode::Append,
-        };
-        let result: crate::proton::vpn::Result<protun::api::connection::PcapFileInfo> =
-            info.try_into();
-        assert!(matches!(result, Err(crate::proton::vpn::Error::InvalidState(_))));
+        assert!(matches!(result, Err(Error::TryFromSlice(_))));
     }
 
     // ---- get_private_key_from_secrets ----
@@ -612,7 +540,7 @@ mod tests {
         let mut secrets: ConnectionSettingsSection = HashMap::new();
         secrets.insert("private-key".into(), str_owned_value(&BASE64_STANDARD.encode([0u8; 16])));
         let result = get_private_key_from_secrets(&mut secrets);
-        assert!(matches!(result, Err(crate::proton::vpn::Error::ValueError(_))));
+        assert!(matches!(result, Err(Error::ValueError(_))));
     }
 
     #[test]
@@ -620,13 +548,13 @@ mod tests {
         let mut secrets: ConnectionSettingsSection = HashMap::new();
         secrets.insert("private-key".into(), str_owned_value("not-base64!!!"));
         let result = get_private_key_from_secrets(&mut secrets);
-        assert!(matches!(result, Err(crate::proton::vpn::Error::ValueError(_))));
+        assert!(matches!(result, Err(Error::ValueError(_))));
     }
 
     #[test]
     fn test_get_private_key_missing_key() {
         let mut secrets: ConnectionSettingsSection = HashMap::new();
         let result = get_private_key_from_secrets(&mut secrets);
-        assert!(matches!(result, Err(crate::proton::vpn::Error::MissingSetting(_))));
+        assert!(matches!(result, Err(Error::MissingSetting(_))));
     }
 }

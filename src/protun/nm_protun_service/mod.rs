@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2025 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -16,31 +16,19 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-//! High-level VPN SDK interface.
+//! The NetworkManager VPN Plugin for ProtonVPN.
 //!
-//! Provides a simple API for managing VPN connections.
+//! This module contains the implementation of the protun VPN service.
+//! The service provides a VPN connection to the ProtonVPN network and is
+//! configured via the NetworkManager D-Bus API.
 
-pub use super::connection_manager::*;
+mod error;
+mod interfaces;
+mod run;
+mod service;
+mod types;
+mod netlink;
+pub mod wireguard_utils;
 
-#[derive(Debug)]
-pub struct Sdk {
-    connection_manager: ConnectionManager,
-}
-
-impl Default for Sdk {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Sdk {
-    pub fn new() -> Self {
-        Sdk {
-            connection_manager: ConnectionManager::new(),
-        }
-    }
-
-    pub fn connection_manager(&mut self) -> &mut ConnectionManager {
-        &mut self.connection_manager
-    }
-}
+pub mod settings;
+pub use run::run;

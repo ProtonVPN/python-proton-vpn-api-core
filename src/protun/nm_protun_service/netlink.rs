@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2026 Proton AG
+// Copyright (c) 2025 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -23,7 +23,7 @@
 use futures::stream::TryStreamExt;
 use rtnetlink::new_connection;
 
-use super::{Error, Result};
+use super::error::{Error, Result};
 
 /// A wrapper around rtnetlink Handle for interface operations.
 pub struct NetlinkHandle {
