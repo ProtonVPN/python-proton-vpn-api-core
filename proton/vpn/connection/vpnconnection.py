@@ -34,7 +34,7 @@ from proton.vpn.connection.publisher import Publisher
 from proton.vpn.connection import states, events
 
 
-# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes,too-many-public-methods
 class VPNConnection(ABC):
     """
     Defines the interface to create a new VPN connection.
@@ -113,6 +113,28 @@ class VPNConnection(ABC):
     @abstractmethod
     async def stop(self):
         """Stops the VPN connection."""
+
+    @classmethod
+    def supports_packet_capture(cls) -> bool:
+        """
+        Returns whether this VPN connection implementation supports packet capture or not.
+        By default, it's assumed that packet capture is not supported, so this method
+        returns `False`. VPN connection implementations that support packet capture
+        should override this method to return `True`.
+        """
+        return False
+
+    async def start_packet_capture(self):
+        """
+        Starts the packet capture for the VPN connection,
+        if supported by the implementation.
+        """
+
+    async def stop_packet_capture(self):
+        """
+        Stops the packet capture for the VPN connection,
+        if supported by the implementation.
+        """
 
     @property
     def are_feature_updates_applied_when_active(self) -> bool:
@@ -246,7 +268,6 @@ class VPNConnection(ABC):
         protocol group, while generic implementations can return "generic"
         as protocol group.
         """
-        raise NotImplementedError
 
     async def add_persistence(self):
         """

@@ -28,8 +28,10 @@ import socket
 import uuid
 import logging
 from concurrent.futures import Future
+from datetime import datetime
 from getpass import getuser
 from ipaddress import IPv4Address, IPv6Address
+from pathlib import Path
 from typing import Dict, Optional, Union, List
 
 import gi
@@ -42,6 +44,15 @@ from proton.vpn.connection import events, states
 from proton.vpn.connection.events import EventContext
 from proton.vpn.connection.interfaces import Settings
 from proton.vpn.backend.networkmanager.core import LinuxNetworkManager, LocalAgentMixin
+
+from proton.vpn.core.settings.packet_capture import PacketCaptureMode
+
+try:
+    import proton.vpn.linux.protun as proton_vpn_linux_protun
+except ImportError:
+    # The protun plugin might not be available in the environment,
+    # so we handle the import error gracefully.
+    proton_vpn_linux_protun = None
 
 
 logger = logging.getLogger(__name__)
@@ -59,6 +70,33 @@ _INTERNAL_IPV4_DNS_SEARCH = "~"
 _DNS_PRIORITY = -1500
 
 
+def generate_capture_path(directory_path: str,
+                          now: Optional[datetime] = None) -> Path:
+    """
+    Generate a file path for a Proton VPN packet capture file.
+
+    Args:
+        directory_path (str or Path): The base directory path
+        now (datetime, optional): The datetime to use for the filename.
+                                  Defaults to datetime.now() if not provided.
+                                  Useful for unit testing.
+
+    Returns:
+        Path: Path object pointing to the capture file with timestamp and .pcap extension
+    """
+    base_dir = Path(directory_path)
+
+    if now is None:
+        now = datetime.now()
+
+    date_str = now.strftime(r"%Y_%m_%d")
+    time_str = now.strftime(r"%H_%M_%S")
+    filename = f"proton_vpn__{date_str}__{time_str}.pcap"
+    full_path = base_dir / filename
+
+    return full_path
+
+
 class Protun(LinuxNetworkManager, LocalAgentMixin):
     """Creates a protun VPN plugin connection."""
 
@@ -72,6 +110,8 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
         super().__init__(*args, **kwargs)
         LocalAgentMixin.__init__(self)
         self._connection_settings = None
+        self._protun_client = None
+        self._protun = kwargs.get("protun", proton_vpn_linux_protun)
 
     def setup(self) -> Future:
         """Creates and registers the NM VPN connection."""
@@ -322,6 +362,48 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
         if cls.plugin_exists is None:
             cls.plugin_exists = cls._plugin_exists(cls.PLUGIN_NAME)
         return cls.plugin_exists
+
+    async def _get_protun_client(self):
+        """Returns the cached protun client, creating it on first call."""
+        if self._protun is None:
+            raise RuntimeError("Protun module is not available")
+        if self._protun_client is None:
+            self._protun_client = await self._protun.ConnectionManager.new()
+        return self._protun_client
+
+    @classmethod
+    def supports_packet_capture(cls, protun=proton_vpn_linux_protun):
+        """Returns True if protun supports packet capture and is available."""
+        return protun is not None
+
+    async def start_packet_capture(self):
+        """Starts a packet capture session, writing to a timestamped .pcap file."""
+        # Translate the mode
+        if self.settings.packet_capture.mode == PacketCaptureMode.OVERWRITE:
+            mode = self._protun.FileWriteMode.Overwrite
+        else:
+            mode = self._protun.FileWriteMode.Append
+
+        file_path = generate_capture_path(
+            self.settings.packet_capture.directory_path)
+
+        await (await self._get_protun_client()).run(
+            self._protun.Command.PcapStart(
+                self._protun.PcapStart(
+                    file_info=self._protun.PcapFileInfo.from_path(
+                        path=str(file_path),
+                        mode=mode
+                    ),
+                    max_bytes=self.settings.packet_capture.max_bytes
+                )
+            )
+        )
+
+    async def stop_packet_capture(self):
+        """Stops the active packet capture session."""
+        await (await self._get_protun_client()).run(
+            self._protun.Command.PcapStop(self._protun.PcapStop())
+        )
 
 
 class ProtunUDP(Protun):

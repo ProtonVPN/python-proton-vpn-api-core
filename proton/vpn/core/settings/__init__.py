@@ -24,8 +24,10 @@ from proton.vpn.core.settings.split_tunneling import SplitTunneling, \
     SplitTunnelingConfig, SplitTunnelingMode
 from proton.vpn.core.settings.features import NetShield
 from proton.vpn.core.settings.custom_dns import CustomDNSEntry
+from proton.vpn.core.settings.packet_capture import PacketCapture, PacketCaptureMode
 
 __all__ = [
     "Settings", "SettingsPersistence", "NetShield",
-    "CustomDNSEntry", "SplitTunneling", "SplitTunnelingConfig", "SplitTunnelingMode"
+    "CustomDNSEntry", "SplitTunneling", "SplitTunnelingConfig", "SplitTunnelingMode",
+    "PacketCapture", "PacketCaptureMode"
 ]

@@ -18,8 +18,10 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from unittest.mock import Mock
 import copy
-import pytest
 import itertools
+
+import pytest
+
 from proton.vpn.core.settings import Settings, SettingsPersistence, NetShield, SplitTunnelingMode
 from proton.vpn.killswitch.interface import KillSwitchState
 
@@ -59,7 +61,7 @@ def default_free_settings_dict():
                     },
                 }
             },
-        }
+        },
     }
 
 

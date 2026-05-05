@@ -31,6 +31,7 @@ from proton.vpn.core.cache_handler import CacheHandler
 from proton.vpn.killswitch.interface import KillSwitchState
 from proton.vpn.core.settings.custom_dns import CustomDNS
 from proton.vpn.core.settings.features import Features
+from proton.vpn.core.settings.packet_capture import PacketCapture
 
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,7 @@ class Settings:
     ipv6: bool
     anonymous_crash_reports: bool
     features: Features
+    packet_capture: PacketCapture
 
     @staticmethod
     def from_dict(data: dict, user_tier: int) -> Settings:
@@ -78,7 +80,9 @@ class Settings:
                 "anonymous_crash_reports",
                 default.anonymous_crash_reports
             ),
-            features=features
+            features=features,
+            # We dont want to persist packet capture settings for now
+            packet_capture=default.packet_capture
         )
 
     def to_dict(self) -> dict:
@@ -102,6 +106,7 @@ class Settings:
             ipv6=True,
             anonymous_crash_reports=DEFAULT_ANONYMOUS_CRASH_REPORTS,
             features=Features.default(user_tier),
+            packet_capture=PacketCapture.default()
         )
 
 
