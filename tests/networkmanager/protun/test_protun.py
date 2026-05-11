@@ -43,8 +43,12 @@ def reset_plugin_exists():
     Protun.plugin_exists = original
 
 
-def test_supports_packet_capture_returns_true():
-    assert Protun.supports_packet_capture(MagicMock()) is True
+def test_supports_packet_capture_():
+    assert Protun.supports_packet_capture(MagicMock()) is False
+
+
+def test_udp_supports_packet_capture():
+    assert ProtunUDP.supports_packet_capture(MagicMock()) is True
 
 
 def test_supports_packet_capture_returns_false_when_module_unavailable():

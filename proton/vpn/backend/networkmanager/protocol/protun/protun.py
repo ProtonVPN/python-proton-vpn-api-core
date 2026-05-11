@@ -372,9 +372,9 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
         return self._protun_client
 
     @classmethod
-    def supports_packet_capture(cls, protun=proton_vpn_linux_protun):
-        """Returns True if protun supports packet capture and is available."""
-        return protun is not None
+    def supports_packet_capture(cls, protun=proton_vpn_linux_protun):  # pylint: disable=W0613
+        """Returns False and should be overriden by Protun protocols that support packet capture"""
+        return False
 
     async def start_packet_capture(self):
         """Starts a packet capture session, writing to a timestamped .pcap file."""
@@ -426,6 +426,11 @@ class ProtunUDP(Protun):
     def get_protocol_group(cls) -> str:
         """Returns the protocol group."""
         return "protun"
+
+    @classmethod
+    def supports_packet_capture(cls, protun=proton_vpn_linux_protun):
+        """Returns True if protun supports packet capture and is available."""
+        return protun is not None
 
     def _protun_ports(self) -> Dict[str, List[int]]:
         """Returns the protun ports as a dict."""
