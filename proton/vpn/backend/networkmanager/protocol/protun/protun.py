@@ -66,8 +66,23 @@ PRIVATE_KEY_FLAGS = "private-key-flags"
 _INTERNAL_IPV4_ADDRESS = "10.2.0.2"
 _INTERNAL_IPV4_PREFIX = 32
 _INTERNAL_IPV4_DNS = "10.2.0.1"
-_INTERNAL_IPV4_DNS_SEARCH = "~"
+
+_INTERNAL_IPV6_ADDRESS = "2a07:b944::2:2"
+_INTERNAL_IPV6_PREFIX = 128
+_INTERNAL_IPV6_DNS = "2a07:b944::2:1"
+
+_DNS_SEARCH = "~"
 _DNS_PRIORITY = -1500
+
+
+def get_dns(ip_version: Union[type[IPv4Address], type[IPv6Address]]):
+    """
+    Get the correct dns server address depending on whether we are using
+    ipv6 or ipv4.
+    """
+    if ip_version == IPv4Address:
+        return _INTERNAL_IPV4_DNS
+    return _INTERNAL_IPV6_DNS
 
 
 def generate_capture_path(directory_path: str,
@@ -162,9 +177,12 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
         )
 
     def _set_route(self):
-        ipv4_config = NM.SettingIP4Config.new()
-        ipv6_config = NM.SettingIP6Config.new()
+        self.connection.add_setting(
+            self._set_route_ipv4(NM.SettingIP4Config.new()))
+        self.connection.add_setting(
+            self._set_route_ipv6(NM.SettingIP6Config.new()))
 
+    def _set_route_ipv4(self, ipv4_config: NM.SettingIP4Config):
         # We set SETTING_IP4_CONFIG_METHOD_AUTO so that the network manager
         # sets up automatic routing to the VPN server IP, to avoid routing
         # loops.
@@ -174,26 +192,58 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
         ipv4_config.set_property(NM.SETTING_IP_CONFIG_METHOD,
                                  NM.SETTING_IP4_CONFIG_METHOD_AUTO)
         ipv4_config.add_address(
-            NM.IPAddress.new(socket.AF_INET, _INTERNAL_IPV4_ADDRESS, _INTERNAL_IPV4_PREFIX)
+            NM.IPAddress.new(socket.AF_INET,
+                             _INTERNAL_IPV4_ADDRESS,
+                             _INTERNAL_IPV4_PREFIX)
         )
 
-        # IPv6 is not yet supported by the protun plugin
-        ipv6_config.set_property(
-            NM.SETTING_IP_CONFIG_METHOD, NM.SETTING_IP6_CONFIG_METHOD_DISABLED
-        )
+        return ipv4_config
+
+    def _set_route_ipv6(self, ipv6_config: NM.SettingIP6Config):
+        if self.enable_ipv6_support:
+            ipv6_config.set_property(
+                NM.SETTING_IP_CONFIG_METHOD,
+                NM.SETTING_IP6_CONFIG_METHOD_MANUAL
+            )
+            ipv6_config.add_address(
+                NM.IPAddress.new(
+                    socket.AF_INET6,
+                    _INTERNAL_IPV6_ADDRESS,
+                    _INTERNAL_IPV6_PREFIX
+                )
+            )
+            # Route all IPv6 traffic through our interface.
+            # Unlike IPv4, there is no routing loop risk because the server is
+            # reached over IPv4.
+            #
+            # If we dont add this, all ipv6 traffic will go through the ipv6
+            # killswitch.
+            ipv6_config.add_route(
+                NM.IPRoute.new(socket.AF_INET6, "::", 0, None, 1)
+            )
+        else:
+            ipv6_config.set_property(
+                NM.SETTING_IP_CONFIG_METHOD,
+                NM.SETTING_IP6_CONFIG_METHOD_DISABLED
+            )
+
+        return ipv6_config
+
+    def _set_dns(self):
+        ipv4_config = self.connection.get_setting_ip4_config()
+        ipv6_config = self.connection.get_setting_ip6_config()
+
+        self._configure_dns(nm_setting=ipv4_config, ip_version=IPv4Address)
+        if self.enable_ipv6_support:
+            self._configure_dns(nm_setting=ipv6_config, ip_version=IPv6Address)
 
         self.connection.add_setting(ipv4_config)
         self.connection.add_setting(ipv6_config)
 
-    def _set_dns(self):
-        ipv4_config = self.connection.get_setting_ip4_config()
-        self._configure_dns(nm_setting=ipv4_config, ip_version=IPv4Address)
-        self.connection.add_setting(ipv4_config)
-
     def _configure_dns(
         self,
         nm_setting: Union[NM.SettingIP4Config, NM.SettingIP6Config],
-        ip_version: Union[IPv4Address, IPv6Address],
+        ip_version: Union[type[IPv4Address], type[IPv6Address]],
         dns_priority: int = _DNS_PRIORITY,
     ):
         """Sets DNS, respecting custom DNS settings."""
@@ -212,8 +262,8 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
         if self._settings.custom_dns.enabled and ip_addresses:
             nm_setting.set_property(NM.SETTING_IP_CONFIG_DNS, ip_addresses)
         else:
-            nm_setting.add_dns(_INTERNAL_IPV4_DNS)
-            nm_setting.add_dns_search(_INTERNAL_IPV4_DNS_SEARCH)
+            nm_setting.add_dns(get_dns(ip_version))
+            nm_setting.add_dns_search(_DNS_SEARCH)
 
     def _protun_ports(self) -> Dict[str, List[int]]:
         """Returns the protun ports as a dict."""

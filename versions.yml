@@ -1,3 +1,10 @@
+version: 5.2.2
+time: 2026/05/12 21:58
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "feat: Add ipv6 support to protun"
+---
 version: 5.2.1
 time: 2026/05/07 21:49
 author: Luke Titley
