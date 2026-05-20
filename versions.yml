@@ -1,3 +1,10 @@
+version: 5.2.3
+time: 2026/05/13 19:04
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "feat: Rename auto protocol to smart"
+---
 version: 5.2.2
 time: 2026/05/12 21:58
 author: Luke Titley

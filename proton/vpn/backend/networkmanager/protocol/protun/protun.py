@@ -545,14 +545,14 @@ class ProtunTLS(Protun):
         }
 
 
-class ProtunAuto(Protun):
+class ProtunSmart(Protun):
     """
     Protun protocol implementation, automatically selecting the best
     available transport protocol.
     """
 
-    protocol = "protun-auto"
-    ui_protocol = "Auto"
+    protocol = "protun-smart"
+    ui_protocol = "Smart"
 
     @classmethod
     def get_priority(cls):
@@ -576,3 +576,21 @@ class ProtunAuto(Protun):
             "tcp-ports": self._vpnserver.wireguard_ports.tcp,
             "tls-ports": self._vpnserver.wireguard_ports.tls
         }
+
+
+class ProtunAuto(ProtunSmart):
+    """
+    Protun protocol implementation, legacy, renamed to ProtunSmart.
+    TODO (ltitley): Remove this before we go to stable.
+    """
+
+    protocol = "protun-auto"
+    ui_protocol = "Auto [Legacy renamed to smart]"
+
+    @classmethod
+    def get_priority(cls):
+        """
+        Returns the priority of the implementation. Lower values indicate a
+        higher priority.
+        """
+        return 10

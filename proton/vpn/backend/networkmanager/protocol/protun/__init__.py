@@ -19,7 +19,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
-from .protun import ProtunAuto, ProtunUDP, ProtunTCP, ProtunTLS
+from .protun import ProtunSmart, ProtunAuto, ProtunUDP, ProtunTCP, ProtunTLS
 
 
 def register(registry):
@@ -27,6 +27,7 @@ def register(registry):
     registry.register(ProtunUDP)
     registry.register(ProtunTCP)
     registry.register(ProtunTLS)
+    registry.register(ProtunSmart)
     registry.register(ProtunAuto)
 
 
