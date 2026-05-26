@@ -89,3 +89,10 @@ class HardJailedTwoFAError(VPNConnectionError):
     """
     When a user is hard jailed due to 2FA issues, this exception is thrown.
     """
+
+
+class NotYetValidCertificateError(VPNConnectionError):
+    """
+    Signals that the passed certificate validity starts in the future.
+
+    """

@@ -124,6 +124,11 @@ class ExpiredCertificate(Error):
     type = StateMachineEventEnum.CERTIFICATE_EXPIRED
 
 
+class NotYetValidCertificate(Error):
+    """Signals that the passed certificate validity starts in the future."""
+    type = StateMachineEventEnum.CERTIFICATE_NOT_YET_VALID
+
+
 class MaximumSessionsReached(Error):
     """Signals that for the given plan the user has too many devices/sessions connected."""
     type = StateMachineEventEnum.MAXIMUM_SESSIONS_REACHED

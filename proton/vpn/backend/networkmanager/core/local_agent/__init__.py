@@ -25,7 +25,7 @@ import proton.vpn.logging
 from proton.vpn.local_agent import (  # pylint: disable=no-name-in-module, import-error
     AgentConnector, AgentConnection, Status,
     State, Reason, ReasonCode, AgentFeatures,
-    LocalAgentError, ExpiredCertificateError,
+    LocalAgentError, ExpiredCertificateError, NotYetValidCertificateError,
     PolicyAPIError, SyntaxAPIError, APIError,
     ConnectionDetails
 )
@@ -38,7 +38,7 @@ proton.vpn.local_agent.init_logger(proton.vpn.logging.getLogger)
 __all__ = [
     "AgentConnector", "AgentConnection", "Status",
     "State", "Reason", "ReasonCode", "AgentFeatures",
-    "LocalAgentError", "ExpiredCertificateError",
+    "LocalAgentError", "ExpiredCertificateError", "NotYetValidCertificateError",
     "PolicyAPIError", "SyntaxAPIError", "APIError",
     "ConnectionDetails", "AgentListener"
 ]

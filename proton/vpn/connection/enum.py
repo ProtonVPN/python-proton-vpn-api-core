@@ -45,6 +45,7 @@ class StateMachineEventEnum(Enum):
     UNEXPECTED_ERROR = auto()
     DEVICE_DISCONNECTED = auto()
     CERTIFICATE_EXPIRED = auto()
+    CERTIFICATE_NOT_YET_VALID = auto()
     MAXIMUM_SESSIONS_REACHED = auto()
     UNHANDLED_ERROR = auto()
     TWOFA_REQUIRED = auto()

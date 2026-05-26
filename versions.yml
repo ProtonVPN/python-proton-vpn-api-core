@@ -1,3 +1,10 @@
+version: 5.2.4
+time: 2026/05/19 07:48
+author: Elena Švilpė
+email: elena.svilpe@proton.ch
+description:
+- "fix: add error handling for certificate not yet valid"
+---
 version: 5.2.3
 time: 2026/05/13 19:04
 author: Luke Titley

@@ -32,7 +32,7 @@ from proton.vpn.connection.exceptions \
 from proton.vpn.core.settings.features import Features
 
 from proton.vpn.backend.networkmanager.core.local_agent import (
-    AgentListener, Status, ExpiredCertificateError, AgentFeatures,
+    AgentListener, Status, ExpiredCertificateError, NotYetValidCertificateError, AgentFeatures,
     ReasonCode, PolicyAPIError, SyntaxAPIError, APIError, State
 )
 
@@ -217,6 +217,10 @@ class LocalAgentMixin:  # pylint: disable=too-few-public-methods
         except ExpiredCertificateError:
             self._notify_subscribers_threadsafe(
                 events.ExpiredCertificate(context))
+            return False
+        except NotYetValidCertificateError:
+            self._notify_subscribers_threadsafe(
+                events.NotYetValidCertificate(context))
             return False
         except TimeoutError:
             logger.info("Connect timeout")
