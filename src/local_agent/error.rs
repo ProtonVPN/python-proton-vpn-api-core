@@ -56,6 +56,8 @@ pub enum Error {
     BincodeError(#[from] bincode::Error),
     #[error("Expired certificate: {0}")]
     ExpiredCertificate(String),
+    #[error("Certificate not yet valid: {0}")]
+    NotYetValidCertificate(String),
     #[error("Unable to parse certificate")]
     UnableToParseCertificate,
 }
@@ -70,6 +72,8 @@ impl std::convert::From<Error> for pyo3::PyErr {
         match err {
             Error::ExpiredCertificate(e) =>
                 python::ExpiredCertificateError::new_err(format!("{:?}", e)),
+            Error::NotYetValidCertificate(e) =>
+                python::NotYetValidCertificateError::new_err(format!("{:?}", e)),
             Error::Tokio(e)
                 if e.kind() == std::io::ErrorKind::TimedOut
                     || e.kind() == std::io::ErrorKind::BrokenPipe =>

@@ -1,3 +1,10 @@
+version: 0.7.0
+time: 2026/05/26 13:33
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "fix: add error handling for certificate not yet valid (Elena Švilpė)"
+---
 version: 0.6.0
 time: 2026/04/30 07:48
 author: Luke Titley

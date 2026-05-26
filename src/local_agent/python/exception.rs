@@ -29,6 +29,13 @@ create_exception!(
 
 create_exception!(
     local_agent,
+    NotYetValidCertificateError,
+    LocalAgentError,
+    "Raised when the passed certificate is not yet valid during read from socket."
+);
+
+create_exception!(
+    local_agent,
     ExpiredCertificateError,
     LocalAgentError,
     "Raised when the passed certificate is expired during read from socket."
@@ -60,6 +67,10 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add(
         "ExpiredCertificateError",
         m.py().get_type::<ExpiredCertificateError>(),
+    )?;
+    m.add(
+        "NotYetValidCertificateError",
+        m.py().get_type::<NotYetValidCertificateError>(),
     )?;
     m.add("APIError", m.py().get_type::<APIError>())?;
     m.add("SyntaxAPIError", m.py().get_type::<SyntaxAPIError>())?;

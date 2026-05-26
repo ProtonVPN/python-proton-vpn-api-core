@@ -32,6 +32,7 @@ use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio_rustls::rustls::{ClientConfig, RootCertStore};
 use tokio_rustls::TlsConnector;
+use x509_parser::time::ASN1Time;
 // -----------------------------------------------------------------------------
 
 /// The address of the local agent server, this ip is always the same
@@ -156,8 +157,10 @@ fn parse_certificates(cert: &str) -> Result<Vec<CertificateDer<'static>>> {
 }
 
 fn ensure_certificates_are_current(
-    certificates: &[CertificateDer<'_>]
+    certificates: &[CertificateDer<'_>],
+    now: Option<ASN1Time>,  // Optional time for testing
 ) -> Result<()> {
+    let now = now.unwrap_or_else(ASN1Time::now);
 
     for cert_d in certificates {
 
@@ -166,11 +169,20 @@ fn ensure_certificates_are_current(
         )?;
 
         let validity = &cert.tbs_certificate.validity;
-        if !validity.is_valid() {
+
+        // Check if current time is before the certificate's start time
+        if now < validity.not_before {
+            return Err(Error::NotYetValidCertificate(format!(
+                "Now {:?}, Start: {}, End: {}",
+                now, &validity.not_before, &validity.not_after
+            )));
+        }
+
+        // Check if current time is after the certificate's end time
+        if now > validity.not_after {
             return Err(Error::ExpiredCertificate(format!(
                 "Now {:?}, Start: {}, End: {}",
-                std::time::SystemTime::now(),
-                &validity.not_before, &validity.not_after
+                now, &validity.not_before, &validity.not_after
             )));
         }
     }
@@ -205,7 +217,7 @@ impl AgentConnector {
 
         // This does a time validation of the certificates
         // and will return an error if any of them are expired.
-        ensure_certificates_are_current(&certs)?;
+        ensure_certificates_are_current(&certs, None)?;
 
         // Key is in pks8 format
         let key = rustls_pemfile::private_key(&mut std::io::Cursor::new(&params.key))?
@@ -321,6 +333,7 @@ impl AgentConnector {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use time::macros::datetime;
 
     #[test]
     fn test_proton_vpn_root_and_intermediate_legacy_certificates_are_not_close_to_expiration() {
@@ -358,4 +371,50 @@ mod tests {
             assert!(expires_in > seconds);
         }
     }
+
+    // Testing certificate validity errors with the embedded root/intermediate certificates
+
+    // Root CA: Valid 2019-01-17 - 2039-01-12
+    // Intermediate: Valid 2022-01-14 - 2032-01-12
+
+    fn parse_embedded_certificates() -> Vec<CertificateDer<'static>> {
+        let mut cursor = std::io::Cursor::new(
+            PROTON_VPN_ROOT_FOLLOWED_BY_INTERMEDIATE_LEGACY_CA
+        );
+        rustls_pemfile::certs(&mut cursor)
+            .filter_map(|x| x.ok())
+            .collect()
+    }
+
+    #[test]
+    fn test_valid_certificate_with_current_time() {
+        let certs = parse_embedded_certificates();
+
+        // Use current time
+        let result = ensure_certificates_are_current(&certs, None);
+        assert!(result.is_ok(), "Embedded certificates should be currently valid");
+    }
+
+    #[test]
+    fn test_expired_certificate_error() {
+        let certs = parse_embedded_certificates();
+        // Time after both certificates end
+        let expired_time = ASN1Time::new(datetime!(2040-01-15 00:00:00 UTC));
+        let result = ensure_certificates_are_current(&certs, Some(expired_time));
+        assert!(matches!(result, Err(Error::ExpiredCertificate(_))),
+                "Should return ExpiredCertificate error when time is past certificate end date");
+    }
+
+    #[test]
+    fn test_not_yet_valid_certificate_error() {
+        let certs = parse_embedded_certificates();
+
+        // Time before the root cert starts (with buffer)
+        let not_yet_valid_time = ASN1Time::new(datetime!(2019-01-01 00:00:00 UTC));
+
+        let result = ensure_certificates_are_current(&certs, Some(not_yet_valid_time));
+        assert!(matches!(result, Err(Error::NotYetValidCertificate(_))),
+                "Should return NotYetValidCertificate error when time is before certificate start date");
+    }
+
 }
