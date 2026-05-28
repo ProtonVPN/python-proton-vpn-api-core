@@ -32,6 +32,7 @@ from proton.vpn.connection.interfaces import VPNServer, Settings, VPNCredentials
 from proton.vpn.connection.persistence import ConnectionPersistence, ConnectionParameters
 from proton.vpn.connection.publisher import Publisher
 from proton.vpn.connection import states, events
+from proton.vpn.session.servers.types import TierEnum
 
 
 # pylint: disable=too-many-instance-attributes,too-many-public-methods
@@ -52,6 +53,7 @@ class VPNConnection(ABC):
         server: VPNServer,
         credentials: VPNCredentials,
         settings: Settings,
+        user_tier: TierEnum,
         connection_id: str = None,
         connection_persistence: ConnectionPersistence = None,
         publisher: Publisher = None,
@@ -75,7 +77,7 @@ class VPNConnection(ABC):
         self._vpnserver = server
         self._vpncredentials = credentials
         self._settings = settings
-
+        self._user_tier = user_tier
         self._connection_persistence = connection_persistence or ConnectionPersistence()
         self._publisher = publisher or Publisher()
 

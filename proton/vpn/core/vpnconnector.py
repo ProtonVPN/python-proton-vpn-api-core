@@ -245,7 +245,8 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
                 server=persisted_parameters.server,
                 credentials=self.credentials,
                 settings=await self.get_settings(),
-                connection_id=persisted_parameters.connection_id
+                connection_id=persisted_parameters.connection_id,
+                user_tier=self._session_holder.user_tier
             )
             if not isinstance(vpn_connection.initial_state, states.Disconnected):
                 return vpn_connection
@@ -387,7 +388,8 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
         protocol_type = self._registry.get(protocol)
 
-        connection = protocol_type(server, self.credentials, settings)
+        connection = protocol_type(
+            server, self.credentials, settings, self._session_holder.user_tier)
 
         connection.register(self._on_connection_event)
 

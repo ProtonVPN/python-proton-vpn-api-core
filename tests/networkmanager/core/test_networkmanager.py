@@ -21,6 +21,7 @@ from unittest.mock import Mock, patch, AsyncMock, DEFAULT
 
 import gi
 from proton.vpn.connection.persistence import ConnectionParameters
+from proton.vpn.session.servers.types import TierEnum
 
 gi.require_version("NM", "1.0")  # noqa: required before importing NM module
 from gi.repository import NM, GLib
@@ -49,7 +50,7 @@ class LinuxNetworkManagerProtocol(LinuxNetworkManager):
         # Make sure we don't trigger connection persistence nor the kill switch.
         connection_persistence = connection_persistence or Mock()
 
-        super().__init__(*args, connection_persistence=connection_persistence,
+        super().__init__(*args, connection_persistence=connection_persistence, user_tier=TierEnum.PLUS,
                          **kwargs)
 
     def setup(self):

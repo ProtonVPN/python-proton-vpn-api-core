@@ -25,6 +25,7 @@ from proton.vpn.connection import VPNConnection, states
 from proton.vpn.connection.persistence import ConnectionPersistence, ConnectionParameters
 from proton.vpn.connection.states import StateContext
 from proton.vpn.connection.interfaces import VPNServer, ProtocolPorts
+from proton.vpn.session.servers.types import TierEnum
 
 from .common import MockVpnCredentials
 
@@ -72,7 +73,7 @@ class DummyVPNConnection(VPNConnection):
         # Make sure we don't trigger connection persistence.
         connection_persistence = connection_persistence or Mock()
 
-        super().__init__(*args, connection_persistence=connection_persistence, **kwargs)
+        super().__init__(*args, connection_persistence=connection_persistence, user_tier=TierEnum.PLUS, **kwargs)
 
     def _initialize_persisted_connection(
             self, persisted_parameters: ConnectionParameters

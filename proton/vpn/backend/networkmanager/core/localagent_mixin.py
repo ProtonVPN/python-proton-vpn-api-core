@@ -30,6 +30,7 @@ from proton.vpn.connection.events import EventContext
 from proton.vpn.connection.exceptions \
     import FeatureError, FeaturePolicyError, FeatureSyntaxError
 from proton.vpn.core.settings.features import Features
+from proton.vpn.session.servers.types import TierEnum
 
 from proton.vpn.backend.networkmanager.core.local_agent import (
     AgentListener, Status, ExpiredCertificateError, NotYetValidCertificateError, AgentFeatures,
@@ -51,7 +52,8 @@ class LocalAgentMixin:  # pylint: disable=too-few-public-methods
     client and to listen for status updates and errors from the local agent
     server.
     """
-    def __init__(self):
+    def __init__(self, user_tier: TierEnum):
+        self._user_tier = user_tier
         self._agent_listener = AgentListener(
             on_status=self.__on_local_agent_status,
             on_error=self.__on_local_agent_error
@@ -121,10 +123,10 @@ class LocalAgentMixin:  # pylint: disable=too-few-public-methods
         future.add_done_callback(self._handle_future_result)
 
     async def _request_connection_features(self, features: Features):
-        if features.are_free_tier_defaults():
-            # No need to request default features, since they are available by default.
-            # Also, the local agent server raises an error if features are requested
-            # for free users, even when the requested features are the default ones.
+        if self._user_tier == TierEnum.FREE:
+            # Local agent server raises an error if features are requested
+            # for free users, even if they are the default ones.
+            # Skipping requesting features causes using default ones.
             logger.info("Using default VPN connection features.")
             return
 

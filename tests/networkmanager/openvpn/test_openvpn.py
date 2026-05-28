@@ -29,6 +29,7 @@ from proton.vpn.backend.networkmanager.protocol.openvpn.openvpn \
         import OpenVPN, OpenVPNTCP
 from proton.vpn.connection import events
 from collections import namedtuple
+from proton.vpn.session.servers.types import TierEnum
 
 from boilerplate import (MockVpnCredentials, MockSettings, vpn_server)
 
@@ -123,7 +124,7 @@ async def test_on_state_changed(_notify_subscribers_threadsafe, nm_client_mock,
 
     nm_protocol = OpenVPNTCP(
         vpn_server, MockVpnCredentials(), MockSettings(),
-        nm_client=nm_client_mock
+        nm_client=nm_client_mock, user_tier=TierEnum.PLUS
     )
     nm_protocol._on_state_changed(None, state, reason)
 

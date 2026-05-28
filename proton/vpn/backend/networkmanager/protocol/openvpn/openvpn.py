@@ -204,7 +204,7 @@ class OpenVPN(LinuxNetworkManager, LocalAgentMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        LocalAgentMixin.__init__(self)
+        LocalAgentMixin.__init__(self, self._user_tier)
         self._vpn_settings = None
         self._connection_settings = None
 
@@ -425,7 +425,7 @@ class OpenVPN(LinuxNetworkManager, LocalAgentMixin):
     async def update_settings(self, settings: Settings):
         """Update features on the active agent connection."""
         await super().update_settings(settings)
-        if self._agent_listener.is_running:  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
+        if self._agent_listener.is_running:
             await self._request_connection_features(settings.features)
 
 

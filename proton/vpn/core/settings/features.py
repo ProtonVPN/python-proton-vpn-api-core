@@ -46,10 +46,6 @@ class Features:
     port_forwarding: bool
     split_tunneling: SplitTunneling
 
-    def are_free_tier_defaults(self):
-        """Returns True if the features are the ones set for the free tier."""
-        return self == Features.default(user_tier=0)
-
     @staticmethod
     def from_dict(data: dict, user_tier: int) -> Features:
         """Creates and returns `Features` from the provided dict."""
