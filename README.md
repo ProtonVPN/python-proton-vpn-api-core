@@ -47,24 +47,3 @@ cargo run --bin nm-protun-service --features protun -- cli protun pcap-start --f
 cargo run --bin nm-protun-service --features protun -- cli protun pcap-stop
 ```
 
-## Custom Routing
-
-Custom routing is where we want to be before the public release.
-
-Currently we avoid routing loop by special casing packets destined for the
-vpn server, in the future we dont want to do this. Instead we want to support
-an fwmark. All traffic that is the from vpn network interface should have the
-fwmark.
-
-This is not ready for testing yet, but during development this feature needs
-to be enabled.
-
-### Building
-> cargo build --bin nm-protun-service --bin nm-protun-auth-dialog --features 'protun, nm_protun_auth_dialog, protun_fwmark'
-
-### Running
-> nmcli connection add type vpn vpn-type protun con-name "proton0" # Make connection
-> nmcli connection modify proton0 ipv4.auto-route-ext-gw no        # Disable gateway ip routing
-> nmcli connection up "proton0"                                    # Start the connection
-
-ALternatively, perhaps we could use ipv4.method=manual to disable the routing table entries as well.

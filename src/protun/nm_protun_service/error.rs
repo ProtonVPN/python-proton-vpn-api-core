@@ -44,6 +44,10 @@ pub enum Error {
     JsonError(#[from] serde_json::Error),
     #[error("{0}")]
     Infallible(#[from] std::convert::Infallible),
+    #[error("{0}")]
+    NetLink(String),
+    #[error("{0}")]
+    SocketFdInvalid(&'static str)
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

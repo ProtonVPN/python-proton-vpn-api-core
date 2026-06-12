@@ -47,10 +47,11 @@ pub const VERSION: u32 = 1;
 pub const SETTINGS_KEY: &str = "settings";
 
 #[derive(Debug, Clone)]
-pub struct InterfaceParams {
+pub struct InterfaceParams<A> {
     pub name: String,
-    pub address: IpAddr,
+    pub address: A,
     pub prefix: u32,
+    pub dns: Vec<A>,
 }
 
 impl From<PcapStart> for protun::api::connection::PcapFileInfo {
@@ -74,8 +75,8 @@ pub struct Settings {
 
 #[derive(Debug, Clone)]
 pub struct ConnectionParams {
-    pub interface: InterfaceParams,
-    pub dns: Vec<IpAddr>,
+    pub ipv4_interface: InterfaceParams<std::net::Ipv4Addr>,
+    pub ipv6_interface: Option<InterfaceParams<std::net::Ipv6Addr>>,
     pub private_key: [u8; 32],
     pub peers: Vec<protun::api::connection::PeerInfo>,
     pub user: u32,
@@ -180,10 +181,59 @@ impl GetSection for HashMap<String, ConnectionSettingsSection> {
     }
 }
 
+/// Extract IPv6 configuration (address, prefix, dns) from ipv6 settings
+fn extract_ipv6_config(
+    name: String,
+    ipv6: Option<&mut ConnectionSettingsSection>,
+) -> Result<Option<InterfaceParams::<std::net::Ipv6Addr>>> {
+    match ipv6 {
+        None => Ok(None),
+        Some(ipv6) => {
+            let address_data: Vec<HashMap<String, OwnedValue>> =
+                match ipv6.take_value("address-data") {
+                    Ok(data) => data,
+                    Err(_) => return Ok(None),
+                };
+            let Some(mut first) = address_data.into_iter().next() else {
+                return Ok(None);
+            };
+            let address: String = first
+                .remove("address")
+                .and_then(|v| v.try_into().ok())
+                .ok_or_else(|| Error::MissingSetting("ipv6.address-data[0].address".into()))?;
+            let prefix: u32 = first
+                .remove("prefix")
+                .and_then(|v| v.try_into().ok())
+                .ok_or_else(|| Error::MissingSetting("ipv6.address-data[0].prefix".into()))?;
+            let address: std::net::Ipv6Addr = address
+                .parse()
+                .map_err(|_| Error::ValueError("Invalid IPv6 address".into()))?;
+
+            let dns: Vec<std::net::Ipv6Addr> = ipv6
+                .take_value::<Vec<Vec<u8>>>("dns")
+                .unwrap_or_default()
+                .into_iter()
+                .filter_map(|bytes| {
+                    let arr: [u8; 16] = bytes.try_into().ok()?;
+                    Some(std::net::Ipv6Addr::from(arr))
+                })
+                .collect();
+
+            Ok(Some(InterfaceParams::<std::net::Ipv6Addr>{
+                name,
+                address,
+                prefix,
+                dns
+            }))
+        }
+    }
+}
+
 /// Extract IPv4 configuration (address, prefix, DNS) from ipv4 settings
 fn extract_ipv4_config(
+    name: String,
     ipv4: &mut ConnectionSettingsSection,
-) -> Result<(IpAddr, u32, Vec<IpAddr>)> {
+) -> Result<InterfaceParams::<std::net::Ipv4Addr>> {
     // TODO: LT: Look into address-data, as addresses is deprecated.
     let mut addr_array = ipv4
         .take_value::<Vec<Vec<u32>>>("addresses")?
@@ -200,16 +250,21 @@ fn extract_ipv4_config(
     })??;
 
     // Address is in network byte order
-    let ip = IpAddr::V4(std::net::Ipv4Addr::from_bits(u32::from_be(addr_u32)));
+    let address = std::net::Ipv4Addr::from_bits(u32::from_be(addr_u32));
 
     // dns is au - array of u32 in network byte order
-    let dns_servers: Vec<IpAddr> = ipv4
+    let dns: Vec<std::net::Ipv4Addr> = ipv4
         .take_value::<Vec<u32>>("dns")?
         .into_iter()
-        .map(|ip| IpAddr::V4(std::net::Ipv4Addr::from_bits(u32::from_be(ip))))
+        .map(|ip| std::net::Ipv4Addr::from_bits(u32::from_be(ip)))
         .collect();
 
-    Ok((ip, prefix, dns_servers))
+    Ok(InterfaceParams::<std::net::Ipv4Addr>{
+        name,
+        address,
+        prefix,
+        dns
+    })
 }
 
 pub fn read_json_key<T>(key: &str, data: &mut  ConnectionSettingsSection) -> Result<T>
@@ -256,8 +311,17 @@ pub fn load_connection_params_from_settings(
     }
 
     let mut secrets: ConnectionSettingsSection = vpn.take_value("secrets")?;
-    let (internal_address, internal_prefix, dns) =
-        extract_ipv4_config(connection_settings.get_section("ipv4")?)?;
+
+    let ipv6_interface = extract_ipv6_config(
+        interface_name.clone(),
+        connection_settings.get_mut("ipv6")
+    )?;
+
+    let ipv4_interface =
+        extract_ipv4_config(
+            interface_name.clone(),
+            connection_settings.get_section("ipv4")?
+    )?;
 
     // Deserialize peers with implicit conversion to protun PeerInfo.
     let peers = settings.peers
@@ -269,14 +333,10 @@ pub fn load_connection_params_from_settings(
     let private_key = get_private_key_from_secrets(&mut secrets)?;
 
     Ok(ConnectionParams {
-        interface: InterfaceParams {
-            name: interface_name,
-            address: internal_address,
-            prefix: internal_prefix,
-        },
+        ipv4_interface,
+        ipv6_interface,
         peers,
         private_key,
-        dns,
         user,
     })
 }
@@ -523,6 +583,168 @@ mod tests {
         let result: Result<protun::api::connection::PeerInfo> =
             peer.try_into();
         assert!(matches!(result, Err(Error::TryFromSlice(_))));
+    }
+
+    // ---- extract_ipv6_config ----
+
+    fn u32_owned_value(n: u32) -> OwnedValue {
+        OwnedValue::try_from(Value::from(n)).unwrap()
+    }
+
+    fn make_ipv6_section(address: &str, prefix: u32) -> ConnectionSettingsSection {
+        let mut entry: HashMap<String, OwnedValue> = HashMap::new();
+        entry.insert("address".into(), str_owned_value(address));
+        entry.insert("prefix".into(), u32_owned_value(prefix));
+        let address_data = vec![entry];
+        let mut section = ConnectionSettingsSection::new();
+        section.insert(
+            "address-data".into(),
+            OwnedValue::try_from(Value::from(address_data)).unwrap(),
+        );
+        section
+    }
+
+    const TEST_IPV6_ADDR: &str = "fd00::1";
+    const TEST_IF_NAME: &str = "protun0";
+    const TEST_IPV4_ADDR: std::net::Ipv4Addr = std::net::Ipv4Addr::new(10, 0, 0, 1);
+    const TEST_DNS_ADDR: std::net::Ipv4Addr = std::net::Ipv4Addr::new(8, 8, 8, 8);
+
+    fn addr_u32(ip: std::net::Ipv4Addr) -> u32 {
+        // extract_ipv4_config reads: Ipv4Addr::from_bits(u32::from_be(x))
+        // so to produce ip from x: x = u32::to_be(ip.to_bits())
+        u32::to_be(ip.to_bits())
+    }
+
+    fn make_ipv4_section(
+        address: std::net::Ipv4Addr,
+        prefix: u32,
+        dns: Vec<std::net::Ipv4Addr>,
+    ) -> ConnectionSettingsSection {
+        let mut section = ConnectionSettingsSection::new();
+        section.insert(
+            "addresses".into(),
+            OwnedValue::try_from(Value::from(vec![
+                vec![addr_u32(address), prefix, 0u32],
+            ])).unwrap(),
+        );
+        let dns_u32: Vec<u32> = dns.into_iter().map(addr_u32).collect();
+        section.insert(
+            "dns".into(),
+            OwnedValue::try_from(Value::from(dns_u32)).unwrap(),
+        );
+        section
+    }
+
+    // ---- extract_ipv4_config / extract_ipv6_config (shared scenarios) ----
+
+    #[test]
+    fn test_valid_config_no_dns() {
+        let mut s = make_ipv4_section(TEST_IPV4_ADDR, 24, vec![]);
+        let r = extract_ipv4_config(TEST_IF_NAME.into(), &mut s).unwrap();
+        assert_eq!(r.name, TEST_IF_NAME);
+        assert_eq!(r.address, TEST_IPV4_ADDR);
+        assert_eq!(r.prefix, 24);
+        assert!(r.dns.is_empty());
+
+        let mut s = make_ipv6_section(TEST_IPV6_ADDR, 64);
+        let r = extract_ipv6_config(TEST_IF_NAME.into(), Some(&mut s)).unwrap().unwrap();
+        assert_eq!(r.name, TEST_IF_NAME);
+        assert_eq!(r.address, TEST_IPV6_ADDR.parse::<std::net::Ipv6Addr>().unwrap());
+        assert_eq!(r.prefix, 64);
+        assert!(r.dns.is_empty());
+    }
+
+    #[test]
+    fn test_valid_config_with_dns() {
+        let mut s = make_ipv4_section(TEST_IPV4_ADDR, 24, vec![TEST_DNS_ADDR]);
+        let r = extract_ipv4_config(TEST_IF_NAME.into(), &mut s).unwrap();
+        assert_eq!(r.dns, vec![TEST_DNS_ADDR]);
+
+        let ipv6_dns_bytes: Vec<Vec<u8>> = vec![
+            TEST_IPV6_ADDR.parse::<std::net::Ipv6Addr>().unwrap().octets().to_vec()
+        ];
+        let mut s = make_ipv6_section(TEST_IPV6_ADDR, 64);
+        s.insert("dns".into(), OwnedValue::try_from(Value::from(ipv6_dns_bytes)).unwrap());
+        let r = extract_ipv6_config(TEST_IF_NAME.into(), Some(&mut s)).unwrap().unwrap();
+        assert_eq!(r.dns, vec![TEST_IPV6_ADDR.parse::<std::net::Ipv6Addr>().unwrap()]);
+    }
+
+    // ---- extract_ipv4_config (specific) ----
+
+    #[test]
+    fn test_ipv4_missing_addresses_returns_error() {
+        let mut section = ConnectionSettingsSection::new();
+        let result = extract_ipv4_config(TEST_IF_NAME.into(), &mut section);
+        assert!(matches!(result, Err(Error::MissingSetting(_))));
+    }
+
+    #[test]
+    fn test_ipv4_empty_addresses_returns_error() {
+        let mut section = ConnectionSettingsSection::new();
+        section.insert(
+            "addresses".into(),
+            OwnedValue::try_from(Value::from(Vec::<Vec<u32>>::new())).unwrap(),
+        );
+        section.insert(
+            "dns".into(),
+            OwnedValue::try_from(Value::from(Vec::<u32>::new())).unwrap(),
+        );
+        let result = extract_ipv4_config(TEST_IF_NAME.into(), &mut section);
+        assert!(matches!(result, Err(Error::MissingSetting(_))));
+    }
+
+    #[test]
+    fn test_ipv4_malformed_address_entry_returns_error() {
+        let mut section = ConnectionSettingsSection::new();
+        section.insert(
+            "addresses".into(),
+            OwnedValue::try_from(Value::from(vec![vec![0u32, 24u32]])).unwrap(), // 2 elements, not 3
+        );
+        section.insert(
+            "dns".into(),
+            OwnedValue::try_from(Value::from(Vec::<u32>::new())).unwrap(),
+        );
+        let result = extract_ipv4_config(TEST_IF_NAME.into(), &mut section);
+        assert!(matches!(result, Err(Error::ValueError(_))));
+    }
+
+    // ---- extract_ipv6_config (specific) ----
+
+    #[test]
+    fn test_ipv6_none_section_returns_none() {
+        let result = extract_ipv6_config(TEST_IF_NAME.into(), None).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_ipv6_missing_address_data_returns_none() {
+        let mut section = ConnectionSettingsSection::new();
+        let result = extract_ipv6_config(TEST_IF_NAME.into(), Some(&mut section)).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_ipv6_missing_address_field_returns_error() {
+        let mut entry: HashMap<String, OwnedValue> = HashMap::new();
+        entry.insert("prefix".into(), u32_owned_value(128));
+        let mut section = ConnectionSettingsSection::new();
+        section.insert(
+            "address-data".into(),
+            OwnedValue::try_from(Value::from(vec![entry])).unwrap(),
+        );
+        let result = extract_ipv6_config(TEST_IF_NAME.into(), Some(&mut section));
+        assert!(matches!(result, Err(Error::MissingSetting(_))));
+    }
+
+    #[test]
+    fn test_ipv6_malformed_dns_bytes_are_skipped() {
+        let mut section = make_ipv6_section(TEST_IPV6_ADDR, 128);
+        let bad_dns: Vec<Vec<u8>> = vec![vec![0u8; 4]]; // 4 bytes, not 16
+        section.insert("dns".into(), OwnedValue::try_from(Value::from(bad_dns)).unwrap());
+        let result = extract_ipv6_config(TEST_IF_NAME.into(), Some(&mut section))
+            .unwrap()
+            .unwrap();
+        assert!(result.dns.is_empty());
     }
 
     // ---- get_private_key_from_secrets ----

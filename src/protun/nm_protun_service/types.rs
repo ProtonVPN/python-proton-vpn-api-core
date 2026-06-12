@@ -64,6 +64,27 @@ pub struct VpnConfig {
     /// Whether this VPN has IPv4 configuration
     #[zvariant(rename = "has-ip4")]
     pub has_ip4: bool,
+    /// Whether this VPN has IPv6 configuration
+    #[zvariant(rename = "has-ip6")]
+    pub has_ip6: bool,
+}
+
+/// IPv6 configuration data sent to NetworkManager
+///
+/// This is serialized as a D-Bus dictionary (a{sv}).
+/// Note: IP address must be a 16-byte array in network byte order.
+#[derive(Debug, SerializeDict, Type)]
+#[zvariant(signature = "a{sv}")]
+pub struct Ip6Config {
+    /// Internal VPN address (16 bytes, network byte order)
+    pub address: Vec<u8>,
+    /// Network prefix length
+    pub prefix: u32,
+    /// DNS servers (each a 16-byte array, network byte order)
+    pub dns: Vec<Vec<u8>>,
+    /// If true, don't set this VPN as the default route
+    #[zvariant(rename = "never-default")]
+    pub never_default: bool,
 }
 
 /// IPv4 configuration data sent to NetworkManager
@@ -84,4 +105,7 @@ pub struct Ip4Config {
     /// If true, don't set this VPN as the default route
     #[zvariant(rename = "never-default")]
     pub never_default: bool,
+    /// If true, don't automatically add routes derived by NM
+    #[zvariant(rename = "ignore-auto-routes")]
+    pub ignore_auto_routes: bool,
 }

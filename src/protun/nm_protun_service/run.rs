@@ -23,6 +23,8 @@
 //!
 //! Reference: https://networkmanager.dev/docs/api/latest/gdbus-org.freedesktop.NetworkManager.VPN.Plugin.html
 
+use std::sync::Arc;
+
 use zbus::Connection;
 
 use super::interfaces::new_interfaces;
@@ -37,7 +39,8 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     log::info!("Starting Proton VPN NetworkManager plugin");
 
-    let (plugin, connection_updates) = new_interfaces();
+    let shutdown = Arc::new(tokio::sync::Notify::new());
+    let (plugin, connection_updates) = new_interfaces(shutdown.clone());
     let zbus_connection = Connection::system().await?;
 
     zbus_connection
@@ -68,8 +71,9 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     tokio::select! {
-        _ = sigint.recv() => log::info!("Received SIGINT, shutting down..."),
-        _ = sigterm.recv() => log::info!("Received SIGTERM, shutting down..."),
+        _ = sigint.recv()       => log::info!("Received SIGINT, shutting down..."),
+        _ = sigterm.recv()      => log::info!("Received SIGTERM, shutting down..."),
+        _ = shutdown.notified() => log::info!("Disconnect received, shutting down..."),
     }
 
     Ok(())

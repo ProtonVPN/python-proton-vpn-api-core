@@ -45,6 +45,7 @@ use super::types::NMVpnServiceState;
 
 /// MTU for the VPN tunnel interface
 pub const VPN_MTU: u32 = 1420;
+const FWMARK: u32 = 245447468;
 
 pub struct ConnectionInfo {
     pub interface_name: String,
@@ -58,6 +59,9 @@ pub struct Service {
     pub user: Option<u32>,
     /// The active VPN connection, if any
     connection: Option<Connection>,
+    // The name of the tun interface
+    interface_name: String,
+    ipv6: bool,
 }
 
 impl std::fmt::Debug for Service {
@@ -65,6 +69,7 @@ impl std::fmt::Debug for Service {
         f.debug_struct("Service")
             .field("service_state", &self.service_state)
             .field("user", &self.user)
+            .field("interface_name", &self.interface_name)
             .finish()
     }
 }
@@ -75,6 +80,8 @@ impl Default for Service {
             service_state: NMVpnServiceState::Init,
             user: None,
             connection: None,
+            interface_name: String::new(),
+            ipv6: false,
         }
     }
 }
@@ -98,6 +105,7 @@ impl Service {
         &mut self,
         initial_config: InitialConnectionConfig,
         tun_interface: String,
+        ipv6: bool,
     ) -> Result<ConnectionInfo> {
         log::info!(
             "service: starting connection with {:?}",
@@ -116,13 +124,19 @@ impl Service {
 
         // Create TUN device
         let (tun_fd, actual_name) = create_tun(&tun_interface)?;
+        self.interface_name = actual_name.clone();
 
         // Start the WireGuard connection
         let connection = Connection::unix_connect(
             initial_config,
             tun_fd,
             Box::new(on_state_changed),
-            None, // TODO LT: Not sure if we'll need the socket_fd_available_callback on Linux, but we can add it later if needed
+            Some(Box::new(
+                move |socket_fd: i32| {
+                    if let Err(error) = set_fwmark_on_socket(socket_fd, FWMARK) {
+                        log::error!("Unable to set fwmark on socket {error}");
+                    }
+                })),
             Box::new(on_event),
         );
 
@@ -130,6 +144,11 @@ impl Service {
 
         // Configure interface: UP + MTU
         nl.configure_interface(&actual_name, VPN_MTU).await?;
+
+        self.ipv6 = ipv6;
+
+        // Configure the routing
+        nl.setup_routing(FWMARK, &actual_name, ipv6).await?;
 
         self.connection = Some(connection);
 
@@ -146,13 +165,28 @@ impl Service {
 
     /// Disconnect from VPN.
     pub async fn disconnect(&mut self) {
-        if let Some(connection) = self.connection.take() {
+
+        match NetlinkHandle::new() {
+            Ok(nl) => if let Err(error) =
+                nl.teardown_routing(FWMARK, &self.interface_name, self.ipv6).await
+                {
+                    log::error!("Failed to teardown routing: {error}");
+                }
+            Err(err) => {
+                log::error!("Unable to connect to netlink {err}");
+            }
+        }
+
+        // Tunnel
+        if let Some(connection) = self.connection.take()
+        {
             connection.disconnect_and_wait();
+
             log::info!(
                 "service: disconnected and joined connection thread"
             );
         } else {
-            log::info!("service: disconnect called but no active connection");
+            log::error!("service: disconnect called but no active connection");
         }
     }
 
@@ -249,6 +283,39 @@ fn create_tun(name: &str) -> std::io::Result<(i32, String)> {
     );
 
     Ok((tun_fd, actual_name))
+}
+
+/// Sets the SO_MARK on a raw socket file descriptor.
+///
+/// # Safety
+/// The `socket_fd` must be a valid, open socket file descriptor.
+/// Requires CAP_NET_ADMIN capability to succeed.
+fn set_fwmark_on_socket(socket_fd: i32, mark: u32) -> Result<()> {
+
+    if socket_fd <= 0 {
+        return Err(Error::SocketFdInvalid("In set_fwmark_on_socket"));
+    }
+
+    type MarkId = libc::c_int;
+    let mark_int = mark as MarkId;
+
+    unsafe {  // nosemgrep
+        let mark_ptr = &mark_int as *const MarkId as *const libc::c_void;
+        let len = std::mem::size_of::<MarkId>() as libc::socklen_t;
+        let res = libc::setsockopt(
+            socket_fd,
+            libc::SOL_SOCKET,
+            libc::SO_MARK,
+            mark_ptr,
+            len,
+        );
+
+        if res != 0 {
+            return Err(Error::IO(std::io::Error::last_os_error()))
+        }
+    }
+
+    Ok(())
 }
 
 fn on_state_changed(state: State) {

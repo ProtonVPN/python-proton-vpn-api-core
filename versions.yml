@@ -1,3 +1,10 @@
+version: 0.8.0
+time: 2026/06/12 12:49
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "feat: Support for split tunneling"
+---
 version: 0.7.0
 time: 2026/05/26 13:33
 author: Luke Titley

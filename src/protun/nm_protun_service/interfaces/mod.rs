@@ -22,9 +22,9 @@ pub mod protun;
 
 use super::service::Service;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::sync::{Notify, RwLock};
 
-pub fn new_interfaces() -> (network_manager::NetworkManager, protun::Protun) {
+pub fn new_interfaces(shutdown: Arc<Notify>) -> (network_manager::NetworkManager, protun::Protun) {
     let state = Arc::new(RwLock::new(Service::default()));
-    (network_manager::NetworkManager::new(state.clone()), protun::Protun::new(state))
+    (network_manager::NetworkManager::new(state.clone(), shutdown), protun::Protun::new(state))
 }

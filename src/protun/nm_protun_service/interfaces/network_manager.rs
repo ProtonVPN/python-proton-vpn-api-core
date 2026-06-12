@@ -28,14 +28,78 @@ pub use super::super::error::*;
 pub use super::super::settings::*;
 use super::super::service::{Service, ServiceHandle, WgClientPrivateKey, InitialConnectionConfig};
 
-use super::super::types::{Ip4Config, NMVpnServiceState, VpnConfig};
+use super::super::types::{Ip4Config, Ip6Config, NMVpnServiceState, VpnConfig};
 use super::super::error::{Error, Result};
 
+// Network Manager (version 1.46.0) requires a vpn plugin to communicate the
+// ip address of the vpn server (the gateway) we are connecting to, in order to
+// create a direct route to it for vpn encrypted traffic.
+//
+// This is not something the protun plugin can provide because:
+//  - There is no one server, there are a set of servers any of which the plugin
+//    can choose to connect to. The plugin can also switch between servers
+//    midway through a connection, or even connect to multiple servers at once.
+//  - Protun is a wireguard based protocol, encrypted packets are tagged
+//    with an fwmark which is used to filter what goes directly to the
+//    network card and what goes through the tunnel device. A direct route in
+//    the main table would undermine this, as it would be more specific than
+//    the fwmark route.
+//  - Packets that are explicitly not destined for the tunnel (split tunneling)
+//    also use the fwmark, a direct route in the main table adds confusion.
+//
+// Finally, the fwmark routing rule and routing table already fix the routing
+// loop issue that the Network Manager is trying to resolve by adding this
+// direct route.
+//
+// Unfortunately, if a plugin omits a gateway ip address when signalling a
+// successful startup the Network Manager will assume the plugin has failed
+// to connect, and will close it down.
+//
+// To work around this design limitation the protun plugin signals an invalid
+// gateway ip, TEST-NET-1 (192.0.2.0), this is reserved for documentation
+// (as per RFC 5737), packets destined for this address are likely to be
+// dropped at network boundries.
+//
+// Additionaly, the protun plugin adds it's own routing rules to support the
+// fwmark (as mentioned above). This has the desirable side effect of suppressing
+// the automatic creation of the gateway route. The reason is that the
+// Network Manager checks the existing route for the gateway ip before adding
+// the direct one, and it requires that the existing route:
+//
+//  - Is in the main routing table.
+//  - Is routed to the parent network device of the tunnel (normally the network card).
+//
+// Both of these checks are false, as the custom routing setup by protun follows
+// the wireguard convention of:
+//
+//  - Routing all unmarked packets in a custom table (table $fwmark)
+//  - Routing all unmarked packets to the tunnel device.
+//
+// Finally the Network Manager has an option to disable creation of the direct
+// route to the gateway: `auto-route-ext-gw no`
+//
+// This should be set as an extra safety measure to ensure the Network Manager
+// never tries to make the route. The `nm-protun-service cli` already does this
+// when creating a connection profile using nmcli.
+//
+// Ultimately these three strategies:
+//  - our custom routing rules
+//  - an invalid gateway address
+//  - ipv4.auto-route-ext-gw no
+//
+// Ensure that the gateway routing rule isn't created, and if it ever was
+// that it would be harmless.
+//
+//
+//
+// TEST-NET-1 from RFC 5737 is '192.0.2.0'
+//
+const NOOP_GATEWAY_IP: std::net::Ipv4Addr = std::net::Ipv4Addr::new(192,0,2,0);
+
 struct ConfigInfo {
-    interface: InterfaceParams,
     interface_mtu: u32,
-    external_gateway: std::net::IpAddr,
-    dns: Vec<std::net::IpAddr>,
+    ipv4_interface: InterfaceParams<std::net::Ipv4Addr>,
+    ipv6_interface: Option<InterfaceParams<std::net::Ipv6Addr>>,
 }
 
 /// The main VPN Plugin D-Bus object
@@ -43,12 +107,14 @@ struct ConfigInfo {
 /// This implements the org.freedesktop.NetworkManager.VPN.Plugin interface
 pub struct NetworkManager {
     pub service: ServiceHandle,
+    shutdown: std::sync::Arc<tokio::sync::Notify>,
 }
 
 impl NetworkManager {
-    pub fn new(service: ServiceHandle) -> Self {
+    pub fn new(service: ServiceHandle, shutdown: std::sync::Arc<tokio::sync::Notify>) -> Self {
         Self {
             service,
+            shutdown,
         }
     }
 
@@ -69,16 +135,12 @@ impl NetworkManager {
         params: ConnectionParams,
     ) -> Result<ConfigInfo> {
         let ConnectionParams {
-            mut interface,
+            mut ipv4_interface,
+            mut ipv6_interface,
             peers,
             private_key,
-            dns,
             user,
         } = params;
-
-        let external_gateway = peers.first()
-            .ok_or_else(|| Error::InvalidState("no peers in connection params".into()))?
-            .server_ip.0.clone(); // TODO LT: This needs to be replaced with a stub IP address.
 
         let mut service = self.service.write().await;
         service.user = Some(user);
@@ -90,17 +152,21 @@ impl NetworkManager {
                     network_available: true,
                     pcap_file : None,
                 },
-                interface.name.clone(),
+                ipv4_interface.name.clone(),
+                ipv6_interface.is_some(),
             )
             .await?;
 
-        interface.name = connection_info.interface_name.clone(); // Update interface name in case it was changed by the SDK
+        // Update interface name in case it was changed by the SDK
+        ipv4_interface.name = connection_info.interface_name.clone();
+        if let Some(ipv6_interface) = & mut ipv6_interface {
+            ipv6_interface.name = connection_info.interface_name.clone();
+        }
 
         Ok(ConfigInfo {
-            interface,
             interface_mtu: connection_info.mtu,
-            external_gateway,
-            dns,
+            ipv4_interface,
+            ipv6_interface,
         })
     }
 
@@ -109,26 +175,17 @@ impl NetworkManager {
         emitter: &SignalEmitter<'_>,
         config_info: ConfigInfo,
     ) -> zbus::fdo::Result<()> {
-        fn to_u32(ip: std::net::IpAddr) -> Result<u32> {
-            match ip {
-                std::net::IpAddr::V4(v4) => Ok(u32::from(v4).to_be()), // Network byte order
-                std::net::IpAddr::V6(_) => {
-                    Err(Error::InvalidState(
-                        "IPv6 addresses not yet supported".to_string(),
-                    ))
-                }
-            }
+        fn to_u32(ip: std::net::Ipv4Addr) -> Result<u32> {
+            Ok(u32::from(ip).to_be()) // Network byte order
         }
 
         Self::config(
             emitter,
             VpnConfig {
-                tundev: config_info.interface.name.clone(),
-                gateway: to_u32(config_info.external_gateway)?, // TODO LT: This needs to be replaced
-                // with a stub IP address.
-                // We will be changing the
-                // external_gateway dynamically.
+                tundev: config_info.ipv4_interface.name.clone(),
+                gateway: to_u32(NOOP_GATEWAY_IP)?,
                 has_ip4: true,
+                has_ip6: config_info.ipv6_interface.is_some(),
             },
         )
         .await?;
@@ -136,22 +193,32 @@ impl NetworkManager {
         Self::ip4_config(
             emitter,
             Ip4Config {
-                address: to_u32(config_info.interface.address)?,
-                prefix: config_info.interface.prefix,
+                address: to_u32(config_info.ipv4_interface.address)?,
+                prefix: config_info.ipv4_interface.prefix,
                 dns: config_info
+                    .ipv4_interface
                     .dns
                     .into_iter()
                     .map(to_u32)
                     .collect::<Result<Vec<u32>>>()?,
                 mtu: config_info.interface_mtu,
-                #[cfg(feature = "protun_fwmark")]
                 never_default: true,
-                #[cfg(not(feature = "protun_fwmark"))]
-                never_default: false,
-                //ignore_auto_routes: true, // TODO LT: Do we need this as well?
+                ignore_auto_routes: true,
             },
         )
         .await?;
+
+        if let Some(ipv6) = config_info.ipv6_interface {
+            Self::ip6_config(emitter, Ip6Config {
+                address: ipv6.address.octets().to_vec(),
+                prefix: ipv6.prefix,
+                dns: ipv6.dns
+                    .iter()
+                    .map(|ip| ip.octets().to_vec())
+                    .collect(),
+                never_default: true,
+            }).await?;
+        }
 
         Ok(())
     }
@@ -176,13 +243,13 @@ impl NetworkManager {
         );
 
         let params = load_connection_params_from_settings(settings)?;
-        log::info!("Using interface name: {}", params.interface.name);
+        log::info!("Using interface name: {}", params.ipv4_interface.name);
 
         self.set_state(&emitter, NMVpnServiceState::Starting)
             .await?;
 
         let config_info = self.establish_connection(params).await?;
-        log::info!("TUN interface {} created", config_info.interface.name);
+        log::info!("TUN interface {} created", config_info.ipv4_interface.name);
 
         Self::emit_nm_config(&emitter, config_info).await?; // TODO LT: SUpport ipv6 config
         log::info!("Sent Config and Ip4Config signals to NetworkManager");
@@ -254,6 +321,10 @@ impl NetworkManager {
 
         self.set_state(&emitter, NMVpnServiceState::Stopped).await?;
         log::info!("VPN disconnected");
+
+        log::info!("Service shutting down");
+
+        self.shutdown.notify_one();
 
         Ok(())
     }
@@ -329,7 +400,7 @@ impl NetworkManager {
     #[zbus(signal)]
     async fn ip6_config(
         emitter: &SignalEmitter<'_>,
-        ip6config: ConnectionSettingsSection,
+        ip6config: Ip6Config,
     ) -> zbus::Result<()>;
 
     #[zbus(signal)]
