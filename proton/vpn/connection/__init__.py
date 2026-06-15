@@ -36,7 +36,10 @@ from .interfaces import (
     VPNUserPassCredentials, Settings
 )
 
+FWMARK_VALUE = 245447468
+
 __all__ = [
     "VPNConnection", "VPNServer", "ProtocolPorts", "VPNCredentials",
-    "VPNPubkeyCredentials", "VPNUserPassCredentials", "Settings"
+    "VPNPubkeyCredentials", "VPNUserPassCredentials", "Settings",
+    "FWMARK_VALUE"
 ]

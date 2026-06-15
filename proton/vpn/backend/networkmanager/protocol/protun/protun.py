@@ -183,14 +183,12 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
             self._set_route_ipv6(NM.SettingIP6Config.new()))
 
     def _set_route_ipv4(self, ipv4_config: NM.SettingIP4Config):
-        # We set SETTING_IP4_CONFIG_METHOD_AUTO so that the network manager
-        # sets up automatic routing to the VPN server IP, to avoid routing
-        # loops.
-        #
-        # Later we'll want to replace this with fwmark which will allow protun
-        # to work with split tunneling.
         ipv4_config.set_property(NM.SETTING_IP_CONFIG_METHOD,
-                                 NM.SETTING_IP4_CONFIG_METHOD_AUTO)
+                                 NM.SETTING_IP4_CONFIG_METHOD_MANUAL)
+
+        ipv4_config.set_property(NM.SETTING_IP_CONFIG_AUTO_ROUTE_EXT_GW,
+                                 NM.Ternary.FALSE)
+
         ipv4_config.add_address(
             NM.IPAddress.new(socket.AF_INET,
                              _INTERNAL_IPV4_ADDRESS,
@@ -205,21 +203,15 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
                 NM.SETTING_IP_CONFIG_METHOD,
                 NM.SETTING_IP6_CONFIG_METHOD_MANUAL
             )
+            ipv6_config.set_property(
+                NM.SETTING_IP_CONFIG_AUTO_ROUTE_EXT_GW,
+                NM.Ternary.FALSE)
             ipv6_config.add_address(
                 NM.IPAddress.new(
                     socket.AF_INET6,
                     _INTERNAL_IPV6_ADDRESS,
                     _INTERNAL_IPV6_PREFIX
                 )
-            )
-            # Route all IPv6 traffic through our interface.
-            # Unlike IPv4, there is no routing loop risk because the server is
-            # reached over IPv4.
-            #
-            # If we dont add this, all ipv6 traffic will go through the ipv6
-            # killswitch.
-            ipv6_config.add_route(
-                NM.IPRoute.new(socket.AF_INET6, "::", 0, None, 1)
             )
         else:
             ipv6_config.set_property(
