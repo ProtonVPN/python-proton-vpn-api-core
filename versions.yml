@@ -1,3 +1,10 @@
+version: 5.3.1
+time: 2026/06/15 10:51
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "fix: We need to switch over to the wireguard killswitch for protun"
+---
 version: 5.3.0
 time: 2026/06/12 15:08
 author: Luke Titley

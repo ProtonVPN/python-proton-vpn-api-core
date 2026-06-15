@@ -95,7 +95,10 @@ class WGKillSwitch(KillSwitch):
 
     @staticmethod
     def _validate(validate_params: dict = None):
-        if not validate_params or validate_params.get("protocol") != "wireguard":
+        def is_compatible(protocol):
+            return (protocol == "wireguard" or protocol.startswith("protun-"))
+
+        if (not validate_params) or (not is_compatible(validate_params.get("protocol"))):
             return False
 
         try:
