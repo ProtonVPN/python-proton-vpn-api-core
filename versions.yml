@@ -1,3 +1,10 @@
+version: 5.3.2
+time: 2026/06/16 16:50
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "fix: Use the default killswitch for protun"
+---
 version: 5.3.1
 time: 2026/06/15 10:51
 author: Luke Titley
