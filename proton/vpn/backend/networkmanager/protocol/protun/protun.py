@@ -401,6 +401,10 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
 
     @classmethod
     def validate(cls):
+        # Protun doesn't support distributions with older versions
+        # of the network manager
+        if not hasattr(NM, "SETTING_IP_CONFIG_AUTO_ROUTE_EXT_GW"):
+            return False
         if cls.plugin_exists is None:
             cls.plugin_exists = cls._plugin_exists(cls.PLUGIN_NAME)
         return cls.plugin_exists

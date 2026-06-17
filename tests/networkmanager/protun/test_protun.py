@@ -62,10 +62,27 @@ def test_validate_returns_false_when_plugin_does_not_exist():
 
 def test_validate_returns_true_when_plugin_exists_and_module_available():
     Protun.plugin_exists = True
-    assert Protun.validate() is True
+    if is_deprecated_network_manager():
+        assert Protun.validate() is False
+    else:
+        assert Protun.validate() is True
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
+
+
+def is_deprecated_network_manager():
+    """Return true if this is a recent enough network manager version"""
+    # pylint: disable=wrong-import-position
+    import gi
+
+    gi.require_version("NM", "1.0")  # noqa: required before importing NM module
+
+    # pylint: disable=wrong-import-position
+    from gi.repository import NM
+
+    return not hasattr(NM, "SETTING_IP_CONFIG_AUTO_ROUTE_EXT_GW")
+
 
 def _make_instance(mode, directory_path="/tmp", max_bytes=512 * 1024 * 1024, protun=None):
     """Build a bare ProtunUDP instance without invoking __init__."""
