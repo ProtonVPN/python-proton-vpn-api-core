@@ -236,7 +236,18 @@ class NMClient:
         one can't be found."""
 
         best: Optional[NM.ActiveConnection] = None
-        best_metric: int = 1 << 16  # +1 larger than the largest possible value
+
+        # The metric field is a 32 bit unsigned int. So the largest possible
+        # value is (2^32) - 1.
+        # For a breakdown of each struct see
+        # https://kernelspec.blogspot.com/2014/10/zoom-into-packet-routing-in-linux-kernel.html
+        # or look at Chapter 5 (The IPv4 Routing Subsystem) of "Linux Kernel Networking"
+        # by Rami Rosen, the metric field is called fib_priority and its in
+        # the fib_info struct.
+        # Direct reference to the structure in the linux kernel codebase is
+        # here:
+        # https://github.com/torvalds/linux/blob/master/include/net/ip_fib.h#L136
+        best_metric: int = (1 << 32) - 1  # Largest/Worst possible metric
 
         def is_default_route(route):
             return route.get_dest() == "0.0.0.0" and route.get_prefix() == 0
@@ -261,6 +272,16 @@ class NMClient:
             if ip4_config is None:
                 continue
 
+            # Here we're searching for default routes only,
+            # because these are the routes that the vpn tunnel
+            # will rely on to get encrypted traffic out to the wide world.
+            #
+            # We're searching for the best default route and returning the
+            # connection associated with that.
+            #
+            # This is intended for use by wireguard based vpn plugins only.
+            # In standard wireguard routing, the default routes in the main
+            # table are the routes out of the machine.
             for route in ip4_config.get_routes():
                 if is_default_route(route):
                     metric = route.get_metric()

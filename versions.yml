@@ -1,3 +1,10 @@
+version: 5.4.1
+time: 2026/06/23 15:27
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "chore: Added missing comments"
+---
 version: 5.4.0
 time: 2026/06/22 15:44
 author: Luke Titley
