@@ -37,6 +37,16 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def supported(protocol):
+    """
+    This checks if a given protocol is supported by this killswitch, it returns
+    True if it's supported, False if not.
+    """
+
+    return (protocol is not None) and \
+           (protocol == "wireguard" or protocol.startswith("protun-"))
+
+
 class WGKillSwitch(KillSwitch):
     """
     Kill Switch implementation using NetworkManager.
@@ -95,7 +105,7 @@ class WGKillSwitch(KillSwitch):
 
     @staticmethod
     def _validate(validate_params: dict = None):
-        if not validate_params or validate_params.get("protocol") != "wireguard":
+        if not validate_params or not supported(validate_params.get("protocol")):
             return False
 
         try:

@@ -194,9 +194,16 @@ class NMClient:
         self._run_on_main_loop_thread(add_connection_async)
         return future
 
-    def start_connection_async(self, connection: NM.Connection) -> Future:
+    def start_connection_async(
+            self, connection: NM.Connection,
+            infer_parent_connection: bool = False
+    ) -> Future:
         """Starts a VPN connection asynchronously.
         :param connection: connection to be started.
+        :param infer_parent_connection: when True, the physical active connection
+        with the lowest default route metric is passed as specific_object to NM.
+        Required for VPN plugin connections (e.g. ProTun) when the kill switch
+        dummy interface would otherwise become the parent device.
         :return: Future to know when the connection has been started. Note that
         is just after the connection has started but before it is established.
         """
@@ -204,12 +211,18 @@ class NMClient:
             finish_method_name="activate_connection_finish"
         )
 
+        if infer_parent_connection:
+            physical_ac = self.find_best_parent_connection()
+            specific_object = physical_ac.get_path() if physical_ac else None
+        else:
+            specific_object = None
+
         def activate_connection_async():
             self._assert_running_on_main_loop_thread()
             self._nm_client.activate_connection_async(
                 connection,
                 None,
-                None,
+                specific_object,
                 None,
                 callback,
                 None
@@ -217,6 +230,46 @@ class NMClient:
 
         self._run_on_main_loop_thread(activate_connection_async)
         return future
+
+    def find_best_parent_connection(self) -> Optional[NM.ActiveConnection]:
+        """Find the best parent connection for a vpn connection, or None if
+        one can't be found."""
+
+        best: Optional[NM.ActiveConnection] = None
+        best_metric: int = 1 << 16  # +1 larger than the largest possible value
+
+        def is_default_route(route):
+            return route.get_dest() == "0.0.0.0" and route.get_prefix() == 0
+
+        def is_physical_connection(active_connection):
+            return active_connection.props.type in (
+                NM.SETTING_WIRED_SETTING_NAME,     # Ethernet/USB+Ethernet
+                NM.SETTING_WIRELESS_SETTING_NAME,  # Wifi
+                NM.SETTING_GSM_SETTING_NAME,       # USB+Dongle
+                NM.SETTING_CDMA_SETTING_NAME,      # USB+Dongle
+                NM.SETTING_BRIDGE_SETTING_NAME     # Bridge
+            )
+
+        for active_connection in self._nm_client.get_active_connections():
+            # Only allow physical connections
+            if not is_physical_connection(active_connection):
+                continue
+
+            # Filter based on ipv4 config, as our vpn traffic goes over ipv4,
+            # even the ipv6 traffic.
+            ip4_config = active_connection.get_ip4_config()
+            if ip4_config is None:
+                continue
+
+            for route in ip4_config.get_routes():
+                if is_default_route(route):
+                    metric = route.get_metric()
+                    if metric < best_metric:
+                        best = active_connection
+                        best_metric = metric
+                    break
+
+        return best
 
     def stop_connection_async(self, connection: NM.ActiveConnection) -> Future:
         """Stops a VPN connection asynchronously.

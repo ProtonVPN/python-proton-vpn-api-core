@@ -21,6 +21,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import asyncio
 import logging
+from concurrent.futures import Future
 from typing import Optional
 
 from proton.vpn.connection import VPNConnection, events, states
@@ -111,7 +112,7 @@ class LinuxNetworkManager(VPNConnection):
             return
 
         try:
-            future_vpn_connection = self.nm_client.start_connection_async(connection)
+            future_vpn_connection = self.start_connection_async(connection)
             vpn_connection = await loop.run_in_executor(
                 None, future_vpn_connection.result
             )
@@ -131,6 +132,11 @@ class LinuxNetworkManager(VPNConnection):
                 )
             )
             await self.remove_connection(connection)
+
+    def start_connection_async(self, connection: NM.Connection) -> Future:
+        """Starts a VPN connection via NetworkManager. Override in subclasses
+        that need to control how NM selects the parent device."""
+        return self.nm_client.start_connection_async(connection)
 
     async def stop(self, connection=None):
         """Stops the VPN connection."""

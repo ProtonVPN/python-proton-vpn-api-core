@@ -134,6 +134,14 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
         self._modify_connection()
         return self.nm_client.add_connection_async(self.connection)
 
+    def start_connection_async(self, connection: NM.Connection) -> Future:
+        """Activates the ProTun VPN plugin, explicitly passing the best physical
+        active connection as NM's specific_object. Without this, NM uses its
+        primary_connection as parent which may be the kill switch dummy device."""
+        return self.nm_client.start_connection_async(
+            connection, infer_parent_connection=True
+        )
+
     def _generate_connection(self):
         self._unique_id = str(uuid.uuid4())
         self._connection_settings = NM.SettingConnection.new()
