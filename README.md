@@ -44,28 +44,65 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+#### Rust submodule
+
+Build the Rust binary:
+
+```shell
+cargo build --features "python,core,local_agent,protun"
+```
+
+Create a symlink to the rust binary:
+
+```shell
+ln -sf ../../target/debug/libproton_vpn_platform.so proton/vpn/platform.abi3.so
+```
+
+Then install the package in editable mode:
+
+```shell
+pip install -e .
+```
+
+After each `cargo build` the symlink automatically points to the updated `.so` —
+no reinstall or re-copy needed.
+
 ### Tests
 
-You can run the tests with:
+You can run the python tests with:
 
 ```shell
 pytest
 ```
 
-# proton-vpn-linux
+# proton-vpn-platform
 
-**proton-vpn-linux** is the Rust backend for ProtonVPN's Linux client. It implements a NetworkManager VPN plugin for WireGuard-based connections (protun), a local agent communication layer, and server scoring — exposing functionality to higher-level ProtonVPN tooling via both native Rust and Python (PyO3) interfaces.
+**proton-vpn-platform** is the Rust backend for ProtonVPN's Linux client. It implements a NetworkManager VPN plugin for WireGuard-based connections (protun), a local agent communication layer, and server scoring — exposing functionality to higher-level ProtonVPN tooling via both native Rust and Python (PyO3) interfaces.
 
 # Core
 
-## Building the python extensions
+## Building
 > cargo build --features 'core,python'
+
+## Testing
+> cargo test --features 'core,python'
+
+# Local Agent
+
+## Building
+> cargo build --features 'local_agent'
+
+## Testing
+> cargo test --features 'local_agent'
 
 
 # Protun
 
 ## Building
 > cargo build --bin nm-protun-service --bin nm-protun-auth-dialog --lib --features 'protun, nm_protun_auth_dialog, python'
+
+## Testing
+> cargo test --features 'protun, nm_protun_auth_dialog, python'
 
 ## Installing
 

@@ -13,7 +13,6 @@ setup(
     author="Proton AG",
     author_email="opensource@proton.me",
     url="https://github.com/ProtonVPN/python-proton-vpn-api-core",
-    include_package_data=True,
     install_requires=[
         "proton-core", "distro", "sentry-sdk",
         "cryptography", "PyNaCl", "distro", "fido2", "packaging",
@@ -36,7 +35,7 @@ setup(
         "proton.vpn.backend.networkmanager.killswitch.default*",
         "proton.vpn.backend.networkmanager.killswitch.wireguard*",
     ]),
-    package_data={'proton.vpn': ['linux.abi3.so']},
+    package_data={'proton.vpn': ['platform.abi3.so']},
     include_package_data=True,
     entry_points={
         "proton_loader_killswitch": [

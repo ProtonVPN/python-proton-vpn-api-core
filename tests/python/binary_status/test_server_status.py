@@ -1,8 +1,8 @@
 import pytest
 import struct
 
-import proton.vpn.linux
-ServerStatus = proton.vpn.linux.core.ServerStatus
+import proton.vpn.platform
+ServerStatus = proton.vpn.platform.core.ServerStatus
 
 STATUS_TOKEN = 'kjdkjskfjkjsdfjsdkfjksd'
 

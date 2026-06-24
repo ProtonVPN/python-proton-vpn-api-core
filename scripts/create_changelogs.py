@@ -3,8 +3,10 @@
 This program generates a deb changelog file, and rpm spec file and a
 CHANGELOG.md file for this project.
 '''
+import os
 import yaml
 import devtools.versions as versions
+import package_info
 
 # The root of this repo
 ROOT = os.path.dirname(
@@ -35,9 +37,9 @@ def build():
         versions.validate_versions(versions_yml)
 
         # Make our files
-        versions.build_rpm(RPM,      versions_yml, RPM_TMPLT)
         versions.build_deb(DEB,      versions_yml, NAME)
         versions.build_mkd(MARKDOWN, versions_yml)
+
 
 if __name__ == "__main__":
     build()

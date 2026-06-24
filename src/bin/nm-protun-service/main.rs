@@ -31,7 +31,7 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 
 #[cfg(feature = "protun")]
-use proton_vpn_linux::protun::core::{
+use proton_vpn_platform::protun::core::{
     Command as ProtunCommand,
     FileWriteMode,
 };
@@ -39,7 +39,7 @@ use proton_vpn_linux::protun::core::{
 #[cfg(feature = "protun")]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    use proton_vpn_linux::protun::nm_protun_service as protun_service;
+    use proton_vpn_platform::protun::nm_protun_service as protun_service;
 
     /// ProtonVPN NetworkManager plugin
     #[derive(Parser, Debug)]
@@ -82,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             cli::run(read_config).await
         },
         Some(Command::Cli { command: CliCommand::Protun { run } }) => {
-            use proton_vpn_linux::protun::core::ConnectionManager;
+            use proton_vpn_platform::protun::core::ConnectionManager;
             ConnectionManager::new().await?.run(run).await?;
             Ok(())
         },

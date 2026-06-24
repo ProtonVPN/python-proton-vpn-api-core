@@ -48,11 +48,11 @@ from proton.vpn.backend.networkmanager.core import LinuxNetworkManager, LocalAge
 from proton.vpn.core.settings.packet_capture import PacketCaptureMode
 
 try:
-    import proton.vpn.linux.protun as proton_vpn_linux_protun
+    import proton.vpn.platform.protun as proton_vpn_platform_protun
 except ImportError:
     # The protun plugin might not be available in the environment,
     # so we handle the import error gracefully.
-    proton_vpn_linux_protun = None
+    proton_vpn_platform_protun = None
 
 
 logger = logging.getLogger(__name__)
@@ -126,7 +126,7 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
         LocalAgentMixin.__init__(self, self._user_tier)
         self._connection_settings = None
         self._protun_client = None
-        self._protun = kwargs.get("protun", proton_vpn_linux_protun)
+        self._protun = kwargs.get("protun", proton_vpn_platform_protun)
 
     def setup(self) -> Future:
         """Creates and registers the NM VPN connection."""
@@ -426,7 +426,7 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
         return self._protun_client
 
     @classmethod
-    def supports_packet_capture(cls, protun=proton_vpn_linux_protun):  # pylint: disable=W0613
+    def supports_packet_capture(cls, protun=proton_vpn_platform_protun):  # pylint: disable=W0613
         """Returns False and should be overriden by Protun protocols that support packet capture"""
         return False
 
@@ -482,7 +482,7 @@ class ProtunUDP(Protun):
         return "protun"
 
     @classmethod
-    def supports_packet_capture(cls, protun=proton_vpn_linux_protun):
+    def supports_packet_capture(cls, protun=proton_vpn_platform_protun):
         """Returns True if protun supports packet capture and is available."""
         return protun is not None
 

@@ -2,6 +2,7 @@
 set -e
 case "$1" in
     remove|purge|upgrade)
-        killall nm-protun-service || true
+        pkill -x nm-protun-service || true
         ;;
 esac
+

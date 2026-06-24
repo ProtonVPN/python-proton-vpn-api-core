@@ -25,7 +25,7 @@ from proton.vpn.connection import events, exceptions, states
 from unittest.mock import Mock, AsyncMock
 import pytest
 
-from tests.connection.test_vpnconnection import DummyVPNConnection
+from tests.python.connection.test_vpnconnection import DummyVPNConnection
 
 
 class _ProtonProtocol(DummyVPNConnection):

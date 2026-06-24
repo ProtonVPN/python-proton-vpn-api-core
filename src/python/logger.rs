@@ -24,7 +24,7 @@ use super::super::error::*;
 // Set the rust log level to something sensible but not too verbose,
 // let the python logger filter.
 const DEFAULT_LOG_LEVEL: log::Level = log::Level::Debug;
-const LOG_NAME: &str = "proton.vpn.linux";
+const LOG_NAME: &str = "proton.vpn.platform";
 const GET_LOGGER: &str = "getLogger";
 const LOGGER: &str = "logger";
 
@@ -177,7 +177,7 @@ impl log::Log for Logger {
     fn flush(&self) {}
 }
 
-/// Initialize the logger for the proton.vpn.linux, this forwards to the
+/// Initialize the logger for the proton.vpn.platform, this forwards to the
 /// python logger.
 #[pyfunction]
 pub fn init_logger(get_logger: Py<PyAny>) -> PyResult<Py<PyAny>> {

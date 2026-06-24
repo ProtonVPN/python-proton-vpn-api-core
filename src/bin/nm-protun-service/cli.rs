@@ -22,9 +22,9 @@ use std::path::PathBuf;
 
 use base64::prelude::*;
 
-use proton_vpn_linux::protun::nm_protun_service::wireguard_utils::WireguardConfig;
-use proton_vpn_linux::protun::nm_protun_service as protun_service;
-use proton_vpn_linux::protun::core::PeerInfo;
+use proton_vpn_platform::protun::nm_protun_service::wireguard_utils::WireguardConfig;
+use proton_vpn_platform::protun::nm_protun_service as protun_service;
+use proton_vpn_platform::protun::core::PeerInfo;
 
 /// Generate and print nmcli command from a WireGuard config file
 pub async fn config_to_nmcli(username: &str,

@@ -5,5 +5,5 @@ variables:
 
 include:
  - project: 'ProtonVPN/Linux/integration/ci-libraries-rust'
-   ref: protun
+   ref: ci-merge
    file: 'develop-pipeline.yml'

@@ -1,6 +1,6 @@
 def test_local_agent_python_bindings():
-    import proton.vpn.linux
-    local_agent = proton.vpn.linux.local_agent
+    import proton.vpn.platform
+    local_agent = proton.vpn.platform.local_agent
 
     assert local_agent.AgentConnection
 

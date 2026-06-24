@@ -1,7 +1,7 @@
 import pytest
 import json
 
-from proton.vpn.linux.local_agent import (
+from proton.vpn.platform.local_agent import (
     AgentConnector, PolicyAPIError, SyntaxAPIError, APIError)
 
 FEATURES = 86200

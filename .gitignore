@@ -26,3 +26,4 @@ tests/*.json
 *.pcap
 sourceme*.sh
 configs/*.conf
+proton/vpn/platform.abi3.so

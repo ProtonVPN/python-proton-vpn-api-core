@@ -28,8 +28,8 @@ pub use submodule::SubModule;
 pub(crate) use await_py::{future, await_py};
 
 #[pyo3::pymodule]
-#[pyo3(name = "linux")]
-fn py_init_linux(
+#[pyo3(name = "platform")]
+fn py_init_platform(
     py: pyo3::prelude::Python,
     m: &pyo3::prelude::Bound<'_, pyo3::prelude::PyModule>,
 ) -> pyo3::PyResult<()> {
@@ -40,13 +40,13 @@ fn py_init_linux(
     m.add_function(wrap_pyfunction!(logger::init_logger, m)?)?;
 
     #[cfg(feature = "core")]
-    m.add_import_submodule(py, &super::core::python::register(py)?, "proton.vpn.linux.core")?;
+    m.add_import_submodule(py, &super::core::python::register(py)?, "proton.vpn.platform.core")?;
 
     #[cfg(feature = "local_agent")]
-    m.add_import_submodule(py, &super::local_agent::python::register(py)?, "proton.vpn.linux.local_agent")?;
+    m.add_import_submodule(py, &super::local_agent::python::register(py)?, "proton.vpn.platform.local_agent")?;
 
     #[cfg(feature = "protun")]
-    m.add_import_submodule(py, &super::protun::python::register(py)?, "proton.vpn.linux.protun")?;
+    m.add_import_submodule(py, &super::protun::python::register(py)?, "proton.vpn.platform.protun")?;
 
     Ok(())
 }

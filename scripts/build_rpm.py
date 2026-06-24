@@ -19,7 +19,7 @@ from package_info import (get_versions, MODULE_PATH,
 import tarfile
 
 
-ROOT = f"{PROTON_VPN_NAMESPACE}-{NAME}-{VERSION}"
+ROOT = f"proton_vpn_api_core-{VERSION}"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("fedora_version")
@@ -50,8 +50,9 @@ module_path = os.path.join(BUILDROOT, install_path)
 os.makedirs(f"target/rpmbuild/{PACKAGE_NAME}/SPECS", exist_ok=True)
 os.makedirs(module_path, exist_ok=True)
 
+spec_file = f"target/rpmbuild/{PACKAGE_NAME}/SPECS/package.spec"
 devtools.versions.build_rpm(
-    f"target/rpmbuild/{PACKAGE_NAME}/SPECS/package.spec",
+    spec_file,
     get_versions(),
     SPEC_TEMPLATE,
     additional_variables={
@@ -59,8 +60,12 @@ devtools.versions.build_rpm(
         "VERSION": VERSION,
         "CPYTHON_VERSION": CPYTHON_VERSION,
         "install_path": install_path,
+        "pep_625_name": "proton_vpn_api_core",
     }
 )
+
+# Add the dependencies necessary for the build
+subprocess.run(["dnf-3", "-y", "builddep", spec_file], check=True)
 
 os.makedirs(f"{HOME}/rpmbuild/SOURCES", exist_ok=True)
 with tarfile.open(name=f"{HOME}/rpmbuild/SOURCES/{ROOT}.tar.gz",
@@ -70,8 +75,8 @@ with tarfile.open(name=f"{HOME}/rpmbuild/SOURCES/{ROOT}.tar.gz",
     archive.add("setup.py", arcname=f"{ROOT}/setup.py")
     archive.add("proton", arcname=f"{ROOT}/proton")
     archive.add("versions.yml", arcname=f"{ROOT}/versions.yml")
-    archive.add(f"target/{RUST_TRIPLET}/release/libproton_vpn_linux.so",
-                arcname=f"{ROOT}/proton/vpn/linux.abi3.so")
+    archive.add(f"target/{RUST_TRIPLET}/release/libproton_vpn_platform.so",
+                arcname=f"{ROOT}/proton/vpn/platform.abi3.so")
     archive.add(f"target/{RUST_TRIPLET}/release/nm-protun-service",
                 arcname=f"{ROOT}/nm-protun-service")
     archive.add(f"target/{RUST_TRIPLET}/release/nm-protun-auth-dialog",
@@ -81,10 +86,11 @@ with tarfile.open(name=f"{HOME}/rpmbuild/SOURCES/{ROOT}.tar.gz",
     archive.add("resources/nm-protun-service.conf",
                 arcname=f"{ROOT}/nm-protun-service.conf")
 
-subprocess.check_output(["rpmbuild", "--quiet", "-bb",
-                         "--buildroot", BUILDROOT,
-                         "--target", RPM_ARCH,
-                         f"rpmbuild/{PACKAGE_NAME}/SPECS/package.spec"],
-                        cwd="target")
+command = ["rpmbuild", "--quiet", "-bb",
+           "--buildroot", BUILDROOT,
+           "--target", RPM_ARCH,
+           f"rpmbuild/{PACKAGE_NAME}/SPECS/package.spec"]
+print("Running command: " + " ".join(command))
+subprocess.run(command, cwd="target", check=True)
 
 print(TIME)

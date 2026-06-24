@@ -7,7 +7,7 @@ export PYBUILD_NAME=protonvpn_api_core
 
 override_dh_auto_build:
 	mkdir -p proton/vpn
-	cp {{rust_triplet}}/release/libproton_vpn_linux.so proton/vpn/linux.abi3.so
+	cp {{rust_triplet}}/release/libproton_vpn_platform.so proton/vpn/platform.abi3.so
 	mkdir -p usr/libexec
 	cp {{rust_triplet}}/release/nm-protun-service usr/libexec/nm-protun-service
 	cp {{rust_triplet}}/release/nm-protun-auth-dialog usr/libexec/nm-protun-auth-dialog

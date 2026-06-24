@@ -28,7 +28,7 @@ from gi.repository import NM, GLib
 
 import pytest
 
-from tests.networkmanager.core.boilerplate import VPNServer, VPNCredentials, Settings
+from tests.python.networkmanager.core.boilerplate import VPNServer, VPNCredentials, Settings
 from proton.vpn.backend.networkmanager.core import LinuxNetworkManager
 from proton.vpn.connection.events import EventContext
 from proton.vpn.connection import states

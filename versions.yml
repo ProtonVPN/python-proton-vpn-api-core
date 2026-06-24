@@ -1,3 +1,10 @@
+version: 5.5.0
+time: 2026/07/03 12:07
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "feat: Combine with proton-vpn-linux"
+---
 version: 5.4.1
 time: 2026/06/23 15:27
 author: Luke Titley

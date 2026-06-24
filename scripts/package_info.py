@@ -13,7 +13,7 @@ import sys
 import pathlib
 # ------------------------------------------------------------------------------
 PROJECT_DIR = (pathlib.Path(__file__).parent / "..").resolve()
-NAME = 'linux'
+NAME = 'platform'
 PROTON_VPN_NAMESPACE = 'proton-vpn'
 # ------------------------------------------------------------------------------
 MODULE_PATH = PROJECT_DIR
@@ -50,7 +50,7 @@ def get_lib_path(triplet: str):
     """
 
     return os.path.join(
-        PROJECT_DIR, "target", triplet, 'release', 'libproton_vpn_linux.so'
+        PROJECT_DIR, "target", triplet, 'release', 'libproton_vpn_platform.so'
     )
 
 

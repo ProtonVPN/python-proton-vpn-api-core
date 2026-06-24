@@ -16,9 +16,7 @@ License: GPLv3
 Vendor: Proton AG <opensource@proton.me>
 URL: https://github.com/ProtonVPN/%{{unmangled_name}}
 Source0: %{{pep_625_name}}-%{{version}}.tar.gz
-# Source0: %{{unmangled_name}}-%{{version}}.tar.gz # This is from the proton-vpn-linux repo
 
-BuildArch: noarch
 BuildRoot: %{{_tmppath}}/%{{pep_625_name}}-%{{version}}-%{{release}}-buildroot
 
 BuildRequires: python3-proton-core >= 0.5.0
@@ -55,7 +53,7 @@ Requires: gobject-introspection
 Requires: python3-proton-vpn-local-agent >= 1.6.3
 Requires: python3-jinja2
 
-Conflicts: proton-vpn-gtk-app < 4.16.5~rc2
+Conflicts: proton-vpn-gtk-app < 4.17.1~rc10
 Conflicts: proton-vpn-cli < 1.0.1~rc1
 Conflicts: python3-proton-vpn-network-manager < 0.13.5
 
@@ -63,8 +61,9 @@ Obsoletes: python3-proton-vpn-session
 Obsoletes: python3-proton-vpn-connection
 Obsoletes: python3-proton-vpn-killswitch
 Obsoletes: python3-proton-vpn-logger
-Obsoletes: python3-proton-vpn-lib
 Obsoletes: python3-proton-vpn-network-manager
+Obsoletes: python3-proton-vpn-lib
+Obsoletes: proton-vpn-linux
 
 %{{?python_disable_dependency_generator}}
 
@@ -73,7 +72,6 @@ Package %{{unmangled_name}} library.
 
 %prep
 %setup -q -n %{{pep_625_name}}-%{{version}}
-# %setup -n %{{unmangled_name}}-%{{version}} -n %{{unmangled_name}}-%{{version}} # proton-vpn-linux repo
 
 %build
 python3 setup.py build
@@ -99,11 +97,6 @@ install -D -m 644 nm-protun-service.conf $RPM_BUILD_ROOT/usr/share/dbus-1/system
 %postun
 # Runs after the old package is removed.
 # Restarts the protun service.
-killall nm-protun-service || true
-
-%post
-# Runs after the new package is installed. Only required if the previous package
-# still didn't have the %postun hook to restart the protun service.
-killall nm-protun-service || true
+pkill -x nm-protun-service || true
 
 %changelog

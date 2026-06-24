@@ -1996,8 +1996,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "proton-vpn-linux"
-version = "5.4.1"
+name = "proton-vpn-netstack"
+version = "0.6.0"
+source = "sparse+https://rust.gitlab-pages.protontech.ch/shared/registry/index/"
+checksum = "fcd725b3baebb44befaf9a37e158e7cbfb044e32324469ae765c8e052755f323"
+dependencies = [
+ "derive_more 2.1.1",
+ "futures",
+ "proton-os-interface",
+ "rand_xoshiro",
+ "smoltcp",
+ "thiserror 2.0.18",
+ "tracing",
+]
+
+[[package]]
+name = "proton-vpn-platform"
+version = "5.5.0"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -2035,21 +2050,6 @@ dependencies = [
  "x509-parser",
  "zbus",
  "zvariant",
-]
-
-[[package]]
-name = "proton-vpn-netstack"
-version = "0.6.0"
-source = "sparse+https://rust.gitlab-pages.protontech.ch/shared/registry/index/"
-checksum = "fcd725b3baebb44befaf9a37e158e7cbfb044e32324469ae765c8e052755f323"
-dependencies = [
- "derive_more 2.1.1",
- "futures",
- "proton-os-interface",
- "rand_xoshiro",
- "smoltcp",
- "thiserror 2.0.18",
- "tracing",
 ]
 
 [[package]]

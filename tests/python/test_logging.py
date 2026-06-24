@@ -5,13 +5,13 @@ import json
 import logging
 import pytest
 
-import proton.vpn.linux.core
-import proton.vpn.linux.local_agent as local_agent
+import proton.vpn.platform.core
+import proton.vpn.platform.local_agent as local_agent
 
 @pytest.fixture(scope="module")
 def setup_logger():
     log_stream = io.StringIO()
-    logger = proton.vpn.linux.init_logger(logging.getLogger)
+    logger = proton.vpn.platform.init_logger(logging.getLogger)
     logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler(log_stream)
     handler.setFormatter(logging.Formatter(
@@ -39,9 +39,9 @@ async def test_logging(setup_logger):
     await agent_connection.close()
 
     expected = (
-        "INFO:proton.vpn.linux/transport_playback.rs:43:TransportPlayback::new\n"
-        "INFO:proton.vpn.linux/transport_playback.rs:73:TransportPlayback:recv() -> Response { status: Some(StatusMessage { state: Connected, reason: None, features: None, connection_details: None, features_statistics: None }), error: None }\n"
-        "INFO:proton.vpn.linux/transport_playback.rs:80:TransportPlayback:close()\n"
+        "INFO:proton.vpn.platform/transport_playback.rs:43:TransportPlayback::new\n"
+        "INFO:proton.vpn.platform/transport_playback.rs:73:TransportPlayback:recv() -> Response { status: Some(StatusMessage { state: Connected, reason: None, features: None, connection_details: None, features_statistics: None }), error: None }\n"
+        "INFO:proton.vpn.platform/transport_playback.rs:80:TransportPlayback:close()\n"
     )
 
     actual = log_output()

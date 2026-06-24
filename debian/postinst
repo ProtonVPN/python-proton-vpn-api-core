@@ -1,9 +1,0 @@
-#!/bin/sh
-set -e
-
-# This is to fix upgrade/install pre version 0.5.1 which did not stop
-# the service when being removed. This script should be removed when
-# we move to stable.
-killall nm-protun-service || true
-
-#DEBHELPER#
