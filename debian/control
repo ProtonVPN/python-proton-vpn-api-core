@@ -12,7 +12,7 @@ X-Python3-Version: >= 3.9
 
 Package: python3-proton-vpn-api-core
 Architecture: all
-Depends: ${python3:Depends}, ${misc:Depends},
+Depends: ${python3:Depends}, ${shlibs:Depends}, ${misc:Depends},
     python3-proton-core (>= 0.5.0),
     python3-distro, python3-sentry-sdk, python3-nacl,
     python3-fido2, python3-packaging,

@@ -1,0 +1,11 @@
+[VPN Connection]
+name=protun
+service=org.freedesktop.NetworkManager.protun
+program=$PWD/target/debug/nm-protun-service
+supports-multiple-connections=false
+SystemdService=nm-protun.service
+
+[GNOME]
+auth-dialog=$PWD/target/debug/nm-protun-auth-dialog
+supports-external-ui-mode=true
+supports-hints=false

@@ -22,7 +22,7 @@ setup(
     extras_require={
         "development": ["pytest", "pytest-coverage", "pylint", "flake8", "pytest-asyncio", "PyYAML"]
     },
-    packages=find_namespace_packages(include=[
+    packages=['proton', 'proton.vpn'] + find_namespace_packages(include=[
         "proton.vpn.core*",
         "proton.vpn.connection*",
         "proton.vpn.killswitch.interface*",
@@ -36,6 +36,8 @@ setup(
         "proton.vpn.backend.networkmanager.killswitch.default*",
         "proton.vpn.backend.networkmanager.killswitch.wireguard*",
     ]),
+    package_data={'proton.vpn': ['linux.abi3.so']},
+    include_package_data=True,
     entry_points={
         "proton_loader_killswitch": [
             "default = proton.vpn.backend.networkmanager.killswitch.default:NMKillSwitch",

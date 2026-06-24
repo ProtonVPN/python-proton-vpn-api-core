@@ -1,4 +1,9 @@
+variables:
+ PROJECT_NAME: "proton-vpn-api-core"
+ CARGO_REGISTRIES_PROTON_INDEX: "sparse+https://rust.gitlab-pages.protontech.ch/shared/registry/index/"
+ CARGO_HOME: $CI_PROJECT_DIR/.cargo
+
 include:
- - project: 'ProtonVPN/Linux/integration/ci-libraries'
-   ref: develop
+ - project: 'ProtonVPN/Linux/integration/ci-libraries-rust'
+   ref: protun
    file: 'develop-pipeline.yml'

@@ -16,3 +16,13 @@ venv
 package.spec
 changelog
 CHANGELOG.md
+target
+.idea
+**/*.deb
+**/*.changes
+**/*.buildinfo
+**/venv
+tests/*.json
+*.pcap
+sourceme*.sh
+configs/*.conf

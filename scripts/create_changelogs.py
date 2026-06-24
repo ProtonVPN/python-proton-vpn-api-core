@@ -2,10 +2,7 @@
 '''
 This program generates a deb changelog file, and rpm spec file and a
 CHANGELOG.md file for this project.
-
-It reads versions.yml.
 '''
-import os
 import yaml
 import devtools.versions as versions
 
@@ -41,7 +38,6 @@ def build():
         versions.build_rpm(RPM,      versions_yml, RPM_TMPLT)
         versions.build_deb(DEB,      versions_yml, NAME)
         versions.build_mkd(MARKDOWN, versions_yml)
-
 
 if __name__ == "__main__":
     build()

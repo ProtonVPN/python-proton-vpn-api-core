@@ -2,6 +2,7 @@
 %define pep_625_name proton_vpn_api_core
 %define version {version}
 %define release 1
+%define debug_package %{{nil}}
 
 Prefix: %{{_prefix}}
 
@@ -15,6 +16,8 @@ License: GPLv3
 Vendor: Proton AG <opensource@proton.me>
 URL: https://github.com/ProtonVPN/%{{unmangled_name}}
 Source0: %{{pep_625_name}}-%{{version}}.tar.gz
+# Source0: %{{unmangled_name}}-%{{version}}.tar.gz # This is from the proton-vpn-linux repo
+
 BuildArch: noarch
 BuildRoot: %{{_tmppath}}/%{{pep_625_name}}-%{{version}}-%{{release}}-buildroot
 
@@ -35,6 +38,7 @@ BuildRequires: gobject-introspection
 BuildRequires: python3-proton-vpn-local-agent >= 1.6.3
 BuildRequires: python3-jinja2
 
+Requires: python3 >= {CPYTHON_VERSION}
 Requires: python3-proton-core >= 0.5.0
 Requires: python3-distro
 Requires: python3-sentry-sdk
@@ -69,14 +73,37 @@ Package %{{unmangled_name}} library.
 
 %prep
 %setup -q -n %{{pep_625_name}}-%{{version}}
+# %setup -n %{{unmangled_name}}-%{{version}} -n %{{unmangled_name}}-%{{version}} # proton-vpn-linux repo
 
 %build
-%pyproject_wheel
+python3 setup.py build
 
 %install
-%pyproject_install
-%pyproject_save_files proton
+python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
+install -D -m 755 nm-protun-service $RPM_BUILD_ROOT/usr/libexec/nm-protun-service
+install -D -m 755 nm-protun-auth-dialog $RPM_BUILD_ROOT/usr/libexec/nm-protun-auth-dialog
+install -d $RPM_BUILD_ROOT/usr/lib/NetworkManager/VPN
+sed -e 's|program=.*|program=/usr/libexec/nm-protun-service|' \
+    -e 's|auth-dialog=.*|auth-dialog=/usr/libexec/nm-protun-auth-dialog|' \
+    nm-protun.name > $RPM_BUILD_ROOT/usr/lib/NetworkManager/VPN/nm-protun.name
+install -D -m 644 nm-protun-service.conf $RPM_BUILD_ROOT/usr/share/dbus-1/system.d/nm-protun-service.conf
 
-%files -n %{{name}} -f %{{pyproject_files}}
+
+%files -f INSTALLED_FILES
+%defattr(-,root,root)
+/usr/libexec/nm-protun-service
+/usr/libexec/nm-protun-auth-dialog
+/usr/lib/NetworkManager/VPN/nm-protun.name
+/usr/share/dbus-1/system.d/nm-protun-service.conf
+
+%postun
+# Runs after the old package is removed.
+# Restarts the protun service.
+killall nm-protun-service || true
+
+%post
+# Runs after the new package is installed. Only required if the previous package
+# still didn't have the %postun hook to restart the protun service.
+killall nm-protun-service || true
 
 %changelog
