@@ -28,6 +28,7 @@ from typing import Optional, List
 from packaging.version import Version
 
 import gi
+
 gi.require_version("NM", "1.0")
 from gi.repository import NM, GLib, Gio, GObject  # pylint: disable=C0413 # noqa: E402
 
@@ -218,9 +219,9 @@ class NMClient:
         """Returns all the active ethernet/wifi devices."""
         return [
             device for device in self._nm_client.get_devices() if (
-                device.get_device_type() in (NM.DeviceType.ETHERNET, NM.DeviceType.WIFI)
-                and device.get_state() is NM.DeviceState.ACTIVATED
-                and device.get_active_connection()  # Maybe this is redundant.
+                    device.get_device_type() in (NM.DeviceType.ETHERNET, NM.DeviceType.WIFI)
+                    and device.get_state() is NM.DeviceState.ACTIVATED
+                    and device.get_active_connection()  # Maybe this is redundant.
             )
         ]
 
@@ -431,18 +432,13 @@ class NMClient:
                         f"Error removing KS connection: {exc}"
                     ).with_traceback(exc.__traceback__)
                 )
-                return
-
-            # If the connection being removed has no active interface (e.g. an
-            # inactive/persisted profile, or one left over from a failed
-            # activation), then no "device-removed" signal will ever be emitted
-            # for it. In that case the removal is complete as soon as the
-            # connection is deleted, so resolve the future here to avoid waiting
-            # forever (and eventually timing out) for a signal that never comes.
-            if (
-                    not future_interface_removed.done()
-                    and not self._has_device_with_interface(connection.get_interface_name())
-            ):
+            #  If the connection to remove has no live device bound to it will not emit a
+            #  "device-removed" signal. Removal is completed as the connection is deleted, thus we
+            #  set the result here to avoid hanging.
+            else:
+                interface_name: str = connection.get_interface_name()
+                if self._has_named_device(interface_name) or future_interface_removed.done():
+                    return
                 future_interface_removed.set_result(None)
 
         def _on_interface_removed(_nm_client, device):
@@ -473,7 +469,7 @@ class NMClient:
 
         return future_interface_removed
 
-    def _has_device_with_interface(self, interface_name: str) -> bool:
+    def _has_named_device(self, interface_name: str) -> bool:
         """
         Returns whether NetworkManager currently has a device for the given
         interface name.
@@ -481,10 +477,12 @@ class NMClient:
         This must be called from the GLib main loop thread (e.g. from within a
         NetworkManager async callback).
         """
-        return any(
-            device.get_iface() == interface_name
-            for device in self._nm_client.get_devices()
-        )
+        for device in self._nm_client.get_devices():
+            if device.get_iface() == interface_name:
+                break
+        else:
+            return False
+        return True
 
     def get_active_connection(self, conn_id: str) -> Optional[NM.ActiveConnection]:
         """
@@ -492,6 +490,7 @@ class NMClient:
         :param conn_id: ID of the active connection.
         :return: the active connection if it was found. Otherwise, None.
         """
+
         def _get_active_connection():
             active_connections = self._nm_client.get_active_connections()
 
