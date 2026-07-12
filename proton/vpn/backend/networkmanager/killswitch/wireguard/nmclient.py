@@ -431,12 +431,28 @@ class NMClient:
                         f"Error removing KS connection: {exc}"
                     ).with_traceback(exc.__traceback__)
                 )
+                return
+
+            # If the connection being removed has no active interface (e.g. an
+            # inactive/persisted profile, or one left over from a failed
+            # activation), then no "device-removed" signal will ever be emitted
+            # for it. In that case the removal is complete as soon as the
+            # connection is deleted, so resolve the future here to avoid waiting
+            # forever (and eventually timing out) for a signal that never comes.
+            if (
+                    not future_interface_removed.done()
+                    and not self._has_device_with_interface(connection.get_interface_name())
+            ):
+                future_interface_removed.set_result(None)
 
         def _on_interface_removed(_nm_client, device):
             logger.debug(
                 f"{device.get_iface()} was removed."
             )
-            if device.get_iface() == connection.get_interface_name():
+            if (
+                    device.get_iface() == connection.get_interface_name()
+                    and not future_interface_removed.done()
+            ):
                 future_interface_removed.set_result(None)
 
         def _remove_connection_async():
@@ -456,6 +472,19 @@ class NMClient:
         self._run_on_glib_loop_thread(_remove_connection_async).result()
 
         return future_interface_removed
+
+    def _has_device_with_interface(self, interface_name: str) -> bool:
+        """
+        Returns whether NetworkManager currently has a device for the given
+        interface name.
+
+        This must be called from the GLib main loop thread (e.g. from within a
+        NetworkManager async callback).
+        """
+        return any(
+            device.get_iface() == interface_name
+            for device in self._nm_client.get_devices()
+        )
 
     def get_active_connection(self, conn_id: str) -> Optional[NM.ActiveConnection]:
         """
