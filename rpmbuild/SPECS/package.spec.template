@@ -64,8 +64,6 @@ Obsoletes: python3-proton-vpn-logger
 Obsoletes: python3-proton-vpn-network-manager
 Obsoletes: python3-proton-vpn-lib
 Obsoletes: proton-vpn-linux
-# 5.5.0 changed from noarch to arch-dependent; this forces removal of the old noarch build on upgrade.
-Obsoletes: python3-proton-vpn-api-core < 5.5.0
 
 %{{?python_disable_dependency_generator}}
 
