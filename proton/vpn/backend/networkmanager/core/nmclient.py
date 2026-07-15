@@ -250,7 +250,7 @@ class NMClient:
         best_metric: int = (1 << 32) - 1  # Largest/Worst possible metric
 
         def is_default_route(route):
-            return route.get_dest() == "0.0.0.0" and route.get_prefix() == 0
+            return route.get_dest() == "0.0.0.0" and route.get_prefix() == 0  # nosec B104
 
         def is_physical_connection(active_connection):
             return active_connection.props.type in (

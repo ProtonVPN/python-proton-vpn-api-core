@@ -2012,7 +2012,7 @@ dependencies = [
 
 [[package]]
 name = "proton-vpn-platform"
-version = "5.5.3"
+version = "5.5.4"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
