@@ -1,3 +1,10 @@
+version: 5.5.3
+time: 2026/07/15 10:38
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "fix: dnf update"
+---
 version: 5.5.2
 time: 2026/07/15 09:45
 author: Luke Titley
