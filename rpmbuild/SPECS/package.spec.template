@@ -19,6 +19,7 @@ Source0: %{{pep_625_name}}-%{{version}}.tar.gz
 
 BuildRoot: %{{_tmppath}}/%{{pep_625_name}}-%{{version}}-%{{release}}-buildroot
 
+BuildRequires: python3-devel
 BuildRequires: python3-proton-core >= 0.5.0
 BuildRequires: python3-setuptools
 BuildRequires: python3-distro
@@ -36,7 +37,6 @@ BuildRequires: gobject-introspection
 BuildRequires: python3-proton-vpn-local-agent >= 1.6.3
 BuildRequires: python3-jinja2
 
-Requires: python3 >= {CPYTHON_VERSION}
 Requires: python3-proton-core >= 0.5.0
 Requires: python3-distro
 Requires: python3-sentry-sdk
@@ -64,6 +64,8 @@ Obsoletes: python3-proton-vpn-logger
 Obsoletes: python3-proton-vpn-network-manager
 Obsoletes: python3-proton-vpn-lib
 Obsoletes: proton-vpn-linux
+# 5.5.0 changed from noarch to arch-dependent; this forces removal of the old noarch build on upgrade.
+Obsoletes: python3-proton-vpn-api-core < 5.5.6
 
 %{{?python_disable_dependency_generator}}
 
@@ -74,10 +76,12 @@ Package %{{unmangled_name}} library.
 %setup -q -n %{{pep_625_name}}-%{{version}}
 
 %build
-python3 setup.py build
+%pyproject_wheel
 
 %install
-python3 setup.py install --single-version-externally-managed -O1 --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
+%pyproject_install
+%pyproject_save_files proton
+
 install -D -m 755 nm-protun-service $RPM_BUILD_ROOT/usr/libexec/nm-protun-service
 install -D -m 755 nm-protun-auth-dialog $RPM_BUILD_ROOT/usr/libexec/nm-protun-auth-dialog
 install -d $RPM_BUILD_ROOT/usr/lib/NetworkManager/VPN
@@ -86,8 +90,7 @@ sed -e 's|program=.*|program=/usr/libexec/nm-protun-service|' \
     nm-protun.name > $RPM_BUILD_ROOT/usr/lib/NetworkManager/VPN/nm-protun.name
 install -D -m 644 nm-protun-service.conf $RPM_BUILD_ROOT/usr/share/dbus-1/system.d/nm-protun-service.conf
 
-
-%files -f INSTALLED_FILES
+%files -f %{{pyproject_files}}
 %defattr(-,root,root)
 /usr/libexec/nm-protun-service
 /usr/libexec/nm-protun-auth-dialog
