@@ -33,6 +33,7 @@ from proton.vpn.core.settings import Settings, SettingsPersistence
 from proton.vpn.core.session_holder import SessionHolder, ClientTypeMetadata
 from proton.vpn.session.dataclasses import LoginResult, BugReportForm, NPSSurveyResponse
 from proton.vpn.session.account import VPNAccount
+from proton.vpn.session.location_names_fetcher import LocationTranslations
 from proton.vpn.session import FeatureFlags
 from proton.vpn.core.usage import UsageReporting
 
@@ -269,6 +270,14 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
     def feature_flags(self) -> FeatureFlags:
         """The last feature flags fetched from the REST API."""
         return self._session_holder.session.feature_flags
+
+    async def fetch_location_names(self, locale: str) -> LocationTranslations:
+        """Fetches localized city/state."""
+        return await self._session_holder.session.fetch_location_names(locale)
+
+    def load_location_names_from_cache(self) -> LocationTranslations:
+        """Loads the cached city/state translations."""
+        return self._session_holder.session.load_location_names_from_cache()
 
     async def submit_bug_report(self, bug_report: BugReportForm):
         """

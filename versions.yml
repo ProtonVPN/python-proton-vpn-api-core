@@ -1,3 +1,10 @@
+version: 5.5.7
+time: 2026/07/17 11:57
+author: Axel Langenskiold
+email: axel.langenskiold@proton.ch
+description:
+- "feat: Translate locations in server list."
+---
 version: 5.5.6
 time: 2026/07/16 09:55
 author: Luke Titley

@@ -31,6 +31,7 @@ from proton.vpn.session.servers.server_list_fetcher import ServerListFetcher
 from proton.vpn.session.servers.server_list_fetcher import EndpointVersion
 from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.utils import rest_api_request
+from proton.vpn.session.location_names_fetcher import LocationNamesFetcher, LocationTranslations
 from proton.vpn.session.feature_flags_fetcher import FeatureFlagsFetcher, FeatureFlags
 from proton.vpn.session.notifications_fetcher import NotificationsFetcher, Notifications
 
@@ -62,12 +63,14 @@ class VPNSessionFetcher:
             client_config_fetcher: Optional[ClientConfigFetcher] = None,
             features_fetcher: Optional[FeatureFlagsFetcher] = None,
             notifications_fetcher: Optional[NotificationsFetcher] = None,
+            location_names_fetcher: Optional[LocationNamesFetcher] = None,
     ):
         self._session = session
         self._server_list_fetcher = server_list_fetcher or ServerListFetcher(session)
         self._client_config_fetcher = client_config_fetcher or ClientConfigFetcher(session)
         self._feature_flags_fetcher = features_fetcher or FeatureFlagsFetcher(session)
         self._notifications_fetcher = notifications_fetcher or NotificationsFetcher(session)
+        self._location_names_fetcher = location_names_fetcher or LocationNamesFetcher(session)
 
     async def fetch_vpn_info(self) -> VPNSettings:
         """Fetches client VPN information."""
@@ -151,6 +154,14 @@ class VPNSessionFetcher:
         """Fetches general client configuration to connect to VPN servers."""
         return await self._feature_flags_fetcher.fetch()
 
+    def load_location_names_from_cache(self) -> LocationTranslations:
+        """Loads the cached city/state name translations."""
+        return self._location_names_fetcher.load_from_cache()
+
+    async def fetch_location_names(self, locale: str) -> LocationTranslations:
+        """Fetches localized city/state names for given locale."""
+        return await self._location_names_fetcher.fetch(locale)
+
     def load_notifications_from_cache(self) -> Notifications:
         """
         Loads the previously persisted notifications.
@@ -173,6 +184,7 @@ class VPNSessionFetcher:
         self._client_config_fetcher.clear_cache()
         self._feature_flags_fetcher.clear_cache()
         self._notifications_fetcher.clear_cache()
+        self._location_names_fetcher.clear_cache()
 
     @staticmethod
     def _convert_features(features: Features):

@@ -37,6 +37,7 @@ from proton.vpn.session.dataclasses import \
     VPNLocation
 from proton.vpn.session.exceptions import VPNAccountDecodeError, ServerListDecodeError
 from proton.vpn.session.servers.logicals import ServerList
+from proton.vpn.session.location_names_fetcher import LocationTranslations
 from proton.vpn.session.feature_flags_fetcher import FeatureFlags
 from proton.vpn.session.notifications_fetcher import Notifications
 from proton.vpn.session.u2f_interaction import UserInteraction
@@ -408,6 +409,14 @@ class VPNSession(Session):
         """Fetches pull notifications."""
         self._notifications = await self._fetcher.fetch_notifications()
         return self._notifications
+
+    async def fetch_location_names(self, locale: str) -> LocationTranslations:
+        """Fetches localized location."""
+        return await self._fetcher.fetch_location_names(locale)
+
+    def load_location_names_from_cache(self) -> LocationTranslations:
+        """Loads the cached location translations."""
+        return self._fetcher.load_location_names_from_cache()
 
     @property
     def notifications(self) -> Notifications:
