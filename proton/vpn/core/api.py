@@ -47,9 +47,11 @@ logger = logging.getLogger(__name__)
 class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
     """Class exposing the Proton VPN facade."""
     def __init__(self, client_type_metadata: ClientTypeMetadata,
-                 registry: Optional[Registry] = None):
+                 registry: Optional[Registry] = None,
+                 locale: Optional[str] = None):
         self._session_holder = SessionHolder(
-            client_type_metadata=client_type_metadata
+            client_type_metadata=client_type_metadata,
+            locale=locale
         )
         self._settings_persistence = SettingsPersistence()
         self._vpn_connector = None
@@ -271,13 +273,10 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         """The last feature flags fetched from the REST API."""
         return self._session_holder.session.feature_flags
 
-    async def fetch_location_names(self, locale: str) -> LocationTranslations:
-        """Fetches localized city/state."""
-        return await self._session_holder.session.fetch_location_names(locale)
-
-    def load_location_names_from_cache(self) -> LocationTranslations:
-        """Loads the cached city/state translations."""
-        return self._session_holder.session.load_location_names_from_cache()
+    @property
+    def location_names(self) -> LocationTranslations:
+        """The last location translations fetched from the REST API."""
+        return self._session_holder.session.location_names
 
     async def submit_bug_report(self, bug_report: BugReportForm):
         """

@@ -125,6 +125,7 @@ class LogicalServer:  # pylint: disable=too-many-public-methods
 
     def __init__(self, data: Dict):
         self._data = data
+        self._location_translations = None
 
     def update(self, server_load: ServerLoad):
         """Internally updates the logical server:
@@ -235,19 +236,30 @@ class LogicalServer:  # pylint: disable=too-many-public-methods
 
     @property
     def location(self) -> str:
-        """Returns the location of the server, which is its
-        state if available, otherwise its city"""
-        return self._data.get("State") or self._data.get("City")
+        """Returns the location of the server, localized to active locale when locale
+            is set, English otherwise.
+        """
+        raw = self._data.get("State") or self._data.get("City")
+        if raw and self._location_translations:
+            return self._location_translations.translate(self.exit_country, raw)
+        return raw
+
+    def set_location_translations(self, translations):
+        """Sets the localized city/state names.
+
+        :param translations: a ``LocationTranslations``
+        """
+        self._location_translations = translations
 
     @property
     def city(self) -> str:
-        """Returns the city of the server."""
-        return self._data.get("City")
-
-    @property
-    def state(self) -> str:
-        """Returns the state of the server."""
-        return self._data.get("State")
+        """Returns the city of the server, localized to active locale when locale
+            is set, English otherwise.
+        """
+        raw = self._data.get("City")
+        if raw and self._location_translations:
+            return self._location_translations.translate(self.exit_country, raw)
+        return raw
 
     @property
     def tier(self) -> int:

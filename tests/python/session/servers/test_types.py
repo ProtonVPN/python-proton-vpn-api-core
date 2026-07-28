@@ -19,6 +19,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 from proton.vpn.session.exceptions import ServerNotFoundError
 from proton.vpn.session.servers.types import PhysicalServer, LogicalServer, ServerLoad
 from proton.vpn.session.servers.country_codes import get_country_name_by_code
+from proton.vpn.session.location_names_fetcher import LocationTranslations
 
 import pytest
 
@@ -113,13 +114,30 @@ class TestLogicalServer:
         assert server.features == []
         assert server.location == (STATE or CITY)
         assert server.city == CITY
-        assert server.state == STATE
         assert server.tier == TIER
         assert server.latitude == LAT
         assert server.longitude == LONG
         assert server.physical_servers[0].domain == PhysicalServer(MOCK_PHYSICAL).domain
         assert server.physical_servers[0].entry_ip == PhysicalServer(MOCK_PHYSICAL).entry_ip
         assert server.physical_servers[0].exit_ip == PhysicalServer(MOCK_PHYSICAL).exit_ip
+
+    def test_location_is_english_when_no_translations_set(self):
+        server = LogicalServer(MOCK_LOGICAL)
+        assert server.location == (STATE or CITY)
+
+    def test_location_uses_translations_when_set(self):
+        server = LogicalServer(MOCK_LOGICAL)
+        server.set_location_translations(LocationTranslations(
+            {"Cities": {EXITCOUNTRY: {CITY: "Toronto (traduit)"}}}
+        ))
+        assert server.location == "Toronto (traduit)"
+        # city is localized from the same translation source
+        assert server.city == "Toronto (traduit)"
+
+    def test_location_falls_back_to_english_for_unknown_translation(self):
+        server = LogicalServer(MOCK_LOGICAL)
+        server.set_location_translations(LocationTranslations({}))
+        assert server.location == (STATE or CITY)
 
     def test_update(self):
         server = LogicalServer(MOCK_LOGICAL)

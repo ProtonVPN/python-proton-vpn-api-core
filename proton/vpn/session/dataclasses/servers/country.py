@@ -104,7 +104,10 @@ class Location(ServerGroup):
 
     @property
     def name(self) -> str:
-        """Returns the location name."""
+        """Returns the location name.
+
+        Localized if locale is set, English otherwise.
+        """
         return self._name
 
     @property

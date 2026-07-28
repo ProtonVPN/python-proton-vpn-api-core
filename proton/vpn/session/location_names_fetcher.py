@@ -32,8 +32,8 @@ logger = logging.getLogger(__name__)
 
 LOCALE_HEADER = "X-PM-Locale"
 REFRESH_INTERVAL = 7 * 24 * 60 * 60  # 1 week
-LOCALE_KEY = "Locale"
 EXPIRATION_KEY = "ExpirationTime"
+CACHE_PREFIX = "location_names_"
 
 
 class LocationTranslations:  # pylint: disable=too-few-public-methods
@@ -44,6 +44,14 @@ class LocationTranslations:  # pylint: disable=too-few-public-methods
     """
     def __init__(self, api_data: dict):
         self._api_data = api_data
+
+    @property
+    def is_expired(self) -> bool:
+        """True when the cached translations' refresh interval has elapsed.
+
+        Empty translations have no expiration, so missing/removed cache is re-fetched.
+        """
+        return RefreshCalculator.get_is_expired(self._api_data.get(EXPIRATION_KEY, 0))
 
     def translate(self, country_code: str, english_name: str) -> str:
         """Localized city/state name or the English name when the translation
@@ -67,61 +75,61 @@ class LocationTranslations:  # pylint: disable=too-few-public-methods
 
 class LocationNamesFetcher:
     """Fetches and caches city/state name translations from Proton's REST API."""
-    ROUTE = "/vpn/v1/cities/names"
-    CACHE_PATH = Path(VPNExecutionEnvironment().path_cache) / "location_names.json"
 
-    def __init__(self, session: "VPNSession", cache_handler: CacheHandler = None):
+    ROUTE = "/vpn/v1/cities/names"
+    CACHE_DIR = Path(VPNExecutionEnvironment().path_cache)
+
+    def __init__(self, session: "VPNSession", cache_dir: Path = None):
         """
         :param session: session used to retrieve the location name translations.
+        :param cache_dir: directory per-locale cache files live in.
         """
-        self._translations = None
         self._session = session
-        self._cache_file = cache_handler or CacheHandler(self.CACHE_PATH)
+        self._cache_dir = Path(cache_dir or self.CACHE_DIR)
+
+    def load_from_cache(self, locale: str) -> LocationTranslations:
+        """Loads translations from the locale's cache file, or empty (English) if none."""
+        if not locale:
+            return LocationTranslations.default()
+        cache = self._cache_handler(locale).load()
+        return LocationTranslations(cache) if cache else LocationTranslations.default()
+
+    def _cache_handler(self, locale: str) -> CacheHandler:
+        return CacheHandler(self._cache_dir / f"{CACHE_PREFIX}{locale}.json")
 
     def clear_cache(self):
-        """Discards the cache."""
-        self._translations = None
-        self._cache_file.remove()
+        """Discards every cached locale."""
+        for path in self._cache_dir.glob(f"{CACHE_PREFIX}*.json"):
+            CacheHandler(path).remove()
 
     async def fetch(self, locale: str) -> LocationTranslations:
-        """Fetches city/state name translations for given locale.
+        """Returns city/state name translations for given locale.
 
-        :param locale: language tag sent as `x-pm-locale` header.
-        :returns: translations (cached or fetched).
+        Use cached translations when they exist and have not expired,
+        otherwise fetch and cache them under the locale's own file.
+
+        :param locale: catalog locale (e.g. "fr_FR"). Sent to API as
+            ``x-pm-locale`` header in tag form ("fr-FR").
+        :returns: the translations (cached or freshly fetched).
         """
-        cache = self._cache_file.load()
-        if cache and not self._is_stale(cache, locale):
-            self._translations = LocationTranslations(cache)
-            return self._translations
+        cache_handler = self._cache_handler(locale)
+        cache = cache_handler.load()
+        if cache:
+            cached = LocationTranslations(cache)
+            if not cached.is_expired:
+                return cached
 
         response = await rest_api_request(
             self._session,
             self.ROUTE,
-            additional_headers={LOCALE_HEADER: locale},
+            additional_headers={LOCALE_HEADER: self._header_locale(locale)},
         )
-        response[LOCALE_KEY] = locale
         response[EXPIRATION_KEY] = \
             RefreshCalculator.get_expiration_time(REFRESH_INTERVAL)
-        self._cache_file.save(response)
-        self._translations = LocationTranslations(response)
-        return self._translations
+        cache_handler.save(response)
+        return LocationTranslations(response)
 
     @staticmethod
-    def _is_stale(cache: dict, locale: str) -> bool:
-        """True when the cache was fetched for a different locale or
-        TTL is reached."""
-        return (
-            cache.get(LOCALE_KEY) != locale
-            or RefreshCalculator.get_is_expired(cache.get(EXPIRATION_KEY, 0))
-        )
-
-    def load_from_cache(self) -> LocationTranslations:
-        """Loads the translations from cache.
-
-        :returns: the cached translations, or empty translations (all English)
-            if no cache found.
-        """
-        cache = self._cache_file.load()
-        self._translations = \
-            LocationTranslations(cache) if cache else LocationTranslations.default()
-        return self._translations
+    def _header_locale(locale: str) -> str:
+        """The `x-pm-locale` header value for a catalog locale ("fr_FR" -> "fr-FR")."""
+        return locale.replace("_", "-")

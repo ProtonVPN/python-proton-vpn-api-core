@@ -24,7 +24,7 @@ from proton.vpn.core.refresher import VPNDataRefresher
 
 
 @pytest.mark.asyncio
-async def test_enable_schedules_all_refreshers_if_the_vpn_session_is_already_loaded():
+async def test_enable_schedules_all_refreshers_when_loaded():
     session_holder = Mock()
     scheduler = Mock()
     client_config_refresher = Mock()

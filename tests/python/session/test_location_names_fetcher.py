@@ -16,10 +16,12 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+import json
+import time
 import pytest
 
 from proton.vpn.session.location_names_fetcher import (
-    LocationNamesFetcher, LocationTranslations, LOCALE_HEADER,
+    LocationNamesFetcher, LocationTranslations, LOCALE_HEADER, EXPIRATION_KEY,
 )
 
 
@@ -36,34 +38,12 @@ class FakeSession:
         return self._response
 
 
-class FakeCache:
-    """In-memory CacheHandler."""
-    def __init__(self, data=None):
-        self.data = data
-        self.saved = None
-
-    def load(self):
-        return self.data
-
-    def save(self, newdata):
-        self.saved = newdata
-        self.data = newdata
-
-    def remove(self):
-        self.data = None
-
-
 API_RESPONSE = {
     "Code": 1000,
     "Cities": {"GB": {"London": "Londres", "Manchester": None}},
     "States": {"US": {"California": "Californie"}},
 }
 
-FRESH_CACHE = {
-    **API_RESPONSE,
-    "Locale": "fr-FR",
-    "ExpirationTime": 9999999999,
-}
 
 # ---------------------------------------------------------------------------
 # LocationTranslations
@@ -96,79 +76,102 @@ def test_translate_falls_back_to_english_when_no_translation(
     translations = LocationTranslations(API_RESPONSE)
     assert translations.translate(country_code, english_name) == english_name
 
+
+def test_default_translations_are_expired():
+    # No expiration -> always expired, so a missing cache is re-fetched.
+    assert LocationTranslations.default().is_expired is True
+
+
+def test_expired_when_expiration_in_the_past():
+    translations = LocationTranslations({**API_RESPONSE, EXPIRATION_KEY: 0})
+    assert translations.is_expired is True
+
+
+def test_not_expired_when_expiration_in_the_future():
+    future = time.time() + 3600
+    translations = LocationTranslations({**API_RESPONSE, EXPIRATION_KEY: future})
+    assert translations.is_expired is False
+
+
 # ---------------------------------------------------------------------------
 # LocationNamesFetcher.fetch
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_fetch_sends_the_requested_locale_in_the_header():
+async def test_fetch_sends_the_locale_as_a_tag_in_the_header(tmp_path):
     session = FakeSession(API_RESPONSE)
-    fetcher = LocationNamesFetcher(session, FakeCache())
+    fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
 
-    await fetcher.fetch("fr-FR")
+    await fetcher.fetch("fr_FR")
 
     assert session.requested_headers == {LOCALE_HEADER: "fr-FR"}
 
 
 @pytest.mark.asyncio
-async def test_fetch_returns_usable_translations():
-    fetcher = LocationNamesFetcher(FakeSession(API_RESPONSE), FakeCache())
+async def test_fetch_returns_usable_translations(tmp_path):
+    fetcher = LocationNamesFetcher(FakeSession(API_RESPONSE), cache_dir=tmp_path)
 
-    translations = await fetcher.fetch("fr-FR")
+    translations = await fetcher.fetch("fr_FR")
 
     assert translations.translate("GB", "London") == "Londres"
 
 
 @pytest.mark.asyncio
-async def test_fetch_caches_the_locale_and_an_expiration_time():
-    cache = FakeCache()
-    fetcher = LocationNamesFetcher(FakeSession(API_RESPONSE), cache)
+async def test_fetch_writes_a_per_locale_cache_file(tmp_path):
+    fetcher = LocationNamesFetcher(FakeSession(API_RESPONSE), cache_dir=tmp_path)
 
-    await fetcher.fetch("fr-FR")
+    await fetcher.fetch("fr_FR")
 
-    assert cache.saved["Locale"] == "fr-FR"
-    assert cache.saved["ExpirationTime"] > 0
+    assert (tmp_path / "location_names_fr_FR.json").is_file()
 
 
 @pytest.mark.asyncio
-async def test_fetch_uses_cache_without_requesting_when_fresh_and_same_locale():
+async def test_fetch_uses_cache_without_requesting_when_fresh(tmp_path):
     session = FakeSession(API_RESPONSE)
-    fetcher = LocationNamesFetcher(session, FakeCache(data=FRESH_CACHE))
+    fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
 
-    await fetcher.fetch("fr-FR")
+    await fetcher.fetch("fr_FR")     # populates the cache
+    session.requested_route = None   # forget the first request
+    await fetcher.fetch("fr_FR")     # should be served from cache
 
     assert session.requested_route is None
 
 
 @pytest.mark.asyncio
-async def test_fetch_refetches_when_locale_changed():
+async def test_fetch_refetches_when_cache_expired(tmp_path):
+    (tmp_path / "location_names_fr_FR.json").write_text(
+        json.dumps({**API_RESPONSE, "ExpirationTime": 0})
+    )
     session = FakeSession(API_RESPONSE)
-    fetcher = LocationNamesFetcher(session, FakeCache(data=FRESH_CACHE))
+    fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
 
-    await fetcher.fetch("de-DE")
-
-    assert session.requested_headers == {LOCALE_HEADER: "de-DE"}
-
-
-@pytest.mark.asyncio
-async def test_fetch_refetches_when_cache_expired():
-    session = FakeSession(API_RESPONSE)
-    expired_cache = {**FRESH_CACHE, "ExpirationTime": 0}
-    fetcher = LocationNamesFetcher(session, FakeCache(data=expired_cache))
-
-    await fetcher.fetch("fr-FR")
+    await fetcher.fetch("fr_FR")
 
     assert session.requested_route is not None
 
-# ---------------------------------------------------------------------------
-# LocationNamesFetcher.load_from_cache
-# ---------------------------------------------------------------------------
 
-def test_load_from_cache_returns_cached_translations():
-    fetcher = LocationNamesFetcher(FakeSession(None), FakeCache(data=API_RESPONSE))
-    assert fetcher.load_from_cache().translate("US", "California") == "Californie"
+@pytest.mark.asyncio
+async def test_fetch_caches_each_locale_in_its_own_file(tmp_path):
+    session = FakeSession(API_RESPONSE)
+    fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
+
+    await fetcher.fetch("fr_FR")
+    await fetcher.fetch("de_DE")
+
+    assert (tmp_path / "location_names_fr_FR.json").is_file()
+    assert (tmp_path / "location_names_de_DE.json").is_file()
+    # a previously-cached locale is still served without a new request
+    session.requested_route = None
+    await fetcher.fetch("fr_FR")
+    assert session.requested_route is None
 
 
-def test_load_from_cache_returns_english_default_when_cache_empty():
-    fetcher = LocationNamesFetcher(FakeSession(None), FakeCache(data=None))
-    assert fetcher.load_from_cache().translate("GB", "London") == "London"
+@pytest.mark.asyncio
+async def test_clear_cache_removes_every_locale_file(tmp_path):
+    fetcher = LocationNamesFetcher(FakeSession(API_RESPONSE), cache_dir=tmp_path)
+    await fetcher.fetch("fr_FR")
+    await fetcher.fetch("de_DE")
+
+    fetcher.clear_cache()
+
+    assert list(tmp_path.glob("location_names_*.json")) == []

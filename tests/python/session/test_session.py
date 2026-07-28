@@ -21,6 +21,7 @@ from os.path import basename
 from unittest.mock import AsyncMock, patch, Mock
 
 import pytest
+from proton.session.exceptions import ProtonAPINotReachable
 from proton.session.transports import TransportFactory
 
 from proton.vpn.session import VPNSession
@@ -156,6 +157,66 @@ async def test_submit_nps_response_submit_uses_submit_endpoint(nps_session, mock
 
     endpoint = mock_transport.async_api_request.call_args.args[0]
     assert endpoint == VPNSession.NPS_SURVEY_SUBMIT_ENDPOINT
+
+
+# ---------------------------------------------------------------------------
+# location translations kept in sync with the server list
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_fetch_location_names_returns_translations_for_the_locale():
+    s = VPNSession()
+    s.set_locale("fr_FR")
+    translations = Mock()
+    s._fetcher = Mock()
+    s._fetcher.fetch_location_names = AsyncMock(return_value=translations)
+
+    result = await s._fetch_location_names()
+
+    s._fetcher.fetch_location_names.assert_awaited_once_with("fr_FR")
+    assert result is translations
+
+
+@pytest.mark.asyncio
+async def test_fetch_location_names_is_a_noop_without_a_locale():
+    s = VPNSession()  # no locale set -> localization off
+    s._fetcher = Mock()
+    s._fetcher.fetch_location_names = AsyncMock()
+
+    result = await s._fetch_location_names()
+
+    s._fetcher.fetch_location_names.assert_not_awaited()
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_location_names_swallows_fetch_failures_and_keeps_english():
+    s = VPNSession()
+    s.set_locale("fr_FR")
+    s._fetcher = Mock()
+    s._fetcher.fetch_location_names = AsyncMock(
+        side_effect=ProtonAPINotReachable("no network")
+    )
+
+    # Must not raise: translations never block/break the session.
+    result = await s._fetch_location_names()
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_server_list_applies_current_translations_to_new_list():
+    s = VPNSession()
+    translations = Mock()
+    s._location_names = translations
+    s._feature_flags = Mock()  # used by the endpoint-version lookup
+    new_server_list = Mock()
+    s._fetcher = Mock()
+    s._fetcher.fetch_server_list = AsyncMock(return_value=new_server_list)
+
+    await s.fetch_server_list()
+
+    new_server_list.set_location_translations.assert_called_once_with(translations)
 
 
 @pytest.mark.asyncio

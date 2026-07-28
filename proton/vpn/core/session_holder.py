@@ -21,6 +21,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 from dataclasses import dataclass
+from functools import partial
 
 from pathlib import Path
 import platform
@@ -65,14 +66,20 @@ class SessionHolder:
 
     def __init__(
         self, client_type_metadata: ClientTypeMetadata,
-        session: VPNSession = None
+        session: VPNSession = None,
+        locale: Optional[str] = None
     ):
         self._proton_sso = ProtonSSO(
             appversion=self._get_app_version_header_value(client_type_metadata),
             user_agent=f"ProtonVPN/{client_type_metadata.version} "
                        f"(Linux; {DISTRIBUTION_ID}/{DISTRIBUTION_VERSION})"
         )
+        # SSO instantiates the session, so we bind locale into the override_class
+        # factory to get it into constructor before __setstate__ runs.
+        self._locale = locale
         self._session = session
+        if self._session is not None:
+            self._session.set_locale(self._locale)
 
     def get_session_for(self, username: str) -> VPNSession:
         """
@@ -82,7 +89,7 @@ class SessionHolder:
         """
         self._session = self._proton_sso.get_session(
             account_name=username,
-            override_class=VPNSession
+            override_class=partial(VPNSession, locale=self._locale)
         )
         return self._session
 
@@ -91,7 +98,7 @@ class SessionHolder:
         """Returns the current session object."""
         if not self._session:
             self._session = self._proton_sso.get_default_session(
-                override_class=VPNSession
+                override_class=partial(VPNSession, locale=self._locale)
             )
 
         return self._session

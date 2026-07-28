@@ -1,3 +1,10 @@
+version: 5.5.8
+time: 2026/07/22 15:37
+author: Axel Langenskiold
+email: axel.langenskiold@proton.ch
+description:
+- "fix: Translate locations, pass locale from UI."
+---
 version: 5.5.7
 time: 2026/07/17 11:57
 author: Axel Langenskiold

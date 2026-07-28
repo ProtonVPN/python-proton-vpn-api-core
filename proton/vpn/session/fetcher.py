@@ -154,10 +154,6 @@ class VPNSessionFetcher:
         """Fetches general client configuration to connect to VPN servers."""
         return await self._feature_flags_fetcher.fetch()
 
-    def load_location_names_from_cache(self) -> LocationTranslations:
-        """Loads the cached city/state name translations."""
-        return self._location_names_fetcher.load_from_cache()
-
     async def fetch_location_names(self, locale: str) -> LocationTranslations:
         """Fetches localized city/state names for given locale."""
         return await self._location_names_fetcher.fetch(locale)
@@ -169,6 +165,10 @@ class VPNSessionFetcher:
                   if none found. (triggering an immediate fetch).
         """
         return self._notifications_fetcher.load_from_cache()
+
+    def load_location_names_from_cache(self, locale: str) -> LocationTranslations:
+        """Loads the cached city/state name translations for the locale."""
+        return self._location_names_fetcher.load_from_cache(locale)
 
     async def fetch_notifications(self) -> Notifications:
         """Fetches pull notifications from the REST API."""

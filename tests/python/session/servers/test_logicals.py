@@ -28,6 +28,7 @@ from proton.vpn.session.servers.logicals import (
     sort_servers_by_country_and_location_and_enabled_and_load,
     ServerList
 )
+from proton.vpn.session.location_names_fetcher import LocationTranslations
 
 
 def _compact_features(features: List[ServerFeatureEnum]) -> ServerFeatureEnum:
@@ -127,6 +128,23 @@ def fixture_api_response() -> str:
             },
         ]
     }
+
+
+def test_set_location_translations_applies_to_every_logical(api_response: str):
+    server_list = ServerList(
+        user_tier=2,
+        logicals=[LogicalServer(ls) for ls in api_response["LogicalServers"]]
+    )
+
+    server_list.set_location_translations(LocationTranslations(
+        {"Cities": {"JP": {"Tokyo": "Tokyo (traduit)"}}}
+    ))
+
+    tokyo = next(s for s in server_list.logicals if s.exit_country == "JP")
+    other = next(s for s in server_list.logicals if s.exit_country != "JP")
+    assert tokyo.location == "Tokyo (traduit)"
+    # untranslated locations keep their English name (raw city)
+    assert other.location == other.city
 
 
 def test_server_list_get_fastest(api_response: str):

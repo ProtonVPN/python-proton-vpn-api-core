@@ -23,6 +23,9 @@ from typing import Optional
 
 from proton.session import Session, FormData, FormField
 from proton.session.api import Fido2Assertion, Fido2AssertionParameters
+from proton.session.exceptions import (
+    ProtonAPIError, ProtonAPINotReachable, ProtonAPINotAvailable
+)
 
 from proton.vpn import logging
 from proton.vpn.session.account import VPNAccount
@@ -47,7 +50,7 @@ logger = logging.getLogger(__name__)
 BINARY_SERVER_STATUS = "BinaryServerStatus"
 
 
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods,too-many-instance-attributes
 class VPNSession(Session):
     """
     Augmented Session that provides helpers to a persistent offline keyring
@@ -85,6 +88,8 @@ class VPNSession(Session):
             client_config: Optional[ClientConfig] = None,
             feature_flags: Optional[FeatureFlags] = None,
             notifications: Optional[Notifications] = None,
+            location_names: Optional[LocationTranslations] = None,
+            locale: Optional[str] = None,
             **kwargs
     ):  # pylint: disable=too-many-arguments
         self._fetcher = fetcher or VPNSessionFetcher(session=self)
@@ -102,7 +107,19 @@ class VPNSession(Session):
         self._client_config = client_config
         self._feature_flags = feature_flags
         self._notifications = notifications
+        self._location_names = location_names
+        # Locale is set by SessionHolder after construction and never
+        # serialized to the keyring.
+        self._locale = locale
         super().__init__(*args, **kwargs)
+
+    def set_locale(self, locale: Optional[str]):
+        """Sets the locale used to fetch localized location names.
+
+        Called by SessionHolder on the sessions it hands out. ``None``
+        disables localization.
+        """
+        self._locale = locale
 
     @property
     def loaded(self) -> bool:
@@ -132,6 +149,10 @@ class VPNSession(Session):
             self._client_config = self._fetcher.load_client_config_from_cache()
 
             self._notifications = self._fetcher.load_notifications_from_cache()
+
+            self._location_names = self._fetcher.load_location_names_from_cache(self._locale)
+            if self._server_list is not None:
+                self._server_list.set_location_translations(self._location_names)
 
         super().__setstate__(data)
 
@@ -228,6 +249,7 @@ class VPNSession(Session):
         self._client_config = None
         self._feature_flags = None
         self._notifications = None
+        self._location_names = None
         self._fetcher.clear_cache()
         return result
 
@@ -285,18 +307,21 @@ class VPNSession(Session):
                 else VPNSecrets()
             )
 
-            vpninfo, certificate, location, client_config = await asyncio.gather(
-                self._fetcher.fetch_vpn_info(),
-                self._fetcher.fetch_certificate(
-                    client_public_key=secrets.ed25519_pk_pem, features=features),
-                self._fetcher.fetch_location(),
-                self._fetcher.fetch_client_config(),
-            )
+            vpninfo, certificate, location, client_config, location_names = \
+                await asyncio.gather(
+                    self._fetcher.fetch_vpn_info(),
+                    self._fetcher.fetch_certificate(
+                        client_public_key=secrets.ed25519_pk_pem, features=features),
+                    self._fetcher.fetch_location(),
+                    self._fetcher.fetch_client_config(),
+                    self._fetch_location_names()
+                )
 
             self._vpn_account = VPNAccount(
                 vpninfo=vpninfo, certificate=certificate, secrets=secrets, location=location
             )
             self._client_config = client_config
+            self._location_names = location_names
 
             # The feature flags must be fetched before the server list,
             # since the server list can be fetched differently depending on
@@ -366,6 +391,7 @@ class VPNSession(Session):
         self._server_list = await self._fetcher.fetch_server_list(
             self._serverlist_endpoint_version()
         )
+        self._server_list.set_location_translations(self._location_names)
         return self._server_list
 
     @property
@@ -381,6 +407,7 @@ class VPNSession(Session):
         self._server_list = await self._fetcher.update_server_loads(
             self._serverlist_endpoint_version()
         )
+        self._server_list.set_location_translations(self._location_names)
         return self._server_list
 
     async def fetch_client_config(self) -> ClientConfig:
@@ -410,13 +437,25 @@ class VPNSession(Session):
         self._notifications = await self._fetcher.fetch_notifications()
         return self._notifications
 
-    async def fetch_location_names(self, locale: str) -> LocationTranslations:
-        """Fetches localized location."""
-        return await self._fetcher.fetch_location_names(locale)
+    async def _fetch_location_names(self) -> Optional[LocationTranslations]:
+        """Fetches the localized location names for the session locale.
 
-    def load_location_names_from_cache(self) -> LocationTranslations:
-        """Loads the cached location translations."""
-        return self._fetcher.load_location_names_from_cache()
+        :returns: the localized location names, or None when no locale is set or
+            the request failed.
+        """
+        if not self._locale:
+            return None
+
+        try:
+            return await self._fetcher.fetch_location_names(self._locale)
+        except (ProtonAPIError, ProtonAPINotReachable, ProtonAPINotAvailable):
+            logger.warning("Could not load location names, keeping English", exc_info=True)
+            return None
+
+    @property
+    def location_names(self) -> LocationTranslations:
+        """The localized location names for the last refreshed locale."""
+        return self._location_names or LocationTranslations.default()
 
     @property
     def notifications(self) -> Notifications:

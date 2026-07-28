@@ -19,6 +19,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 import pytest
 from proton.vpn.session.servers.types import LogicalServer, ServerFeatureEnum
 from proton.vpn.session.dataclasses.servers.country import Location, Country, ServerAnalysis
+from proton.vpn.session.location_names_fetcher import LocationTranslations
 
 
 COUNTRY_CODE = "AR"
@@ -114,6 +115,20 @@ class TestCountry:
         assert locations[0].name == CITIES[0]
         assert locations[1].name == CITIES[1]
         assert len(locations) == len(CITIES)
+
+    def test_location_name_is_localized_when_servers_have_translations(
+        self, non_free_logical_servers
+    ):
+        translations = LocationTranslations(
+            {"Cities": {COUNTRY_CODE: {"Buenos Aires": "Buenos Aires (traduit)"}}}
+        )
+        for server in non_free_logical_servers:
+            server.set_location_translations(translations)
+        country = Country(COUNTRY_CODE, non_free_logical_servers, group_by_location=True)
+
+        # Grouping still keys on the English name, but the displayed name is localized.
+        assert country.locations[0].name == "Buenos Aires (traduit)"
+        assert country.locations[1].name == CITIES[1]  # untranslated -> English
 
     def test_locations_are_grouped_by_state_when_state_is_present(self):
         """When servers have a State field it takes priority over City for grouping."""

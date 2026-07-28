@@ -105,6 +105,16 @@ class ServerList:  # pylint: disable=R0902, R0904
         """The internal list of logical servers."""
         return self._logicals
 
+    def set_location_translations(self, translations):
+        """Applies localized city/state names to every server, so that
+        ``LogicalServer.location`` returns the localized value.
+
+        :param translations: a ``LocationTranslations`` (or None to keep the
+            English names).
+        """
+        for logical in self._logicals:
+            logical.set_location_translations(translations)
+
     @property
     def expiration_time(self) -> float:
         """The expiration time of the server list as a unix timestamp."""
