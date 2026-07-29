@@ -74,12 +74,8 @@ class SessionHolder:
             user_agent=f"ProtonVPN/{client_type_metadata.version} "
                        f"(Linux; {DISTRIBUTION_ID}/{DISTRIBUTION_VERSION})"
         )
-        # SSO instantiates the session, so we bind locale into the override_class
-        # factory to get it into constructor before __setstate__ runs.
         self._locale = locale
         self._session = session
-        if self._session is not None:
-            self._session.set_locale(self._locale)
 
     def get_session_for(self, username: str) -> VPNSession:
         """

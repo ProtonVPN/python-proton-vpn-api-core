@@ -29,6 +29,7 @@ from proton.vpn import logging
 from proton.vpn.core.refresher.certificate_refresher import CertificateRefresher
 from proton.vpn.core.refresher.client_config_refresher import ClientConfigRefresher
 from proton.vpn.core.refresher.feature_flags_refresher import FeatureFlagsRefresher
+from proton.vpn.core.refresher.location_names_refresher import LocationNamesRefresher
 from proton.vpn.core.refresher.notifications_refresher import NotificationsRefresher
 from proton.vpn.core.refresher.scheduler import Scheduler
 from proton.vpn.core.refresher.server_list_refresher import ServerListRefresher
@@ -56,7 +57,8 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
         server_list_refresher: ServerListRefresher = None,
         certificate_refresher: CertificateRefresher = None,
         feature_flags_refresher: FeatureFlagsRefresher = None,
-        notifications_refresher: NotificationsRefresher = None
+        notifications_refresher: NotificationsRefresher = None,
+        location_names_refresher: LocationNamesRefresher = None
     ):
         self._session_holder = session_holder
         self._scheduler = scheduler
@@ -75,11 +77,15 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
         self._notifications_refresher = notifications_refresher or NotificationsRefresher(
             session_holder
         )
+        self._location_names_refresher = location_names_refresher or LocationNamesRefresher(
+            session_holder
+        )
         self._client_config_refresh_task_id = None
         self._server_list_refresher_task_id = None
         self._certificate_refresher_task_id = None
         self._feature_flags_refresher_task_id = None
         self._notifications_refresher_task_id = None
+        self._location_names_refresher_task_id = None
 
     def set_error_callback(self, error_callback: Callable[[Exception], None] = None):
         """Sets the error callback to be called when an error occurs while executing a task."""
@@ -104,6 +110,10 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
     def set_certificate_updated_callback(self, callback: Optional[Callable]):
         """Sets the callback to be called whenever the certificate is updated."""
         self._certificate_refresher.certificate_updated_callback = callback
+
+    def set_location_names_updated_callback(self, callback: Optional[Callable]):
+        """Sets the callback to be called whenever the location names are updated."""
+        self._location_names_refresher.location_names_updated_callback = callback
 
     async def get_up_to_date_server_list(self) -> ServerList:
         """
@@ -215,6 +225,9 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
         self._scheduler.cancel_task(self._notifications_refresher_task_id)
         self._notifications_refresher_task_id = None
 
+        self._scheduler.cancel_task(self._location_names_refresher_task_id)
+        self._location_names_refresher_task_id = None
+
         await self._scheduler.stop()
         logger.info(
             "VPN data refresher service disabled.",
@@ -269,6 +282,15 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
         logger.info(
             f"Next pull notification refresh scheduled in "
             f"{timedelta(seconds=self._notifications_refresher.initial_refresh_delay)}"
+        )
+
+        self._location_names_refresher_task_id = self._scheduler.run_after(
+            self._location_names_refresher.initial_refresh_delay,
+            self._location_names_refresher.refresh
+        )
+        logger.info(
+            f"Next location names refresh scheduled in "
+            f"{timedelta(seconds=self._location_names_refresher.initial_refresh_delay)}"
         )
 
         self._scheduler.start()

@@ -23,9 +23,6 @@ from typing import Optional
 
 from proton.session import Session, FormData, FormField
 from proton.session.api import Fido2Assertion, Fido2AssertionParameters
-from proton.session.exceptions import (
-    ProtonAPIError, ProtonAPINotReachable, ProtonAPINotAvailable
-)
 
 from proton.vpn import logging
 from proton.vpn.session.account import VPNAccount
@@ -108,18 +105,8 @@ class VPNSession(Session):
         self._feature_flags = feature_flags
         self._notifications = notifications
         self._location_names = location_names
-        # Locale is set by SessionHolder after construction and never
-        # serialized to the keyring.
         self._locale = locale
         super().__init__(*args, **kwargs)
-
-    def set_locale(self, locale: Optional[str]):
-        """Sets the locale used to fetch localized location names.
-
-        Called by SessionHolder on the sessions it hands out. ``None``
-        disables localization.
-        """
-        self._locale = locale
 
     @property
     def loaded(self) -> bool:
@@ -314,7 +301,7 @@ class VPNSession(Session):
                         client_public_key=secrets.ed25519_pk_pem, features=features),
                     self._fetcher.fetch_location(),
                     self._fetcher.fetch_client_config(),
-                    self._fetch_location_names()
+                    self._fetcher.fetch_location_names(self._locale)
                 )
 
             self._vpn_account = VPNAccount(
@@ -437,20 +424,10 @@ class VPNSession(Session):
         self._notifications = await self._fetcher.fetch_notifications()
         return self._notifications
 
-    async def _fetch_location_names(self) -> Optional[LocationTranslations]:
-        """Fetches the localized location names for the session locale.
-
-        :returns: the localized location names, or None when no locale is set or
-            the request failed.
-        """
-        if not self._locale:
-            return None
-
-        try:
-            return await self._fetcher.fetch_location_names(self._locale)
-        except (ProtonAPIError, ProtonAPINotReachable, ProtonAPINotAvailable):
-            logger.warning("Could not load location names, keeping English", exc_info=True)
-            return None
+    async def fetch_location_names(self) -> LocationTranslations:
+        """Fetches the localized location names for the session locale."""
+        self._location_names = await self._fetcher.fetch_location_names(self._locale)
+        return self._location_names
 
     @property
     def location_names(self) -> LocationTranslations:

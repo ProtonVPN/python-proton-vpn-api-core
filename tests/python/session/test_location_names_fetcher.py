@@ -18,10 +18,14 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import json
 import time
+from unittest.mock import AsyncMock
+
 import pytest
+from proton.session.exceptions import ProtonAPINotReachable
 
 from proton.vpn.session.location_names_fetcher import (
     LocationNamesFetcher, LocationTranslations, LOCALE_HEADER, EXPIRATION_KEY,
+    REFRESH_INTERVAL,
 )
 
 
@@ -91,6 +95,23 @@ def test_not_expired_when_expiration_in_the_future():
     future = time.time() + 3600
     translations = LocationTranslations({**API_RESPONSE, EXPIRATION_KEY: future})
     assert translations.is_expired is False
+
+
+def test_seconds_until_expiration_is_zero_when_there_is_no_cache():
+    # Empty translations have no expiration, so a refresh is due immediately.
+    assert LocationTranslations.default().seconds_until_expiration == 0
+
+
+def test_seconds_until_expiration_counts_down_to_the_expiration_time():
+    translations = LocationTranslations({**API_RESPONSE, EXPIRATION_KEY: time.time() + 3600})
+    assert 0 < translations.seconds_until_expiration <= 3600
+
+
+def test_get_refresh_interval_is_close_to_the_base_interval():
+    # RefreshCalculator applies a random deviation around the base interval.
+    assert LocationTranslations.get_refresh_interval_in_seconds() == pytest.approx(
+        REFRESH_INTERVAL, rel=0.25
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -164,6 +185,65 @@ async def test_fetch_caches_each_locale_in_its_own_file(tmp_path):
     session.requested_route = None
     await fetcher.fetch("fr_FR")
     assert session.requested_route is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_returns_english_without_a_locale(tmp_path):
+    # No locale means localization is off, so there is nothing to request.
+    session = FakeSession(API_RESPONSE)
+    fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
+
+    translations = await fetcher.fetch(None)
+
+    assert translations.translate("GB", "London") == "London"
+    assert session.requested_route is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_keeps_the_cached_translations_when_the_request_fails(tmp_path):
+    # Translated names are cosmetic, so a failure must not cost the user the
+    # names they already had, even though those are past their refresh time.
+    (tmp_path / "location_names_fr_FR.json").write_text(
+        json.dumps({**API_RESPONSE, EXPIRATION_KEY: 0})
+    )
+    session = FakeSession(API_RESPONSE)
+    session.async_api_request = AsyncMock(
+        side_effect=ProtonAPINotReachable("no network")
+    )
+    fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
+
+    translations = await fetcher.fetch("fr_FR")
+
+    assert translations.translate("GB", "London") == "Londres"
+    # Still expired, which is how the caller knows to try again.
+    assert translations.is_expired is True
+
+
+@pytest.mark.asyncio
+async def test_fetch_returns_english_when_the_request_fails_with_no_cache(tmp_path):
+    session = FakeSession(API_RESPONSE)
+    session.async_api_request = AsyncMock(
+        side_effect=ProtonAPINotReachable("no network")
+    )
+    fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
+
+    translations = await fetcher.fetch("fr_FR")
+
+    assert translations.translate("GB", "London") == "London"
+    assert translations.is_expired is True
+
+
+@pytest.mark.asyncio
+async def test_fetch_does_not_cache_a_failed_request(tmp_path):
+    session = FakeSession(API_RESPONSE)
+    session.async_api_request = AsyncMock(
+        side_effect=ProtonAPINotReachable("no network")
+    )
+    fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
+
+    await fetcher.fetch("fr_FR")
+
+    assert list(tmp_path.glob("location_names_*.json")) == []
 
 
 @pytest.mark.asyncio

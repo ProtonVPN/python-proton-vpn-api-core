@@ -164,44 +164,19 @@ async def test_submit_nps_response_submit_uses_submit_endpoint(nps_session, mock
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_fetch_location_names_returns_translations_for_the_locale():
-    s = VPNSession()
-    s.set_locale("fr_FR")
+async def test_fetch_location_names_stores_and_returns_the_new_translations():
+    s = VPNSession(locale="fr_FR")
     translations = Mock()
     s._fetcher = Mock()
     s._fetcher.fetch_location_names = AsyncMock(return_value=translations)
 
-    result = await s._fetch_location_names()
+    result = await s.fetch_location_names()
 
     s._fetcher.fetch_location_names.assert_awaited_once_with("fr_FR")
     assert result is translations
+    assert s.location_names is translations
 
 
-@pytest.mark.asyncio
-async def test_fetch_location_names_is_a_noop_without_a_locale():
-    s = VPNSession()  # no locale set -> localization off
-    s._fetcher = Mock()
-    s._fetcher.fetch_location_names = AsyncMock()
-
-    result = await s._fetch_location_names()
-
-    s._fetcher.fetch_location_names.assert_not_awaited()
-    assert result is None
-
-
-@pytest.mark.asyncio
-async def test_fetch_location_names_swallows_fetch_failures_and_keeps_english():
-    s = VPNSession()
-    s.set_locale("fr_FR")
-    s._fetcher = Mock()
-    s._fetcher.fetch_location_names = AsyncMock(
-        side_effect=ProtonAPINotReachable("no network")
-    )
-
-    # Must not raise: translations never block/break the session.
-    result = await s._fetch_location_names()
-
-    assert result is None
 
 
 @pytest.mark.asyncio

@@ -20,6 +20,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from pathlib import Path
 
+from proton.session.exceptions import (
+    ProtonAPIError, ProtonAPINotReachable, ProtonAPINotAvailable
+)
+
 from proton.utils.environment import VPNExecutionEnvironment
 from proton.vpn.session.utils import RefreshCalculator, rest_api_request
 from proton.vpn.core.cache_handler import CacheHandler
@@ -52,6 +56,18 @@ class LocationTranslations:  # pylint: disable=too-few-public-methods
         Empty translations have no expiration, so missing/removed cache is re-fetched.
         """
         return RefreshCalculator.get_is_expired(self._api_data.get(EXPIRATION_KEY, 0))
+
+    @property
+    def seconds_until_expiration(self) -> float:
+        """Seconds left until the translations should be fetched again."""
+        return RefreshCalculator.get_seconds_until_expiration(
+            self._api_data.get(EXPIRATION_KEY, 0)
+        )
+
+    @staticmethod
+    def get_refresh_interval_in_seconds() -> float:
+        """Returns the refresh interval in seconds."""
+        return RefreshCalculator(REFRESH_INTERVAL).get_refresh_interval_in_seconds()
 
     def translate(self, country_code: str, english_name: str) -> str:
         """Localized city/state name or the English name when the translation
@@ -110,20 +126,28 @@ class LocationNamesFetcher:
 
         :param locale: catalog locale (e.g. "fr_FR"). Sent to API as
             ``x-pm-locale`` header in tag form ("fr-FR").
-        :returns: the translations (cached or freshly fetched).
+        :returns: the translations. Empty (English) when no locale is set or when
+            the request failed with nothing cached.
         """
-        cache_handler = self._cache_handler(locale)
-        cache = cache_handler.load()
-        if cache:
-            cached = LocationTranslations(cache)
-            if not cached.is_expired:
-                return cached
+        if not locale:
+            return LocationTranslations.default()
 
-        response = await rest_api_request(
-            self._session,
-            self.ROUTE,
-            additional_headers={LOCALE_HEADER: self._header_locale(locale)},
-        )
+        cached = self.load_from_cache(locale)
+        if not cached.is_expired:
+            return cached
+
+        cache_handler = self._cache_handler(locale)
+        try:
+            response = await rest_api_request(
+                self._session,
+                self.ROUTE,
+                additional_headers={LOCALE_HEADER: self._header_locale(locale)},
+            )
+        except (ProtonAPIError, ProtonAPINotReachable, ProtonAPINotAvailable):
+            logger.warning("Could not fetch location names, keeping the current ones",
+                           exc_info=True)
+            return cached
+
         response[EXPIRATION_KEY] = \
             RefreshCalculator.get_expiration_time(REFRESH_INTERVAL)
         cache_handler.save(response)

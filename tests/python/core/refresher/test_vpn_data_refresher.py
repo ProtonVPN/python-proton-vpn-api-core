@@ -37,6 +37,8 @@ async def test_enable_schedules_all_refreshers_when_loaded():
     feature_flag_refresher.initial_refresh_delay = 0
     notifications_refresher = Mock()
     notifications_refresher.initial_refresh_delay = 0
+    location_names_refresher = Mock()
+    location_names_refresher.initial_refresh_delay = 0
     refresher = VPNDataRefresher(
         session_holder=session_holder,
         scheduler=scheduler,
@@ -44,7 +46,8 @@ async def test_enable_schedules_all_refreshers_when_loaded():
         server_list_refresher=server_list_refresher,
         certificate_refresher=certificate_refresher,
         feature_flags_refresher=feature_flag_refresher,
-        notifications_refresher=notifications_refresher
+        notifications_refresher=notifications_refresher,
+        location_names_refresher=location_names_refresher
     )
 
     session_holder.session.loaded = True
@@ -57,6 +60,7 @@ async def test_enable_schedules_all_refreshers_when_loaded():
         call.run_after(certificate_refresher.initial_refresh_delay, certificate_refresher.refresh),
         call.run_after(feature_flag_refresher.initial_refresh_delay, feature_flag_refresher.refresh),
         call.run_after(notifications_refresher.initial_refresh_delay, notifications_refresher.refresh),
+        call.run_after(location_names_refresher.initial_refresh_delay, location_names_refresher.refresh),
         call.start()
     ]
 
@@ -75,6 +79,8 @@ async def test_enable_fetches_vpn_session_when_not_loaded_and_then_schedules_ref
     feature_flag_refresher.initial_refresh_delay = 0
     notifications_refresher = Mock()
     notifications_refresher.initial_refresh_delay = 0
+    location_names_refresher = Mock()
+    location_names_refresher.initial_refresh_delay = 0
 
     mock_manager = Mock()
     mock_manager.session_holder = session_holder
@@ -84,6 +90,7 @@ async def test_enable_fetches_vpn_session_when_not_loaded_and_then_schedules_ref
     mock_manager.certificate_refresher = certificate_refresher
     mock_manager.feature_flag_refresher = feature_flag_refresher
     mock_manager.notifications_refresher = notifications_refresher
+    mock_manager.location_names_refresher = location_names_refresher
 
     refresher = VPNDataRefresher(
         session_holder=session_holder,
@@ -92,7 +99,8 @@ async def test_enable_fetches_vpn_session_when_not_loaded_and_then_schedules_ref
         server_list_refresher=server_list_refresher,
         certificate_refresher=certificate_refresher,
         feature_flags_refresher=feature_flag_refresher,
-        notifications_refresher=notifications_refresher
+        notifications_refresher=notifications_refresher,
+        location_names_refresher=location_names_refresher
     )
 
     session_holder.session.loaded = False
@@ -107,5 +115,6 @@ async def test_enable_fetches_vpn_session_when_not_loaded_and_then_schedules_ref
         call.scheduler.run_after(certificate_refresher.initial_refresh_delay, certificate_refresher.refresh),
         call.scheduler.run_after(feature_flag_refresher.initial_refresh_delay, feature_flag_refresher.refresh),
         call.scheduler.run_after(notifications_refresher.initial_refresh_delay, notifications_refresher.refresh),
+        call.scheduler.run_after(location_names_refresher.initial_refresh_delay, location_names_refresher.refresh),
         call.scheduler.start()
     ]
