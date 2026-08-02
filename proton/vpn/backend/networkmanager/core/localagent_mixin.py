@@ -40,9 +40,9 @@ from proton.vpn.backend.networkmanager.core.local_agent import (
 logger = logging.getLogger(__name__)
 
 TWOFA_REASON_CODES = [
-    ReasonCode.REASON_CODE_2FA_UNSPECIFIED,
-    ReasonCode.REASON_CODE_2FA_EXPIRED,
-    ReasonCode.REASON_CODE_2FA_SITUATION_CHANGED
+    ReasonCode.TWOFA_UNSPECIFIED,
+    ReasonCode.TWOFA_EXPIRED,
+    ReasonCode.TWOFA_SITUATION_CHANGED
 ]
 
 

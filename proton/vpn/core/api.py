@@ -43,7 +43,26 @@ from proton.session.api import Fido2Assertion
 
 from proton.vpn.session.u2f_interaction import UserInteraction
 
+import proton.vpn.platform.local_agent  # pylint: disable=no-name-in-module, import-error, line-too-long
+
 logger = logging.getLogger(__name__)
+
+PLATFORM_LOGGER = None
+
+
+# Initialize proton.vpn.platform and direct it to output
+# using our custom logger.
+
+def init_platform_logger(get_logger=proton.vpn.logging.getLogger):
+    """
+    Inits the logger for proton.vpn.platform
+    """
+    global PLATFORM_LOGGER  # pylint: disable=global-statement
+    if PLATFORM_LOGGER is None:
+        PLATFORM_LOGGER = proton.vpn.platform.init_logger(  # pylint: disable=no-member, line-too-long
+            get_logger
+        )
+    return PLATFORM_LOGGER
 
 
 class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
@@ -51,6 +70,9 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
     def __init__(self, client_type_metadata: ClientTypeMetadata,
                  registry: Optional[Registry] = None,
                  locale: Optional[str] = None):
+
+        init_platform_logger()
+
         self._session_holder = SessionHolder(
             client_type_metadata=client_type_metadata,
             locale=locale

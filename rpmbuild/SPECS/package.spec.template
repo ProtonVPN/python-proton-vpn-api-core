@@ -34,7 +34,6 @@ BuildRequires: NetworkManager
 BuildRequires: NetworkManager-openvpn
 BuildRequires: NetworkManager-openvpn-gnome
 BuildRequires: gobject-introspection
-BuildRequires: python3-proton-vpn-local-agent >= 1.6.3
 BuildRequires: python3-jinja2
 
 Requires: python3-proton-core >= 0.5.0
@@ -50,7 +49,6 @@ Requires: NetworkManager
 Requires: NetworkManager-openvpn
 Requires: NetworkManager-openvpn-gnome
 Requires: gobject-introspection
-Requires: python3-proton-vpn-local-agent >= 1.6.3
 Requires: python3-jinja2
 
 Conflicts: proton-vpn-gtk-app < 4.17.1~rc10
@@ -64,6 +62,7 @@ Obsoletes: python3-proton-vpn-logger
 Obsoletes: python3-proton-vpn-network-manager
 Obsoletes: python3-proton-vpn-lib
 Obsoletes: proton-vpn-linux
+Obsoletes: python3-proton-vpn-local-agent
 # 5.5.0 changed from noarch to arch-dependent; this forces removal of the old noarch build on upgrade.
 Obsoletes: python3-proton-vpn-api-core < 5.5.6
 

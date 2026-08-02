@@ -1,3 +1,10 @@
+version: 5.5.12
+time: 2026/08/05 14:03
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "chore: Move over to local agent in api.core"
+---
 version: 5.5.11
 time: 2026/08/04 11:32
 author: Luke Titley

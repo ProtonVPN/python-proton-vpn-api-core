@@ -18,7 +18,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import asyncio
 from collections.abc import Callable
-from proton.vpn.local_agent import (  # pylint: disable=no-name-in-module, import-error
+from proton.vpn.platform.local_agent import (  # pylint: disable=no-name-in-module, import-error
     Listener, AgentFeatures, Status
 )
 from proton.vpn.session.credentials import VPNPubkeyCredentials

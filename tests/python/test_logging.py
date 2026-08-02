@@ -5,13 +5,15 @@ import json
 import logging
 import pytest
 
+import proton.vpn.core.api
 import proton.vpn.platform.core
 import proton.vpn.platform.local_agent as local_agent
+
 
 @pytest.fixture(scope="module")
 def setup_logger():
     log_stream = io.StringIO()
-    logger = proton.vpn.platform.init_logger(logging.getLogger)
+    logger = proton.vpn.core.api.init_platform_logger(logging.getLogger)
     logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler(log_stream)
     handler.setFormatter(logging.Formatter(
@@ -22,6 +24,8 @@ def setup_logger():
         return log_stream.getvalue()
 
     yield logger, log_output
+
+    logger.removeHandler(handler)
 
 
 @pytest.mark.asyncio
