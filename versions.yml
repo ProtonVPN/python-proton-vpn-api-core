@@ -1,3 +1,10 @@
+version: 5.5.11
+time: 2026/08/04 11:32
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "fix: Beta detection"
+---
 version: 5.5.10
 time: 2026/07/30 11:31
 author: Elena Švilpė

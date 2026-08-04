@@ -42,17 +42,20 @@ DISTRIBUTION_ID = distro.id()
 DISTRIBUTION_VERSION = distro.version()
 
 
-def _is_beta_repo_installed() -> bool:
-    if distro.id() == "debian" or distro.like() == "debian":
-        return Path("/etc/apt/sources.list.d/protonvpn-beta.sources").is_file()
+def _is_beta_repo_installed(distro_id, distro_like, check_file_exists) -> bool:
+    if "debian" in distro_id() or "debian" in distro_like():
+        return check_file_exists("/etc/apt/sources.list.d/protonvpn-beta.sources")
 
-    if distro.id() == "fedora" or distro.like() == "fedora":
-        return Path("/etc/yum.repos.d/protonvpn-beta.repo").is_file()
+    if "fedora" in distro_id() or "fedora" in distro_like():
+        return check_file_exists("/etc/yum.repos.d/protonvpn-beta.repo")
 
     return False
 
 
-BETA_REPO_INSTALLED = _is_beta_repo_installed()
+BETA_REPO_INSTALLED = _is_beta_repo_installed(
+    distro.id, distro.like,
+    lambda path: Path(path).is_file()
+)
 
 
 @dataclass
