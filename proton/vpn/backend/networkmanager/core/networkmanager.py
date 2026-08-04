@@ -238,7 +238,14 @@ class LinuxNetworkManager(VPNConnection):
 
     @classmethod
     def validate(cls):
-        # FIX ME: This should do a validation to ensure that NM can be used
+        """Validates that NM backend can be used."""
+        nm_client = NMClient()
+        if not nm_client.is_nm_version_compatible():
+            logger.error(
+                "%s: NetworkManager version is not compatible, VPN connections may fail.",
+                cls.__name__
+            )
+            return False
         return True
 
     @classmethod

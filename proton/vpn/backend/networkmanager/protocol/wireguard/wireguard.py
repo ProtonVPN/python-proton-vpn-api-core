@@ -327,12 +327,6 @@ class Wireguard(LinuxNetworkManager, LocalAgentMixin):
         return 1
 
     @classmethod
-    def validate(cls):
-        """Determines whether the implementation is valid or not."""
-        # FIX ME: This should do a validation to ensure that NM can be used
-        return True
-
-    @classmethod
     def get_protocol_group(cls) -> str:
         """Returns the protocol group."""
         return "generic"

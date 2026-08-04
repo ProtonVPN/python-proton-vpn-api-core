@@ -21,6 +21,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import asyncio
 import copy
+import time
 from threading import Event
 from typing import Optional
 
@@ -36,6 +37,7 @@ from proton.vpn.session.account import VPNAccount
 from proton.vpn.session.location_names_fetcher import LocationTranslations
 from proton.vpn.session import FeatureFlags
 from proton.vpn.core.usage import UsageReporting
+from proton.vpn.connection.vpnconnection import VPNConnection
 
 from proton.session.api import Fido2Assertion
 
@@ -100,6 +102,17 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         self._vpn_connector.subscribe_to_certificate_updates(self.refresher)
 
         return self._vpn_connector
+
+    def validate_connection_availability(self) -> bool:
+        """Checks if at least one VPN backend is available."""
+        start_time = time.perf_counter()
+
+        result = self._registry.has_any_valid(interface=VPNConnection)
+
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+        logger.info("VPN backend startup check took %.2f ms", elapsed_ms)
+
+        return result
 
     async def load_settings(self) -> Settings:
         """

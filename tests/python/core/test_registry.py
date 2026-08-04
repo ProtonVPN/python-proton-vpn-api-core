@@ -170,3 +170,19 @@ def test_register_from_registrars_calls_each_registrar_with_registry():
 
     registrar_a.assert_called_once_with(registry)
     registrar_b.assert_called_once_with(registry)
+
+
+def test_has_any_valid_returns_false_when_only_invalid_entries_match_interface():
+    registry = Registry()
+    registry.register(_InvalidEntry)
+    registry.register(_UnrelatedEntry)  # valid, but wrong interface
+
+    assert registry.has_any_valid(_Interface) is False
+
+
+def test_has_any_valid_returns_true_when_at_least_one_valid_entry_matches_interface():
+    registry = Registry()
+    registry.register(_InvalidEntry)
+    registry.register(_HighPriorityEntry)
+
+    assert registry.has_any_valid(_Interface) is True

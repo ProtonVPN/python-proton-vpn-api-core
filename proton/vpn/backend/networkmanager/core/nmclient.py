@@ -23,6 +23,8 @@ import logging
 from concurrent.futures import Future
 from threading import Thread, Lock
 from typing import Callable, Optional
+from packaging import version
+from packaging.version import Version
 
 import gi
 gi.require_version("NM", "1.0")  # noqa: required before importing NM module
@@ -145,6 +147,45 @@ class NMClient:
 
     def __init__(self):
         self.initialize_nm_client_singleton()
+
+    def _get_nm_daemon_version(self) -> Version:
+        """
+        Gets the version of Network manager daemon running on the host system.
+        """
+        return version.parse(self._nm_client.get_version())
+
+    def _get_nm_client_version(self) -> Version:
+        """
+        Get the version of Network manager client.
+        """
+        return version.parse(f"{NM.MAJOR_VERSION}.{NM.MINOR_VERSION}.{NM.MICRO_VERSION}")
+
+    @staticmethod
+    def is_version_compatible(client_version: Version, daemon_version: Version) -> bool:
+        """
+        Checks for compatibility between network manager daemon and network manager client
+        Takes versions as arguments for testability
+        """
+
+        threshold = version.parse("1.46")
+        # Incompatible: has_autoconnect_ports=True but NM daemon version < 1.46
+        # This is the issue with snaps on hosts systems that are older than the base snap
+        if client_version >= threshold > daemon_version:
+            logger.warning(
+                "NM daemon version is %s (requires >= 1.46 when autoconnect_ports is supported)",
+                daemon_version
+            )
+            return False
+        return True
+
+    def is_nm_version_compatible(self) -> bool:
+        """
+        Checks for compatibility between running network manager daemon and network manager client.
+        """
+        return self.is_version_compatible(
+            self._get_nm_client_version(),
+            self._get_nm_daemon_version()
+        )
 
     def commit_changes_async(
             self, new_connection: NM.RemoteConnection

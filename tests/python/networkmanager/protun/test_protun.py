@@ -18,13 +18,14 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from proton.vpn.backend.networkmanager.protocol.protun.protun import (
     Protun, ProtunUDP, generate_capture_path,
 )
+from proton.vpn.backend.networkmanager.core.networkmanager import LinuxNetworkManager
 from proton.vpn.core.settings.packet_capture import PacketCaptureMode
 
 
@@ -57,15 +58,17 @@ def test_supports_packet_capture_returns_false_when_module_unavailable():
 
 def test_validate_returns_false_when_plugin_does_not_exist():
     Protun.plugin_exists = False
-    assert Protun.validate() is False
+    with patch.object(LinuxNetworkManager, "validate", return_value=True):
+        assert Protun.validate() is False
 
 
 def test_validate_returns_true_when_plugin_exists_and_module_available():
     Protun.plugin_exists = True
-    if is_deprecated_network_manager():
-        assert Protun.validate() is False
-    else:
-        assert Protun.validate() is True
+    with patch.object(LinuxNetworkManager, "validate", return_value=True):
+        if is_deprecated_network_manager():
+            assert Protun.validate() is False
+        else:
+            assert Protun.validate() is True
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────

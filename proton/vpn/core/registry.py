@@ -139,3 +139,13 @@ class Registry:
                 key=priority
             )
         )
+
+    def has_any_valid(self, interface: type) -> bool:
+        """
+        Checks if there is at least one valid entry in registry for given interface.
+        """
+        for entry_class in self._registry.values():
+            if issubclass(entry_class, interface) and entry_class.validate():
+                return True
+
+        return False
