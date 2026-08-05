@@ -1,3 +1,10 @@
+version: 5.5.13
+time: 2026/08/05 16:30
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "chore: Use ring crypto backend"
+---
 version: 5.5.12
 time: 2026/08/05 14:03
 author: Luke Titley
