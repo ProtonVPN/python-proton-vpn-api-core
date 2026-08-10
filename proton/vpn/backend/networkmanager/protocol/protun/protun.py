@@ -27,6 +27,7 @@ import json
 import socket
 import uuid
 import logging
+import os
 from concurrent.futures import Future
 from datetime import datetime
 from getpass import getuser
@@ -73,6 +74,15 @@ _INTERNAL_IPV6_DNS = "2a07:b944::2:1"
 
 _DNS_SEARCH = "~"
 _DNS_PRIORITY = -1500
+
+
+def in_a_sandbox():
+    """
+    Detects whether the current process is running in a snap or flatpak
+    sandbox.
+    Returns 'True' if it is.
+    """
+    return ("SNAP" in os.environ) or os.path.isfile("/.flatpak-info")
 
 
 def get_dns(ip_version: Union[type[IPv4Address], type[IPv6Address]]):
@@ -414,6 +424,11 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
         # Protun doesn't support distributions with older versions
         # of the network manager
         if not hasattr(NM, "SETTING_IP_CONFIG_AUTO_ROUTE_EXT_GW"):
+            return False
+        # Protun needs privileged access, it doesn't support running inside
+        # of a sandbox
+        if in_a_sandbox():
+            logger.info("Protun is not supported inside snap or flatpak")
             return False
         if cls.plugin_exists is None:
             cls.plugin_exists = cls._plugin_exists(cls.PLUGIN_NAME)
