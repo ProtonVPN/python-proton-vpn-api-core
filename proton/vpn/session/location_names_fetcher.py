@@ -34,7 +34,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-LOCALE_HEADER = "X-PM-Locale"
 REFRESH_INTERVAL = 7 * 24 * 60 * 60  # 1 week
 EXPIRATION_KEY = "ExpirationTime"
 CACHE_PREFIX = "location_names_"
@@ -103,8 +102,9 @@ class LocationNamesFetcher:
         self._session = session
         self._cache_dir = Path(cache_dir or self.CACHE_DIR)
 
-    def load_from_cache(self, locale: str) -> LocationTranslations:
+    def load_from_cache(self) -> LocationTranslations:
         """Loads translations from the locale's cache file, or empty (English) if none."""
+        locale = self._session.locale
         if not locale:
             return LocationTranslations.default()
         cache = self._cache_handler(locale).load()
@@ -118,31 +118,26 @@ class LocationNamesFetcher:
         for path in self._cache_dir.glob(f"{CACHE_PREFIX}*.json"):
             CacheHandler(path).remove()
 
-    async def fetch(self, locale: str) -> LocationTranslations:
-        """Returns city/state name translations for given locale.
+    async def fetch(self) -> LocationTranslations:
+        """Returns city/state name translations for the session locale.
 
         Use cached translations when they exist and have not expired,
         otherwise fetch and cache them under the locale's own file.
 
-        :param locale: catalog locale (e.g. "fr_FR"). Sent to API as
-            ``x-pm-locale`` header in tag form ("fr-FR").
-        :returns: the translations. Empty (English) when no locale is set or when
-            the request failed with nothing cached.
+        :returns: the translations. Empty (English) when no locale is set on the
+            session or when the request failed with nothing cached.
         """
+        locale = self._session.locale
         if not locale:
             return LocationTranslations.default()
 
-        cached = self.load_from_cache(locale)
+        cached = self.load_from_cache()
         if not cached.is_expired:
             return cached
 
         cache_handler = self._cache_handler(locale)
         try:
-            response = await rest_api_request(
-                self._session,
-                self.ROUTE,
-                additional_headers={LOCALE_HEADER: self._header_locale(locale)},
-            )
+            response = await rest_api_request(self._session, self.ROUTE)
         except (ProtonAPIError, ProtonAPINotReachable, ProtonAPINotAvailable):
             logger.warning("Could not fetch location names, keeping the current ones",
                            exc_info=True)
@@ -152,8 +147,3 @@ class LocationNamesFetcher:
             RefreshCalculator.get_expiration_time(REFRESH_INTERVAL)
         cache_handler.save(response)
         return LocationTranslations(response)
-
-    @staticmethod
-    def _header_locale(locale: str) -> str:
-        """The `x-pm-locale` header value for a catalog locale ("fr_FR" -> "fr-FR")."""
-        return locale.replace("_", "-")

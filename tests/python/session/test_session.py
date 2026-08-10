@@ -16,6 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+import logging
 import tempfile
 from os.path import basename
 from unittest.mock import AsyncMock, patch, Mock
@@ -165,14 +166,14 @@ async def test_submit_nps_response_submit_uses_submit_endpoint(nps_session, mock
 
 @pytest.mark.asyncio
 async def test_fetch_location_names_stores_and_returns_the_new_translations():
-    s = VPNSession(locale="fr_FR")
+    s = VPNSession()
     translations = Mock()
     s._fetcher = Mock()
     s._fetcher.fetch_location_names = AsyncMock(return_value=translations)
 
     result = await s.fetch_location_names()
 
-    s._fetcher.fetch_location_names.assert_awaited_once_with("fr_FR")
+    s._fetcher.fetch_location_names.assert_awaited_once_with()
     assert result is translations
     assert s.location_names is translations
 
@@ -243,3 +244,58 @@ async def test_submit_nps_response_uses_post_method(nps_session, mock_transport)
     method = mock_transport.async_api_request.call_args.args[4]
     assert method == "post"
 
+
+# ---------------------------------------------------------------------------
+# x-pm-locale header
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def build_session(mock_transport):
+    """Builds a session with an injected locale, so that these tests don't
+    depend on the environment of the machine running them."""
+    def build(locale=None):
+        session = VPNSession(locale=locale)
+        session.transport_factory = TransportFactory(lambda _: mock_transport)
+        session._vpn_account = create_mock_vpn_account()
+        return session
+    return build
+
+
+@pytest.mark.asyncio
+async def test_api_request_accepts_the_positional_arguments_of_the_base_session(
+    build_session, mock_transport
+):
+    """The base Session takes jsondata, data and additional_headers positionally,
+    so the override must keep accepting them that way."""
+    session = build_session(locale="fr_FR")
+
+    await session.async_api_request("/foo", None, None, {"x-pm-country": MOCK_COUNTRY})
+
+    additional_headers = mock_transport.async_api_request.call_args.args[3]
+    assert additional_headers == {
+        "x-pm-country": MOCK_COUNTRY,
+        "x-pm-locale": "fr-FR",
+    }
+
+
+@pytest.mark.asyncio
+async def test_api_request_omits_the_locale_header_when_no_locale_is_set(
+    build_session, mock_transport
+):
+    session = build_session(locale=None)
+
+    await session.submit_nps_response(NPSSurveyResponse())
+
+    additional_headers = mock_transport.async_api_request.call_args.args[3]
+    assert "x-pm-locale" not in additional_headers
+
+
+@pytest.mark.asyncio
+async def test_api_request_logs_the_locale_header(build_session, caplog):
+    """QA verifies this feature from the client logs."""
+    session = build_session(locale="fr_FR")
+
+    with caplog.at_level(logging.INFO):
+        await session.submit_nps_response(NPSSurveyResponse())
+
+    assert "x-pm-locale: fr-FR" in caplog.text

@@ -24,21 +24,20 @@ import pytest
 from proton.session.exceptions import ProtonAPINotReachable
 
 from proton.vpn.session.location_names_fetcher import (
-    LocationNamesFetcher, LocationTranslations, LOCALE_HEADER, EXPIRATION_KEY,
+    LocationNamesFetcher, LocationTranslations, EXPIRATION_KEY,
     REFRESH_INTERVAL,
 )
 
 
 class FakeSession:
     """Records the request, returns a canned response."""
-    def __init__(self, response):
+    def __init__(self, response, locale="fr_FR"):
         self._response = response
+        self.locale = locale
         self.requested_route = None
-        self.requested_headers = None
 
     async def async_api_request(self, route, **kwargs):
         self.requested_route = route
-        self.requested_headers = kwargs.get("additional_headers")
         return self._response
 
 
@@ -86,11 +85,6 @@ def test_default_translations_are_expired():
     assert LocationTranslations.default().is_expired is True
 
 
-def test_expired_when_expiration_in_the_past():
-    translations = LocationTranslations({**API_RESPONSE, EXPIRATION_KEY: 0})
-    assert translations.is_expired is True
-
-
 def test_not_expired_when_expiration_in_the_future():
     future = time.time() + 3600
     translations = LocationTranslations({**API_RESPONSE, EXPIRATION_KEY: future})
@@ -115,35 +109,50 @@ def test_get_refresh_interval_is_close_to_the_base_interval():
 
 
 # ---------------------------------------------------------------------------
-# LocationNamesFetcher.fetch
+# LocationNamesFetcher.load_from_cache
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
-async def test_fetch_sends_the_locale_as_a_tag_in_the_header(tmp_path):
-    session = FakeSession(API_RESPONSE)
+def test_load_from_cache_reads_the_file_of_the_session_locale(tmp_path):
+    # Both locales are cached. The session's locale picks the file, so that the
+    # names served match the locale header the session sends with every request.
+    (tmp_path / "location_names_fr_FR.json").write_text(
+        json.dumps({**API_RESPONSE, EXPIRATION_KEY: time.time() + 3600})
+    )
+    (tmp_path / "location_names_de_DE.json").write_text(json.dumps({
+        "Cities": {"GB": {"London": "London (de)"}},
+        EXPIRATION_KEY: time.time() + 3600,
+    }))
+    session = FakeSession(API_RESPONSE, locale="de_DE")
     fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
 
-    await fetcher.fetch("fr_FR")
+    translations = fetcher.load_from_cache()
 
-    assert session.requested_headers == {LOCALE_HEADER: "fr-FR"}
+    assert translations.translate("GB", "London") == "London (de)"
 
+
+# ---------------------------------------------------------------------------
+# LocationNamesFetcher.fetch
+# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_fetch_returns_usable_translations(tmp_path):
     fetcher = LocationNamesFetcher(FakeSession(API_RESPONSE), cache_dir=tmp_path)
 
-    translations = await fetcher.fetch("fr_FR")
+    translations = await fetcher.fetch()
 
     assert translations.translate("GB", "London") == "Londres"
 
 
 @pytest.mark.asyncio
 async def test_fetch_writes_a_per_locale_cache_file(tmp_path):
-    fetcher = LocationNamesFetcher(FakeSession(API_RESPONSE), cache_dir=tmp_path)
+    # A locale other than the FakeSession default, so that the file name has to
+    # come from the session rather than happening to match it.
+    session = FakeSession(API_RESPONSE, locale="de_DE")
+    fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
 
-    await fetcher.fetch("fr_FR")
+    await fetcher.fetch()
 
-    assert (tmp_path / "location_names_fr_FR.json").is_file()
+    assert (tmp_path / "location_names_de_DE.json").is_file()
 
 
 @pytest.mark.asyncio
@@ -151,9 +160,9 @@ async def test_fetch_uses_cache_without_requesting_when_fresh(tmp_path):
     session = FakeSession(API_RESPONSE)
     fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
 
-    await fetcher.fetch("fr_FR")     # populates the cache
+    await fetcher.fetch()     # populates the cache
     session.requested_route = None   # forget the first request
-    await fetcher.fetch("fr_FR")     # should be served from cache
+    await fetcher.fetch()     # should be served from cache
 
     assert session.requested_route is None
 
@@ -166,34 +175,18 @@ async def test_fetch_refetches_when_cache_expired(tmp_path):
     session = FakeSession(API_RESPONSE)
     fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
 
-    await fetcher.fetch("fr_FR")
+    await fetcher.fetch()
 
     assert session.requested_route is not None
 
 
 @pytest.mark.asyncio
-async def test_fetch_caches_each_locale_in_its_own_file(tmp_path):
-    session = FakeSession(API_RESPONSE)
-    fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
-
-    await fetcher.fetch("fr_FR")
-    await fetcher.fetch("de_DE")
-
-    assert (tmp_path / "location_names_fr_FR.json").is_file()
-    assert (tmp_path / "location_names_de_DE.json").is_file()
-    # a previously-cached locale is still served without a new request
-    session.requested_route = None
-    await fetcher.fetch("fr_FR")
-    assert session.requested_route is None
-
-
-@pytest.mark.asyncio
 async def test_fetch_returns_english_without_a_locale(tmp_path):
     # No locale means localization is off, so there is nothing to request.
-    session = FakeSession(API_RESPONSE)
+    session = FakeSession(API_RESPONSE, locale=None)
     fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
 
-    translations = await fetcher.fetch(None)
+    translations = await fetcher.fetch()
 
     assert translations.translate("GB", "London") == "London"
     assert session.requested_route is None
@@ -212,7 +205,7 @@ async def test_fetch_keeps_the_cached_translations_when_the_request_fails(tmp_pa
     )
     fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
 
-    translations = await fetcher.fetch("fr_FR")
+    translations = await fetcher.fetch()
 
     assert translations.translate("GB", "London") == "Londres"
     # Still expired, which is how the caller knows to try again.
@@ -227,7 +220,7 @@ async def test_fetch_returns_english_when_the_request_fails_with_no_cache(tmp_pa
     )
     fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
 
-    translations = await fetcher.fetch("fr_FR")
+    translations = await fetcher.fetch()
 
     assert translations.translate("GB", "London") == "London"
     assert translations.is_expired is True
@@ -241,7 +234,7 @@ async def test_fetch_does_not_cache_a_failed_request(tmp_path):
     )
     fetcher = LocationNamesFetcher(session, cache_dir=tmp_path)
 
-    await fetcher.fetch("fr_FR")
+    await fetcher.fetch()
 
     assert list(tmp_path.glob("location_names_*.json")) == []
 
@@ -249,8 +242,10 @@ async def test_fetch_does_not_cache_a_failed_request(tmp_path):
 @pytest.mark.asyncio
 async def test_clear_cache_removes_every_locale_file(tmp_path):
     fetcher = LocationNamesFetcher(FakeSession(API_RESPONSE), cache_dir=tmp_path)
-    await fetcher.fetch("fr_FR")
-    await fetcher.fetch("de_DE")
+    await fetcher.fetch()
+    await LocationNamesFetcher(
+        FakeSession(API_RESPONSE, locale="de_DE"), cache_dir=tmp_path
+    ).fetch()
 
     fetcher.clear_cache()
 

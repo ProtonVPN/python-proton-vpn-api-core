@@ -45,6 +45,7 @@ from proton.vpn.session.u2f_interaction import UserInteraction
 logger = logging.getLogger(__name__)
 
 BINARY_SERVER_STATUS = "BinaryServerStatus"
+LOCALE_HEADER = "x-pm-locale"
 
 
 # pylint: disable=too-many-public-methods,too-many-instance-attributes
@@ -109,6 +110,11 @@ class VPNSession(Session):
         super().__init__(*args, **kwargs)
 
     @property
+    def locale(self) -> Optional[str]:
+        """The locale (e.g. "fr_FR") this session requests translations in."""
+        return self._locale
+
+    @property
     def loaded(self) -> bool:
         """:returns: whether the VPN session data was already loaded or not."""
         return self._vpn_account \
@@ -137,7 +143,7 @@ class VPNSession(Session):
 
             self._notifications = self._fetcher.load_notifications_from_cache()
 
-            self._location_names = self._fetcher.load_location_names_from_cache(self._locale)
+            self._location_names = self._fetcher.load_location_names_from_cache()
             if self._server_list is not None:
                 self._server_list.set_location_translations(self._location_names)
 
@@ -226,6 +232,34 @@ class VPNSession(Session):
 
         return LoginResult(success=True, authenticated=True, twofa_required=False)
 
+    async def async_api_request(  # pylint: disable=keyword-arg-before-vararg
+            self, endpoint, jsondata=None, data=None, additional_headers=None,
+            *args, **kwargs
+    ):
+        """
+        Adds the x-pm-locale header to the API requests going through this method.
+
+        Sent on all headers, ignored when not needed. The header is omitted if no
+        locale is set.
+        """
+        # The locale is a catalog locale (e.g. "fr_FR"), sent in tag form ("fr-FR").
+        locale = self._locale.replace("_", "-") if self._locale else None
+
+        # Caller's headers unpacked last, they win on conflict.
+        additional_headers = {
+            **({LOCALE_HEADER: locale} if locale else {}),
+            **(additional_headers or {})
+        }
+
+        logger.info(
+            f"'{endpoint}'", category="api", event="request",
+            optional=f"{LOCALE_HEADER}: {locale or 'omitted'}"
+        )
+
+        return await super().async_api_request(
+            endpoint, jsondata, data, additional_headers, *args, **kwargs
+        )
+
     async def logout(self, no_condition_check=False, additional_headers=None) -> bool:
         """
         Log out and reset session data.
@@ -301,7 +335,7 @@ class VPNSession(Session):
                         client_public_key=secrets.ed25519_pk_pem, features=features),
                     self._fetcher.fetch_location(),
                     self._fetcher.fetch_client_config(),
-                    self._fetcher.fetch_location_names(self._locale)
+                    self._fetcher.fetch_location_names()
                 )
 
             self._vpn_account = VPNAccount(
@@ -426,7 +460,7 @@ class VPNSession(Session):
 
     async def fetch_location_names(self) -> LocationTranslations:
         """Fetches the localized location names for the session locale."""
-        self._location_names = await self._fetcher.fetch_location_names(self._locale)
+        self._location_names = await self._fetcher.fetch_location_names()
         return self._location_names
 
     @property
