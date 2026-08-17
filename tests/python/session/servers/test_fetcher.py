@@ -16,10 +16,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
+from unittest.mock import AsyncMock, Mock
+
 import pytest
 
-from unittest.mock import AsyncMock, Mock
-from proton.vpn.session.servers.server_list_fetcher import truncate_ip_address, ServerListFetcher, EndpointVersion
+from proton.vpn.session.servers.server_list_fetcher import (
+    EndpointVersion, ServerListFetcher, truncate_ip_address
+)
+
 
 def test_truncate_ip_replaces_last_ip_address_byte_with_a_zero():
     assert truncate_ip_address("1.2.3.4") == "1.2.3.0"
@@ -28,6 +32,7 @@ def test_truncate_ip_replaces_last_ip_address_byte_with_a_zero():
 def test_truncate_ip_raises_exception_when_ip_address_is_invalid():
     with pytest.raises(ValueError):
         truncate_ip_address("foobar")
+
 
 def build_mock_server_list(version, last_modified_time):
     if version is None:

@@ -25,11 +25,41 @@ import random
 import os as sys_os
 import json
 from dataclasses import asdict
+import zoneinfo
 import distro
 from packaging.version import Version
 from proton.vpn import logging
 
 logger = logging.getLogger(__name__)
+
+LOCALTIME_PATH = "/etc/localtime"
+
+
+def get_local_timezone(localtime_path: str = LOCALTIME_PATH) -> Optional[str]:
+    """
+    Returns the local IANA timezone name (e.g. "Europe/Zurich"), or None if it
+    can't be determined.
+
+    zoneinfo can load a zone by name but not report which one is local, and the tzdata
+    file does not contain its own name. Name only exists as the path `/etc/localtime`
+    points to, so it is read from there. Path is a symlink on supported distros.
+
+    No extra checks or third-party packages to avoid false positives. Other packages
+    read the TZ env var first, and some return ambigious timezones when nothing is
+    resolved (UTC). Wrong timezone is worse than None.
+
+    Returns the IANA timezone, None when can't be resolved.
+
+    """
+    path = sys_os.path.realpath(localtime_path)
+    for root in zoneinfo.TZPATH:
+        prefix = root + sys_os.sep
+        if path.startswith(prefix):
+            # tzdata ships copies of the whole database under posix/ and right/.
+            # Those directories are not part of the zone name.
+            return path[len(prefix):].removeprefix("posix/").removeprefix("right/")
+
+    return None
 
 
 class Serializable:  # pylint: disable=missing-class-docstring

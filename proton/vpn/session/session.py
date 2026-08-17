@@ -46,6 +46,7 @@ logger = logging.getLogger(__name__)
 
 BINARY_SERVER_STATUS = "BinaryServerStatus"
 LOCALE_HEADER = "x-pm-locale"
+TIMEZONE_HEADER = "x-pm-timezone"
 
 
 # pylint: disable=too-many-public-methods,too-many-instance-attributes
@@ -88,6 +89,7 @@ class VPNSession(Session):
             notifications: Optional[Notifications] = None,
             location_names: Optional[LocationTranslations] = None,
             locale: Optional[str] = None,
+            timezone: Optional[str] = None,
             **kwargs
     ):  # pylint: disable=too-many-arguments
         self._fetcher = fetcher or VPNSessionFetcher(session=self)
@@ -107,6 +109,7 @@ class VPNSession(Session):
         self._notifications = notifications
         self._location_names = location_names
         self._locale = locale
+        self._timezone = timezone
         super().__init__(*args, **kwargs)
 
     @property
@@ -237,10 +240,11 @@ class VPNSession(Session):
             *args, **kwargs
     ):
         """
-        Adds the x-pm-locale header to the API requests going through this method.
+        Adds the x-pm-locale and x-pm-timezone headers to the API requests going
+        through this method.
 
-        Sent on all headers, ignored when not needed. The header is omitted if no
-        locale is set.
+        Sent on all requests, ignored when not needed. Each header is omitted if
+        its value can't be resolved.
         """
         # The locale is a catalog locale (e.g. "fr_FR"), sent in tag form ("fr-FR").
         locale = self._locale.replace("_", "-") if self._locale else None
@@ -248,12 +252,14 @@ class VPNSession(Session):
         # Caller's headers unpacked last, they win on conflict.
         additional_headers = {
             **({LOCALE_HEADER: locale} if locale else {}),
+            **({TIMEZONE_HEADER: self._timezone} if self._timezone else {}),
             **(additional_headers or {})
         }
 
         logger.info(
             f"'{endpoint}'", category="api", event="request",
-            optional=f"{LOCALE_HEADER}: {locale or 'omitted'}"
+            optional=f"{LOCALE_HEADER}: {locale or 'omitted'}, "
+                     f"{TIMEZONE_HEADER}: {self._timezone or 'omitted'}"
         )
 
         return await super().async_api_request(

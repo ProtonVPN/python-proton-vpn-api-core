@@ -31,6 +31,7 @@ from proton.vpn.session.dataclasses.notifications.nps_survey_response import NPS
 
 MOCK_ISP = "Proton ISP"
 MOCK_COUNTRY = "Middle Earth"
+MOCK_TIMEZONE = "Europe/Zurich"
 
 
 def create_mock_vpn_account():
@@ -246,15 +247,15 @@ async def test_submit_nps_response_uses_post_method(nps_session, mock_transport)
 
 
 # ---------------------------------------------------------------------------
-# x-pm-locale header
+# x-pm-locale and x-pm-timezone headers
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
 def build_session(mock_transport):
-    """Builds a session with an injected locale, so that these tests don't
-    depend on the environment of the machine running them."""
-    def build(locale=None):
-        session = VPNSession(locale=locale)
+    """Builds a session with an injected locale and timezone, so that these tests
+    don't depend on the environment of the machine running them."""
+    def build(locale=None, timezone=None):
+        session = VPNSession(locale=locale, timezone=timezone)
         session.transport_factory = TransportFactory(lambda _: mock_transport)
         session._vpn_account = create_mock_vpn_account()
         return session
@@ -267,7 +268,7 @@ async def test_api_request_accepts_the_positional_arguments_of_the_base_session(
 ):
     """The base Session takes jsondata, data and additional_headers positionally,
     so the override must keep accepting them that way."""
-    session = build_session(locale="fr_FR")
+    session = build_session(locale="fr_FR", timezone=MOCK_TIMEZONE)
 
     await session.async_api_request("/foo", None, None, {"x-pm-country": MOCK_COUNTRY})
 
@@ -275,6 +276,7 @@ async def test_api_request_accepts_the_positional_arguments_of_the_base_session(
     assert additional_headers == {
         "x-pm-country": MOCK_COUNTRY,
         "x-pm-locale": "fr-FR",
+        "x-pm-timezone": MOCK_TIMEZONE,
     }
 
 
@@ -299,3 +301,26 @@ async def test_api_request_logs_the_locale_header(build_session, caplog):
         await session.submit_nps_response(NPSSurveyResponse())
 
     assert "x-pm-locale: fr-FR" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_api_request_omits_the_timezone_header_when_it_cannot_be_resolved(
+    build_session, mock_transport
+):
+    session = build_session(timezone=None)
+
+    await session.submit_nps_response(NPSSurveyResponse())
+
+    additional_headers = mock_transport.async_api_request.call_args.args[3]
+    assert "x-pm-timezone" not in additional_headers
+
+
+@pytest.mark.asyncio
+async def test_api_request_logs_the_timezone_header(build_session, caplog):
+    """QA verifies this feature from the client logs."""
+    session = build_session(timezone=MOCK_TIMEZONE)
+
+    with caplog.at_level(logging.INFO):
+        await session.submit_nps_response(NPSSurveyResponse())
+
+    assert f"x-pm-timezone: {MOCK_TIMEZONE}" in caplog.text

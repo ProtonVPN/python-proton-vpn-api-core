@@ -1,3 +1,10 @@
+version: 5.5.17
+time: 2026/08/17 11:24
+author: Axel Langenskiold
+email: axel.langenskiold@proton.ch
+description:
+- "feat: Add x-pm-timezone header to API calls."
+---
 version: 5.5.16
 time: 2026/08/17 07:27
 author: Elena Svilpe

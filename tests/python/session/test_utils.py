@@ -1,6 +1,23 @@
 import pytest
 
-from proton.vpn.session.utils import to_semver_build_metadata_format, semver_from_pep440
+from proton.vpn.session.utils import (
+    to_semver_build_metadata_format, semver_from_pep440, get_local_timezone
+)
+
+
+@pytest.mark.parametrize("localtime_path, expected_timezone", [
+    ("/usr/share/zoneinfo/Europe/Zurich", "Europe/Zurich"),
+    # tzdata ships duplicates of the database under these subdirectories.
+    # They are not part of the zone name.
+    ("/usr/share/zoneinfo/posix/Europe/Zurich", "Europe/Zurich"),
+    ("/usr/share/zoneinfo/right/Europe/Zurich", "Europe/Zurich"),
+    # Not a path into the zoneinfo database at all.
+    ("/dev/null", None),
+])
+def test_get_local_timezone_extracts_the_zone_name_from_the_localtime_path(
+    localtime_path, expected_timezone
+):
+    assert get_local_timezone(localtime_path) == expected_timezone
 
 
 @pytest.mark.parametrize("input,expected_output", [

@@ -33,7 +33,9 @@ from proton.sso import ProtonSSO
 from proton.vpn import logging
 from proton.vpn.connection import VPNCredentials
 from proton.vpn.session import VPNSession
-from proton.vpn.session.utils import to_semver_build_metadata_format, get_core_api_semver_version
+from proton.vpn.session.utils import (
+    to_semver_build_metadata_format, get_core_api_semver_version, get_local_timezone
+)
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +80,7 @@ class SessionHolder:
                        f"(Linux; {DISTRIBUTION_ID}/{DISTRIBUTION_VERSION})"
         )
         self._locale = locale
+        self._timezone = get_local_timezone()
         self._session = session
 
     def get_session_for(self, username: str) -> VPNSession:
@@ -88,7 +91,7 @@ class SessionHolder:
         """
         self._session = self._proton_sso.get_session(
             account_name=username,
-            override_class=partial(VPNSession, locale=self._locale)
+            override_class=partial(VPNSession, locale=self._locale, timezone=self._timezone)
         )
         return self._session
 
@@ -97,7 +100,7 @@ class SessionHolder:
         """Returns the current session object."""
         if not self._session:
             self._session = self._proton_sso.get_default_session(
-                override_class=partial(VPNSession, locale=self._locale)
+                override_class=partial(VPNSession, locale=self._locale, timezone=self._timezone)
             )
 
         return self._session
