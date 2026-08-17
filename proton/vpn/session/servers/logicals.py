@@ -43,7 +43,7 @@ class PersistenceKeys(Enum):
     LOADS_EXPIRATION_TIME = "LoadsExpirationTime"
     LAST_MODIFIED_TIME = "LastModifiedTime"
     USER_TIER = "MaxTier"
-    STATUS_TOKEN = "StatusToken"  # nosec B105
+    STATUS_TOKEN = "StatusID"  # nosec B105
 
 
 class ServerList:  # pylint: disable=R0902, R0904
@@ -150,6 +150,11 @@ class ServerList:  # pylint: disable=R0902, R0904
     def status_token(self) -> Optional[str]:
         """The token used to recover the status endpoint"""
         return self._status_token
+
+    @property
+    def version(self) -> int:
+        """Cached server list version based on if it has v2 status token"""
+        return 1 if self._status_token is None else 2
 
     def update(self, server_loads: List[ServerLoad]):
         """Updates the server list with new server loads."""

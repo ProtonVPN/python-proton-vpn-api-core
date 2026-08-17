@@ -1,3 +1,10 @@
+version: 5.5.16
+time: 2026/08/17 07:27
+author: Elena Svilpe
+email: elena.svilpe@proton.ch
+description:
+- "fix: transition between v1/v2 logicals"
+---
 version: 5.5.15
 time: 2026/08/10 14:23
 author: Luke Titley
