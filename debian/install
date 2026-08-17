@@ -2,3 +2,6 @@ usr/libexec/nm-protun-service  usr/libexec/
 usr/libexec/nm-protun-auth-dialog  usr/libexec/
 nm-protun.name  usr/lib/NetworkManager/VPN/
 nm-protun-service.conf  usr/share/dbus-1/system.d/
+usr/libexec/proton-vpn-kill-switch-service  usr/libexec/
+me.proton.vpn.kill_switch.conf  usr/share/dbus-1/system.d/
+me.proton.vpn.kill_switch.service  usr/share/dbus-1/system-services/

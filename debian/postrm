@@ -2,7 +2,12 @@
 set -e
 case "$1" in
     remove|purge|upgrade)
-        pkill -x nm-protun-service || true
+        # prerm calls Disable, which D-Bus activates the service, so it is
+        # always running at this point. Left alone it would keep running with a
+        # deleted binary and keep owning me.proton.vpn.kill_switch, blocking
+        # activation of a reinstalled one. -f because the name exceeds the
+        # 15 character limit that -x matches against.
+        pkill -f "^/usr/libexec/proton-vpn-kill-switch-service" || true
         ;;
 esac
 

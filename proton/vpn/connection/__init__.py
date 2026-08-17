@@ -36,6 +36,8 @@ from .interfaces import (
     VPNUserPassCredentials, Settings
 )
 
+# TODO: duplicates proton_vpn_platform::FWMARK  # pylint: disable=fixme
+# A test pins the two together.
 FWMARK_VALUE = 245447468
 
 __all__ = [

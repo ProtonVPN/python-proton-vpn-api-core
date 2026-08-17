@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2025 Proton AG
+// Copyright (c) 2026 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -16,25 +16,19 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-//! ProtonVPN Linux client library.
+//! Kill switch D-Bus service binary.
 //!
-//! Provides VPN connection management, server load computation, and
-//! NetworkManager integration for Linux.
-/// fwmark used to stamp VPN traffic.
-pub const FWMARK: u32 = 245_447_468;
+//! Owns `me.proton.vpn.kill_switch` on the system bus and applies the nftables
+//! kill switch on request. Must run as root (netlink/netfilter access
+//! required).
 
-/// Name of the VPN tunnel interface.
-pub const TUNNEL_IFACE: &str = "proton0";
-
-pub mod error;
-
-#[cfg(feature = "core")]
-pub mod core;
 #[cfg(feature = "kill_switch")]
-pub mod kill_switch;
-#[cfg(feature = "local_agent")]
-pub mod local_agent;
-#[cfg(feature = "protun")]
-pub mod protun;
-#[cfg(feature = "python")]
-pub mod python;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::Builder::from_env(
+        env_logger::Env::default().default_filter_or("info"),
+    )
+    .init();
+
+    proton_vpn_platform::kill_switch::dbus::run().await
+}

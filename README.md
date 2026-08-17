@@ -46,10 +46,27 @@ pip install -r requirements.txt
 
 #### Rust submodule
 
+The Rust code has a path dependency on the `protun` submodule, so make sure it
+is checked out first. A clone without `--recurse-submodules` leaves it empty,
+and cargo then fails to read its manifest before compiling anything:
+
+```shell
+git submodule update --init --recursive
+```
+
+Building the kill switch also needs the nftables development headers, which
+provide the pkg-config files the `nftnl-sys` and `mnl-sys` build scripts look
+for:
+
+```shell
+sudo apt install libnftnl-dev libmnl-dev        # Debian/Ubuntu
+sudo dnf install libnftnl-devel libmnl-devel    # Fedora
+```
+
 Build the Rust binary:
 
 ```shell
-cargo build --features "python,core,local_agent,protun"
+cargo build --features "python,core,local_agent,protun,kill_switch"
 ```
 
 Create a symlink to the rust binary:
@@ -85,7 +102,17 @@ pytest
 > cargo build --features 'core,python'
 
 ## Testing
-> cargo test --features 'core,python'
+> cargo test --features 'core'
+
+`python` is left out on purpose: pyo3's `extension-module` leaves the CPython
+symbols for the interpreter to resolve, so a standalone test binary fails to
+link against it.
+
+# Kill Switch
+
+An nftables kill switch, applied by a D-Bus service and driven from Python.
+See [docs/kill_switch.md](docs/kill_switch.md) for building, installing and
+calling it.
 
 # Local Agent
 

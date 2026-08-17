@@ -120,7 +120,7 @@ pub async fn run(config_path: PathBuf) -> Result<(), Box<dyn std::error::Error>>
                 name.display().to_string()
             }
         )
-        .unwrap_or("proton0".to_string());
+        .unwrap_or(proton_vpn_platform::TUNNEL_IFACE.to_string());
 
     let username = std::env::var("USER")
         .or_else(|_| std::env::var("LOGNAME"))

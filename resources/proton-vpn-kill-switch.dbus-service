@@ -1,0 +1,19 @@
+[D-BUS Service]
+Name=me.proton.vpn.kill_switch
+# Launched by dbus-daemon itself on the first method call, and run as root
+# because applying nftables rules needs CAP_NET_ADMIN.
+Exec=/usr/libexec/proton-vpn-kill-switch-service
+User=root
+
+# There is deliberately no SystemdService= here, and no systemd unit shipped
+# with it: the service only ever needs to run while somebody is calling it, so
+# plain D-Bus activation is enough and keeps systemd out of the picture.
+#
+# TODO: revisit when implementing the permanent kill switch
+# (KillSwitchState.PERMANENT in proton.vpn.killswitch.interface). nftables
+# rules do not survive a reboot, so a kill switch meant to stay on across
+# reboots needs something to re-apply them at boot, which D-Bus activation
+# cannot do - nothing calls Enable after a reboot. That means switching this
+# file to SystemdService=, adding a unit with an [Install] section, enabling it
+# at install time, and persisting the last applied Config for the service to
+# read on startup.

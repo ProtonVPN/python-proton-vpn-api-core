@@ -7,7 +7,10 @@ export PYBUILD_NAME=protonvpn_api_core
 
 override_dh_auto_build:
 	mkdir -p proton/vpn
-	cp {{rust_triplet}}/release/libproton_vpn_platform.so proton/vpn/platform.abi3.so
+	# --remove-destination because a dev tree may have this path as a symlink
+	# into target/debug (see README). Plain cp would write through it, or fail
+	# outright when it dangles.
+	cp --remove-destination {{rust_triplet}}/release/libproton_vpn_platform.so proton/vpn/platform.abi3.so
 	mkdir -p usr/libexec
 	cp {{rust_triplet}}/release/nm-protun-service usr/libexec/nm-protun-service
 	cp {{rust_triplet}}/release/nm-protun-auth-dialog usr/libexec/nm-protun-auth-dialog
@@ -15,4 +18,7 @@ override_dh_auto_build:
 		-e 's|auth-dialog=.*|auth-dialog=/usr/libexec/nm-protun-auth-dialog|' \
 		$(CURDIR)/../resources/nm-protun.name > $(CURDIR)/nm-protun.name
 	cp $(CURDIR)/../resources/nm-protun-service.conf nm-protun-service.conf
+	cp {{rust_triplet}}/release/proton-vpn-kill-switch-service usr/libexec/proton-vpn-kill-switch-service
+	cp $(CURDIR)/../resources/proton-vpn-kill-switch.conf me.proton.vpn.kill_switch.conf
+	cp $(CURDIR)/../resources/proton-vpn-kill-switch.dbus-service me.proton.vpn.kill_switch.service
 	dh_auto_build

@@ -15,7 +15,7 @@ setup(
     url="https://github.com/ProtonVPN/python-proton-vpn-api-core",
     install_requires=[
         "proton-core", "distro", "sentry-sdk",
-        "cryptography", "PyNaCl", "distro", "fido2", "packaging",
+        "cryptography", "PyNaCl", "distro", "fido2", "packaging", "dbus-fast",
         "pygobject", "pycairo", "jinja2", "proton-vpn-local-agent"  # network manager backend
     ],
     extras_require={
@@ -34,6 +34,7 @@ setup(
         "proton.vpn.backend.networkmanager.protocol.protun*",
         "proton.vpn.backend.networkmanager.killswitch.default*",
         "proton.vpn.backend.networkmanager.killswitch.wireguard*",
+        "proton.vpn.backend.firewall_kill_switch*",
     ]),
     package_data={'proton.vpn': ['platform.abi3.so']},
     include_package_data=True,
@@ -41,6 +42,7 @@ setup(
         "proton_loader_killswitch": [
             "default = proton.vpn.backend.networkmanager.killswitch.default:NMKillSwitch",
             "wireguard = proton.vpn.backend.networkmanager.killswitch.wireguard:WGKillSwitch",
+            "firewall = proton.vpn.backend.firewall_kill_switch:FirewallKillSwitch",
         ]
     },
     python_requires=">=3.9",

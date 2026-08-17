@@ -1,6 +1,6 @@
 [package]
 name = "proton-vpn-platform"
-version = "5.5.17"
+version = "5.6.0"
 edition = "2021"
 
 [features]
@@ -14,6 +14,8 @@ sdk = ["dep:protun", "dep:serde", "dep:serde_json", "dep:libc", "dep:base64", "d
 nm_protun_auth_dialog = ["dep:clap", "dep:oo7", "dep:tokio"]
 
 core = ["dep:proton-vpn-binary-status", "dep:serde", "dep:serde_json"]
+kill_switch = ["dep:nftnl", "dep:mnl", "dep:ipnetwork", "dep:clap",
+               "dep:zbus", "dep:zvariant", "dep:serde", "dep:tokio"]
 python = ["proton-vpn-binary-status/serde", "dep:pyo3", "dep:pythonize",
           "dep:pyo3-async-runtimes"]
 local_agent = ["dep:serde", "dep:serde_json", "dep:async-trait",
@@ -30,6 +32,14 @@ required-features = ["protun"]
 [[bin]]
 name = "nm-protun-auth-dialog"
 required-features = ["nm_protun_auth_dialog"]
+
+[[bin]]
+name = "fwks"
+required-features = ["kill_switch"]
+
+[[bin]]
+name = "proton-vpn-kill-switch-service"
+required-features = ["kill_switch"]
 
 [dependencies]
 thiserror = "1.0.60"
@@ -65,6 +75,11 @@ rtnetlink = { version = "0.21", optional = true }
 nix = { version = "0.27", features = ["user"], optional = true }
 netlink-packet-route = { version = "0.30", optional = true }
 futures = { version = "0.3", optional = true }
+
+# Kill switch
+nftnl = { version = "0.9.1", features = ["nftnl-1-2-0"], optional = true }
+mnl = { version = "0.3.1", features = ["mnl-1-0-4"], optional = true }
+ipnetwork = { version = "0.21.1", optional = true }
 
 # Protun/Core
 async-trait = { version = "0.1", optional = true }

@@ -1,0 +1,27 @@
+#!/bin/sh
+set -e
+case "$1" in
+    remove|purge)
+        # Turn the kill switch off before the package goes away, otherwise a
+        # user removing it while the kill switch is active is left with a
+        # drop-by-default firewall and nothing able to remove it.
+        #
+        # This runs in prerm, not postrm, on purpose: the service binary and
+        # its D-Bus policy still exist here, so D-Bus activation can start the
+        # service to handle the call. By postrm both are already deleted.
+        #
+        # Going through the D-Bus API rather than removing the firewall rules
+        # directly keeps how they are applied an implementation detail of the
+        # service.
+        if ! ks_error=$(busctl call \
+                me.proton.vpn.kill_switch /me/proton/vpn/kill_switch \
+                me.proton.vpn.kill_switch Disable 2>&1); then
+            # Never block removal on this, but do not fail silently either.
+            echo "warning: could not disable the Proton VPN kill switch: ${ks_error}" >&2
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

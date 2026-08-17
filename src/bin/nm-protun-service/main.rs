@@ -90,10 +90,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-
-#[cfg(not(feature = "protun"))]
-fn main() {
-    eprintln!("This binary requires the 'protun' feature to be enabled.");
-    eprintln!("Build with: cargo build --features protun --bin protun");
-    std::process::exit(1);
-}

@@ -25,6 +25,8 @@ use libc::{c_void, ioctl, open, O_NONBLOCK, O_RDWR};
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::FWMARK;
+
 use protun::api::connection::*;
 
 use super::netlink::NetlinkHandle;
@@ -45,7 +47,6 @@ use super::types::NMVpnServiceState;
 
 /// MTU for the VPN tunnel interface
 pub const VPN_MTU: u32 = 1420;
-const FWMARK: u32 = 245447468;
 
 pub struct ConnectionInfo {
     pub interface_name: String,

@@ -35,6 +35,7 @@ BuildRequires: NetworkManager-openvpn
 BuildRequires: NetworkManager-openvpn-gnome
 BuildRequires: gobject-introspection
 BuildRequires: python3-jinja2
+BuildRequires: python3-dbus-fast
 
 Requires: python3-proton-core >= 0.5.0
 Requires: python3-distro
@@ -50,6 +51,10 @@ Requires: NetworkManager-openvpn
 Requires: NetworkManager-openvpn-gnome
 Requires: gobject-introspection
 Requires: python3-jinja2
+Requires: python3-dbus-fast
+
+# For busctl, used before removal to switch the kill switch off.
+Requires: systemd
 
 Conflicts: proton-vpn-gtk-app < 4.17.1~rc10
 Conflicts: proton-vpn-cli < 1.0.1~rc1
@@ -89,16 +94,38 @@ sed -e 's|program=.*|program=/usr/libexec/nm-protun-service|' \
     nm-protun.name > $RPM_BUILD_ROOT/usr/lib/NetworkManager/VPN/nm-protun.name
 install -D -m 644 nm-protun-service.conf $RPM_BUILD_ROOT/usr/share/dbus-1/system.d/nm-protun-service.conf
 
+install -D -m 755 proton-vpn-kill-switch-service $RPM_BUILD_ROOT/usr/libexec/proton-vpn-kill-switch-service
+install -D -m 644 proton-vpn-kill-switch.conf $RPM_BUILD_ROOT/usr/share/dbus-1/system.d/me.proton.vpn.kill_switch.conf
+install -D -m 644 proton-vpn-kill-switch.dbus-service $RPM_BUILD_ROOT/usr/share/dbus-1/system-services/me.proton.vpn.kill_switch.service
+
 %files -f %{{pyproject_files}}
 %defattr(-,root,root)
 /usr/libexec/nm-protun-service
 /usr/libexec/nm-protun-auth-dialog
 /usr/lib/NetworkManager/VPN/nm-protun.name
 /usr/share/dbus-1/system.d/nm-protun-service.conf
+/usr/libexec/proton-vpn-kill-switch-service
+/usr/share/dbus-1/system.d/me.proton.vpn.kill_switch.conf
+/usr/share/dbus-1/system-services/me.proton.vpn.kill_switch.service
+
+%preun
+# Runs before the package is removed, while the kill switch service and its
+# D-Bus policy still exist, so D-Bus activation can still service the call.
+# $1 == 0 means final removal rather than an upgrade: an upgrade must not turn
+# the user's kill switch off.
+if [ $1 -eq 0 ]; then
+    if ! ks_error=$(busctl call \
+            me.proton.vpn.kill_switch /me/proton/vpn/kill_switch \
+            me.proton.vpn.kill_switch Disable 2>&1); then
+        echo "warning: could not disable the Proton VPN kill switch: ${{ks_error}}" >&2
+    fi
+fi
 
 %postun
 # Runs after the old package is removed.
-# Restarts the protun service.
-pkill -x nm-protun-service || true
+# The kill switch service is D-Bus activated by preun's Disable call, so it is
+# running here. Left alone it would keep owning me.proton.vpn.kill_switch with a
+# deleted binary. -f because the name exceeds the 15 character limit for -x.
+pkill -f "^/usr/libexec/proton-vpn-kill-switch-service" || true
 
 %changelog

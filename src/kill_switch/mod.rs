@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2025 Proton AG
+// Copyright (c) 2026 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -16,25 +16,21 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-//! ProtonVPN Linux client library.
+//! Kill switch implementations.
 //!
-//! Provides VPN connection management, server load computation, and
-//! NetworkManager integration for Linux.
-/// fwmark used to stamp VPN traffic.
-pub const FWMARK: u32 = 245_447_468;
+//! A kill switch blocks any traffic that would otherwise leave the host
+//! outside the VPN tunnel, so a dropped or misconfigured connection cannot
+//! leak the user's real IP address.
+//!
+//! [`firewall_kill_switch`] is the nftables-based implementation, intended
+//! for WireGuard-based connections.
 
-/// Name of the VPN tunnel interface.
-pub const TUNNEL_IFACE: &str = "proton0";
+mod config;
+mod error;
 
-pub mod error;
+pub mod dbus;
+pub mod firewall_kill_switch;
 
-#[cfg(feature = "core")]
-pub mod core;
-#[cfg(feature = "kill_switch")]
-pub mod kill_switch;
-#[cfg(feature = "local_agent")]
-pub mod local_agent;
-#[cfg(feature = "protun")]
-pub mod protun;
-#[cfg(feature = "python")]
-pub mod python;
+pub use firewall_kill_switch::FirewallKillSwitch;
+pub use config::*;
+pub use error::*;

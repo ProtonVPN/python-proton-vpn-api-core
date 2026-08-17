@@ -25,6 +25,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument("fedora_version")
 parser.add_argument("rpm_arch")
 parser.add_argument("rust_triplet")
+parser.add_argument(
+    "--nodeps",
+    action="store_true",
+    help="Neither install nor check the spec's BuildRequires. For local builds,"
+         " where the python3-proton-* packages are not available; CI installs"
+         " them from target/dependencies before calling this script."
+)
 args = parser.parse_args()
 
 FEDORA_VERSION = f"fc{args.fedora_version}"
@@ -65,7 +72,8 @@ devtools.versions.build_rpm(
 )
 
 # Add the dependencies necessary for the build
-subprocess.run(["dnf-3", "-y", "builddep", spec_file], check=True)
+if not args.nodeps:
+    subprocess.run(["dnf-3", "-y", "builddep", spec_file], check=True)
 
 os.makedirs(f"{HOME}/rpmbuild/SOURCES", exist_ok=True)
 with tarfile.open(name=f"{HOME}/rpmbuild/SOURCES/{ROOT}.tar.gz",
@@ -85,8 +93,15 @@ with tarfile.open(name=f"{HOME}/rpmbuild/SOURCES/{ROOT}.tar.gz",
                 arcname=f"{ROOT}/nm-protun.name")
     archive.add("resources/nm-protun-service.conf",
                 arcname=f"{ROOT}/nm-protun-service.conf")
+    archive.add(f"target/{RUST_TRIPLET}/release/proton-vpn-kill-switch-service",
+                arcname=f"{ROOT}/proton-vpn-kill-switch-service")
+    archive.add("resources/proton-vpn-kill-switch.conf",
+                arcname=f"{ROOT}/proton-vpn-kill-switch.conf")
+    archive.add("resources/proton-vpn-kill-switch.dbus-service",
+                arcname=f"{ROOT}/proton-vpn-kill-switch.dbus-service")
 
 command = ["rpmbuild", "--quiet", "-bb",
+           *(["--nodeps"] if args.nodeps else []),
            "--buildroot", BUILDROOT,
            "--target", RPM_ARCH,
            f"rpmbuild/{PACKAGE_NAME}/SPECS/package.spec"]

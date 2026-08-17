@@ -37,6 +37,9 @@ fn py_init_platform(
 
     exceptions::register(m)?;
 
+    m.add("FWMARK", crate::FWMARK)?;
+    m.add("TUNNEL_IFACE", crate::TUNNEL_IFACE)?;
+
     m.add_function(wrap_pyfunction!(logger::init_logger, m)?)?;
 
     #[cfg(feature = "core")]
