@@ -148,11 +148,13 @@ class NMClient:
     def __init__(self):
         self.initialize_nm_client_singleton()
 
-    def _get_nm_daemon_version(self) -> Version:
+    def _get_nm_daemon_version(self) -> Optional[Version]:
         """
-        Gets the version of Network manager daemon running on the host system.
+        Gets the version of Network manager daemon running on the host system
+        or None if not detected.
         """
-        return version.parse(self._nm_client.get_version())
+        version_string = self._nm_client.get_version()
+        return version.parse(version_string) if version_string else None
 
     def _get_nm_client_version(self) -> Version:
         """
@@ -161,12 +163,14 @@ class NMClient:
         return version.parse(f"{NM.MAJOR_VERSION}.{NM.MINOR_VERSION}.{NM.MICRO_VERSION}")
 
     @staticmethod
-    def is_version_compatible(client_version: Version, daemon_version: Version) -> bool:
+    def is_version_compatible(client_version: Version, daemon_version: Optional[Version]) -> bool:
         """
         Checks for compatibility between network manager daemon and network manager client
         Takes versions as arguments for testability
         """
-
+        if daemon_version is None:
+            logger.warning("NetworkManager daemon is not found")
+            return False
         threshold = version.parse("1.46")
         # Incompatible: has_autoconnect_ports=True but NM daemon version < 1.46
         # This is the issue with snaps on hosts systems that are older than the base snap

@@ -1,3 +1,10 @@
+version: 5.6.1
+time: 2026/08/18 06:39
+author: Elena Švilpė
+email: elena.svilpe@proton.ch
+description:
+- "fix: startup check when NM daemon is not found"
+---
 version: 5.6.0
 time: 2026/08/17 14:00
 author: Pep Llaneras
