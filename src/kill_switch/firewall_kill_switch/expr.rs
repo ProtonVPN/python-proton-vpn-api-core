@@ -34,9 +34,12 @@ use nftnl::expr::{
 };
 use nftnl::{nft_expr, Rule};
 
-// Network protocol numbers
+// Network protocol numbers. Copied rather than taken from libc, which the
+// kill_switch feature would otherwise not need. NFPROTO_* are netfilter address
+// families (linux/netfilter.h); IPPROTO_* are IANA transport protocol numbers.
 pub(super) const NFPROTO_IPV4: u8 = 2;
 pub(super) const NFPROTO_IPV6: u8 = 10;
+pub(super) const IPPROTO_TCP: u8 = 6;
 pub(super) const IPPROTO_UDP: u8 = 17;
 pub(super) const IPPROTO_ICMPV6: u8 = 58; // RFC 4443
 

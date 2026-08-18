@@ -18,7 +18,8 @@
 // -----------------------------------------------------------------------------
 //! The individual rules that punch holes in the drop-by-default chains.
 //!
-//! Every function here appends one or more `accept` rules to a batch. Order
+//! Every function here appends one or more rules to a batch — `accept` for the
+//! traffic the VPN needs, and a final `reject` for everything left. Order
 //! matters: nftables evaluates rules within a chain top to bottom, so the
 //! sequence in which [`super::enable`] calls these is significant.
 
@@ -26,7 +27,7 @@ use std::ffi::CStr;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use ipnetwork::IpNetwork;
-use nftnl::expr::{ct, Verdict};
+use nftnl::expr::{ct, IcmpCode, RejectionType, Verdict};
 use nftnl::{nft_expr, Batch, Chain, MsgType, Rule};
 
 use super::expr::{
@@ -36,6 +37,7 @@ use super::expr::{
     check_net,
     Direction,
     End,
+    IPPROTO_TCP,
     IPPROTO_UDP,
     NFPROTO_IPV4,
 };
@@ -322,6 +324,28 @@ pub(super) fn add_tunnel_iface_rule(
     check_iface(&mut rule, Direction::Out, iface);
     rule.add_expr(&Verdict::Accept);
     batch.add(&rule, MsgType::Add);
+}
+
+/// Reject whatever reaches the end of the chain, instead of letting the Drop
+/// policy discard it silently and leave the caller waiting for a timeout.
+///
+/// TCP gets an RST, everything else "no route to destination", so a blocked app
+/// fails straight away. IPv6 benefits most: with no reply an app retries IPv6
+/// until it times out, whereas an unreachable error makes it fall back to IPv4
+/// immediately. No-route is what a host without a usable route would report,
+/// which is closer to the truth here than refusing a port.
+///
+/// Must be called last — these match unconditionally.
+pub(super) fn add_reject_rules(batch: &mut Batch, chain: &Chain) {
+    let mut tcp = Rule::new(chain);
+    tcp.add_expr(&nft_expr!(meta l4proto));
+    tcp.add_expr(&nft_expr!(cmp == IPPROTO_TCP));
+    tcp.add_expr(&Verdict::Reject(RejectionType::TcpRst));
+    batch.add(&tcp, MsgType::Add);
+
+    let mut other = Rule::new(chain);
+    other.add_expr(&Verdict::Reject(RejectionType::Icmp(IcmpCode::NoRoute)));
+    batch.add(&other, MsgType::Add);
 }
 
 #[cfg(test)]

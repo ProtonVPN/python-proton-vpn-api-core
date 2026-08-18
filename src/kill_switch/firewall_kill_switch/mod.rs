@@ -196,15 +196,14 @@ impl FirewallKillSwitch
         // allow established connections
         rules::add_fwmark_rule(&mut batch, &fwd_chain, config.fwmark);
 
-        // TODO: fail fast on blocked traffic. The Drop policy discards packets
-        // silently, so blocked apps (and forwarded VMs) hang until timeout. Add a
-        // catch-all reject rule at the end of the output and forward chains — ICMP
-        // port-unreachable for the general case, TCP RST for TCP — so they get
-        // "connection refused"/"network unreachable" immediately. Leave the input
-        // chain dropping silently (don't advertise the host to unsolicited
-        // inbound). The Drop policies stay as the fail-closed backstop. Note:
-        // chain policy can only be Accept/Drop, so reject must be an explicit
-        // rule.
+        // Fail fast on blocked traffic, so apps (and forwarded VMs) get an error
+        // rather than hanging until they time out. Added last, since these match
+        // unconditionally. The input chain is left to drop silently, so we don't
+        // advertise the host to unsolicited inbound. The Drop policies remain the
+        // fail-closed backstop: chain policy can only be Accept or Drop, so
+        // reject has to be a rule.
+        rules::add_reject_rules(&mut batch, &out_chain);
+        rules::add_reject_rules(&mut batch, &fwd_chain);
 
         // TODO: after applying, verify the table was actually installed by
         // querying it back via netlink. A successful send doesn't guarantee the
