@@ -1,3 +1,10 @@
+version: 5.6.3
+time: 2026/08/18 14:18
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "fix: Zombie auth-dialog processes"
+---
 version: 5.6.2
 time: 2026/08/18 12:07
 author: Luke Titley

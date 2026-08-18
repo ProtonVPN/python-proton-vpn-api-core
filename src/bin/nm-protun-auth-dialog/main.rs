@@ -386,9 +386,33 @@ mod tests {
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Workaround for gnome-shell issue #7083 (fixed in gnome-shell 49).
+    //
+    // Issue can be found here:
+    // https://gitlab.gnome.org/GNOME/gnome-shell/-/work_items/7083
+    //
+    // its VPN auth-dialog handler is dropping the child watcher
+    // once it gets a result back from stdout.
+    //
+    // So make sure the process terminates before stdout is written to.
+    //
+    // Only way to do this is to fork the child, terminate and let the fork
+    // do the writing to stdout.
+    //
+    unsafe {  // nosemgrep
+        match libc::fork() {
+            -1 => return Err("failed to fork auth-dialog process".into()),
+            0 => {} // child continues
+            _ => std::process::exit(0), // parent exits
+        }
+    }
 
+    forked_main()
+}
+
+#[tokio::main]
+async fn forked_main() -> Result<(), Box<dyn std::error::Error>> {
     run_auth_dialog(Args::parse(), io::stdin().lock(), io::stdout(), oo7Keyring).await?;
 
     Ok(())
