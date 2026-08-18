@@ -50,4 +50,3 @@ download_package() {
 
 # Explicit package declarations with their arch requirements
 download_package python3-proton-core noarch
-download_package python3-proton-vpn-local-agent "$ARCH"

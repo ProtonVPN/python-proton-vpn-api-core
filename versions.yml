@@ -1,3 +1,10 @@
+version: 5.6.4
+time: 2026/08/18 15:54
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "chore: Remove local agent dependency download"
+---
 version: 5.6.3
 time: 2026/08/18 14:18
 author: Luke Titley
