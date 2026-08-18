@@ -1,3 +1,10 @@
+version: 5.6.2
+time: 2026/08/18 12:07
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "fix: Fix the pypi bundle"
+---
 version: 5.6.1
 time: 2026/08/18 06:39
 author: Elena Švilpė

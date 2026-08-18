@@ -84,6 +84,16 @@ pip install -e .
 After each `cargo build` the symlink automatically points to the updated `.so` —
 no reinstall or re-copy needed.
 
+### Building a wheel
+
+Build a release `.so` and package it as a wheel in `target/`:
+
+```shell
+cargo build --release --target x86_64-unknown-linux-gnu \
+    --features "python,core,local_agent,protun,kill_switch"
+./ci-libraries-rust/scripts/build-wheel
+```
+
 ### Tests
 
 You can run the python tests with:

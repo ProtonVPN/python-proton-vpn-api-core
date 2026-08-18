@@ -1,10 +1,17 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_namespace_packages
+from setuptools.dist import Distribution
 import re
 
 VERSIONS = 'versions.yml'
 VERSION = re.search(r'version: (\S+)', open(VERSIONS, encoding='utf-8').readline()).group(1)
+
+
+class BinaryDistribution(Distribution):
+    def has_ext_modules(self):
+        return True
+
 
 setup(
     name="proton-vpn-api-core",
@@ -36,6 +43,7 @@ setup(
         "proton.vpn.backend.networkmanager.killswitch.wireguard*",
         "proton.vpn.backend.firewall_kill_switch*",
     ]),
+    distclass=BinaryDistribution,
     package_data={'proton.vpn': ['platform.abi3.so']},
     include_package_data=True,
     entry_points={
