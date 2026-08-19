@@ -118,3 +118,46 @@ async def test_enable_fetches_vpn_session_when_not_loaded_and_then_schedules_ref
         call.scheduler.run_after(location_names_refresher.initial_refresh_delay, location_names_refresher.refresh),
         call.scheduler.start()
     ]
+
+
+@pytest.mark.asyncio
+async def test_enable_does_not_schedule_the_location_names_refresher_without_a_locale():
+    # Nothing to translate, so the task would never do more than reschedule itself.
+    session_holder = Mock()
+    scheduler = Mock()
+    client_config_refresher = Mock()
+    client_config_refresher.initial_refresh_delay = 0
+    server_list_refresher = Mock()
+    server_list_refresher.initial_refresh_delay = 0
+    certificate_refresher = Mock()
+    certificate_refresher.initial_refresh_delay = 0
+    feature_flag_refresher = Mock()
+    feature_flag_refresher.initial_refresh_delay = 0
+    notifications_refresher = Mock()
+    notifications_refresher.initial_refresh_delay = 0
+    location_names_refresher = Mock()
+    location_names_refresher.initial_refresh_delay = 0
+    refresher = VPNDataRefresher(
+        session_holder=session_holder,
+        scheduler=scheduler,
+        client_config_refresher=client_config_refresher,
+        server_list_refresher=server_list_refresher,
+        certificate_refresher=certificate_refresher,
+        feature_flags_refresher=feature_flag_refresher,
+        notifications_refresher=notifications_refresher,
+        location_names_refresher=location_names_refresher
+    )
+
+    session_holder.session.loaded = True
+    session_holder.session.locale = None
+
+    await refresher.enable()
+
+    assert scheduler.mock_calls == [
+        call.run_after(client_config_refresher.initial_refresh_delay, client_config_refresher.refresh),
+        call.run_after(server_list_refresher.initial_refresh_delay, server_list_refresher.refresh),
+        call.run_after(certificate_refresher.initial_refresh_delay, certificate_refresher.refresh),
+        call.run_after(feature_flag_refresher.initial_refresh_delay, feature_flag_refresher.refresh),
+        call.run_after(notifications_refresher.initial_refresh_delay, notifications_refresher.refresh),
+        call.start()
+    ]

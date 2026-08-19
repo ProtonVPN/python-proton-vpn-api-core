@@ -284,14 +284,15 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
             f"{timedelta(seconds=self._notifications_refresher.initial_refresh_delay)}"
         )
 
-        self._location_names_refresher_task_id = self._scheduler.run_after(
-            self._location_names_refresher.initial_refresh_delay,
-            self._location_names_refresher.refresh
-        )
-        logger.info(
-            f"Next location names refresh scheduled in "
-            f"{timedelta(seconds=self._location_names_refresher.initial_refresh_delay)}"
-        )
+        if self._session.locale:
+            self._location_names_refresher_task_id = self._scheduler.run_after(
+                self._location_names_refresher.initial_refresh_delay,
+                self._location_names_refresher.refresh
+            )
+            logger.info(
+                f"Next location names refresh scheduled in "
+                f"{timedelta(seconds=self._location_names_refresher.initial_refresh_delay)}"
+            )
 
         self._scheduler.start()
 

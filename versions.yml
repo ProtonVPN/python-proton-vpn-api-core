@@ -1,3 +1,10 @@
+version: 5.6.6
+time: 2026/08/19 09:18
+author: Axel Langenskiold
+email: axel.langenskiold@proton.ch
+description:
+- "fix: Don't schedule location refresher on None-locale"
+---
 version: 5.6.5
 time: 2026/08/18 16:11
 author: Pep Llaneras
