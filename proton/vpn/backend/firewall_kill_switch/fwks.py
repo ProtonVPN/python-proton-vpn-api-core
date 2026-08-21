@@ -108,9 +108,6 @@ class FirewallKillSwitch(KillSwitch):
             return False
 
         if not os.environ.get(FEATURE_FLAG):
-            logger.info(
-                "Firewall kill switch is disabled: %s is not set.", FEATURE_FLAG
-            )
             return False
 
         if not dbus_client.is_service_available():
