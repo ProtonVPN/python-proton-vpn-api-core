@@ -32,8 +32,11 @@ use protun::api::connection::*;
 use super::netlink::NetlinkHandle;
 
 pub use protun::api::{
-    connection::{InitialConnectionConfig, PeerInfo, WgClientPrivateKey, PcapFileInfo},
-    state::State,
+    connection::{
+        InitialConnectionConfig, PeerInfo, WgClientPrivateKey, PcapFileInfo,
+        PersistentCache, ConnectionMode, SniStrategy
+    },
+    state::VpnState,
     events::Event,
 };
 
@@ -130,15 +133,16 @@ impl Service {
         // Start the WireGuard connection
         let connection = Connection::unix_connect(
             initial_config,
-            tun_fd,
+            Some(tun_fd),
             Box::new(on_state_changed),
+            Box::new(on_event),
             Some(Box::new(
                 move |socket_fd: i32| {
                     if let Err(error) = set_fwmark_on_socket(socket_fd, FWMARK) {
                         log::error!("Unable to set fwmark on socket {error}");
                     }
                 })),
-            Box::new(on_event),
+            Box::new(StubKeyring{})
         );
 
         // TODO LT: Remember local agent
@@ -189,19 +193,6 @@ impl Service {
         } else {
             log::error!("service: disconnect called but no active connection");
         }
-    }
-
-    pub fn update_wg_private_key(
-        &mut self,
-        private_key: [u8; 32],
-    ) -> Result<()> {
-        if let Some(connection) = &self.connection
-        {
-            connection.update_wg_private_key(PrivateKeyUpdateInfo {
-                wg_private_key: WgClientPrivateKey(private_key),
-            });
-        }
-        Ok(())
     }
 
     pub fn update_peers(&mut self, peers: Vec<PeerInfo>) -> Result<()> {
@@ -319,7 +310,7 @@ fn set_fwmark_on_socket(socket_fd: i32, mark: u32) -> Result<()> {
     Ok(())
 }
 
-fn on_state_changed(state: State) {
+fn on_state_changed(state: VpnState) {
     log::info!("Connection state changed: {:?}", state);
 }
 
@@ -333,4 +324,20 @@ impl Drop for Service {
             connection.disconnect_and_wait();
         }
     }
+}
+
+/// Protun will use this structure in order to store secrets that persist on
+/// disk.
+/// We will need this when we allow protun to update the certificate but
+/// for now it can be a stub.
+struct StubKeyring;
+
+impl PersistentCache for StubKeyring
+{
+    fn put(&self, _key: CacheKey, _bytes: Vec<u8>){}
+    fn get(&self, _key: CacheKey) -> Option<Vec<u8>>{
+        None
+    }
+    fn remove(&self, _key: CacheKey){}
+    fn clear_all(&self){}
 }

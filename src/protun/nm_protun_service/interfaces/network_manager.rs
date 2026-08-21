@@ -26,7 +26,10 @@ use zbus::{Connection, interface, message::Header, object_server::SignalEmitter}
 
 pub use super::super::error::*;
 pub use super::super::settings::*;
-use super::super::service::{Service, ServiceHandle, WgClientPrivateKey, InitialConnectionConfig};
+use super::super::service::{
+    Service, ServiceHandle, WgClientPrivateKey, InitialConnectionConfig,
+    ConnectionMode, SniStrategy
+};
 
 use super::super::types::{Ip4Config, Ip6Config, NMVpnServiceState, VpnConfig};
 use super::super::error::{Error, Result};
@@ -147,10 +150,13 @@ impl NetworkManager {
         let connection_info = service
             .connect(
                 InitialConnectionConfig {
-                    wg_private_key: WgClientPrivateKey(private_key),
                     peers: peers,
                     network_available: true,
                     pcap_file : None,
+                    connection_mode: ConnectionMode::NoLocalAgent {
+                        wg_private_key: WgClientPrivateKey(private_key)
+                    },
+                    sni_strategy: SniStrategy::Random
                 },
                 ipv4_interface.name.clone(),
                 ipv6_interface.is_some(),

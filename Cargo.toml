@@ -1,6 +1,6 @@
 [package]
 name = "proton-vpn-platform"
-version = "5.6.6"
+version = "5.6.7"
 edition = "2021"
 
 [features]
@@ -58,7 +58,7 @@ x509-parser = {version="0.16.0", optional=true}
 socket2 = {version="0.5.7", features=["all"], optional=true}
 
 # Protun
-protun = { path="dependencies/protun", features = ["unix"], optional=true }
+protun = { path="dependencies/protun", features = ["unix"], default-features = false, optional=true }
 serde = {version = "1.0.228", features = ["derive"], optional=true}
 serde_json = { version = "1.0.145", optional=true }
 libc = { version ="0.2.178", optional=true }
