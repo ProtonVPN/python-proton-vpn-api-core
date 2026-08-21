@@ -23,7 +23,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from proton.vpn.backend.networkmanager.protocol.protun.protun import (
-    Protun, ProtunUDP, generate_capture_path,
+    Protun, ProtunUDP, ProtunTCP, ProtunTLS, ProtunSmart, generate_capture_path,
 )
 from proton.vpn.backend.networkmanager.core.networkmanager import LinuxNetworkManager
 from proton.vpn.core.settings.packet_capture import PacketCaptureMode
@@ -44,12 +44,9 @@ def reset_plugin_exists():
     Protun.plugin_exists = original
 
 
-def test_supports_packet_capture_():
-    assert Protun.supports_packet_capture(MagicMock()) is False
-
-
-def test_udp_supports_packet_capture():
-    assert ProtunUDP.supports_packet_capture(MagicMock()) is True
+@pytest.mark.parametrize("cls", [Protun, ProtunUDP, ProtunTCP, ProtunTLS, ProtunSmart])
+def test_supports_packet_capture(cls):
+    assert cls.supports_packet_capture(MagicMock()) is True
 
 
 def test_supports_packet_capture_returns_false_when_module_unavailable():

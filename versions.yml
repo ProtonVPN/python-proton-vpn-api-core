@@ -1,3 +1,10 @@
+version: 5.6.10
+time: 2026/08/21 15:28
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "fix: Enable packet capture for all protun protocols"
+---
 version: 5.6.9
 time: 2026/08/21 13:51
 author: Pep Llaneras
