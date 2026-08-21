@@ -2056,8 +2056,8 @@ dependencies = [
 [[package]]
 name = "proton-boringtun"
 version = "3.0.0"
-source = "sparse+https://rust.gitlab-pages.protontech.ch/shared/registry/index/"
-checksum = "e96081b45cc7a830262dcbac2a79b58bc312aab0672c4c1c51fd8c28b03ca987"
+source = "sparse+https://rust-registry.proton.me/index/"
+checksum = "d6cbef9a3ddc5f97501607f1a689c459a1894069745b4cede7c519b71bb64434"
 dependencies = [
  "aead",
  "base64 0.13.1",
@@ -2075,8 +2075,8 @@ dependencies = [
 [[package]]
 name = "proton-os-interface"
 version = "0.2.6"
-source = "sparse+https://rust.gitlab-pages.protontech.ch/shared/registry/index/"
-checksum = "8e4b9d4c0cb1aa4096f9f7bdabc120323c7b6d110efba90d258c0150a65a7e12"
+source = "sparse+https://rust-registry.proton.me/index/"
+checksum = "4c2654d02228a2e4ccb4edf1883cb2838d9640e19012f75e0cad7afcb468f2d5"
 dependencies = [
  "derive_more 1.0.0",
  "futures",
@@ -2088,9 +2088,9 @@ dependencies = [
 
 [[package]]
 name = "proton-pfff"
-version = "0.13.1"
-source = "sparse+https://rust.gitlab-pages.protontech.ch/shared/registry/index/"
-checksum = "4deb99cc956d8a7d00b77f7d659ba078be7d03363691de39c6da1397cf1b5036"
+version = "0.13.0"
+source = "sparse+https://rust-registry.proton.me/index/"
+checksum = "f359027c854eeb361b3df22c1b2d7d1f2a81a0ff146c502a9a0e38e3a2e35487"
 dependencies = [
  "proton-pfff-config",
  "proton-pfff-core",
@@ -2100,8 +2100,8 @@ dependencies = [
 [[package]]
 name = "proton-pfff-config"
 version = "0.1.0"
-source = "sparse+https://rust.gitlab-pages.protontech.ch/shared/registry/index/"
-checksum = "335cd229789d1a9cb7f88f2dafbafcad642b80ee754f110d4ff87eb429d849f5"
+source = "sparse+https://rust-registry.proton.me/index/"
+checksum = "165ee6f7497786a9a1febf7fb1eeb646cbaeabc0b54b9cecff75dd2d80b86136"
 dependencies = [
  "log",
  "serde",
@@ -2112,8 +2112,8 @@ dependencies = [
 [[package]]
 name = "proton-pfff-core"
 version = "0.1.1"
-source = "sparse+https://rust.gitlab-pages.protontech.ch/shared/registry/index/"
-checksum = "574db1efc1522e95f5f35270f862c1da2f74f8d117a36dd75626b6b74d9d7ee5"
+source = "sparse+https://rust-registry.proton.me/index/"
+checksum = "42778c555bd91e2b7f27a8515d70b1a55726c0bb24b5c99aeb6b6f4965ae0f84"
 dependencies = [
  "derive_more 1.0.0",
  "dyn-clone",
@@ -2129,9 +2129,9 @@ dependencies = [
 
 [[package]]
 name = "proton-pfff-module"
-version = "0.8.5"
-source = "sparse+https://rust.gitlab-pages.protontech.ch/shared/registry/index/"
-checksum = "cb7803b2f0f4f63b9274d05fee250c830df8e1cc7438c5538173eeb52112a838"
+version = "0.8.6"
+source = "sparse+https://rust-registry.proton.me/index/"
+checksum = "581cd09effe5a28e48209e962b219564f2395367042ec7234695c3906a04fbf6"
 dependencies = [
  "derive_more 2.1.1",
  "futures",
@@ -2151,8 +2151,8 @@ dependencies = [
 [[package]]
 name = "proton-tls-parser"
 version = "0.4.0"
-source = "sparse+https://rust.gitlab-pages.protontech.ch/shared/registry/index/"
-checksum = "757f42c2f2e0643b2675f13079cd495b431a6584787744082919afd3634bc1d4"
+source = "sparse+https://rust-registry.proton.me/index/"
+checksum = "e1bc13b37a8daf97216879fc0dfef4f3d080dedd2a772e7730f1d053b985e9ed"
 dependencies = [
  "derive_more 2.1.1",
  "nom 8.0.0",
@@ -2163,9 +2163,9 @@ dependencies = [
 
 [[package]]
 name = "proton-vpn-binary-status"
-version = "1.0.0"
+version = "3.0.0"
 source = "sparse+https://rust-registry.proton.me/index/"
-checksum = "c3d35f47f699bcca2b8610b2ecfa85c9298cebc2cf68a7b5b05dd89625cc9ffe"
+checksum = "19911a700fda644a80babfdd972e42ead99dd690b2251f069df64eb4d5b2686c"
 dependencies = [
  "getrandom 0.3.4",
  "log",
@@ -2177,8 +2177,8 @@ dependencies = [
 [[package]]
 name = "proton-vpn-haproxyv2"
 version = "0.1.0"
-source = "sparse+https://rust.gitlab-pages.protontech.ch/shared/registry/index/"
-checksum = "84aa6af7d01c8c31876f9316c22c0eaa645cc218301b5faf41f97a1ead4a429f"
+source = "sparse+https://rust-registry.proton.me/index/"
+checksum = "5e9090c23aef1ecd7b2dda6849d29551b69b348840b352236528988af314bbfc"
 dependencies = [
  "nom 8.0.0",
  "thiserror 2.0.18",
@@ -2187,8 +2187,8 @@ dependencies = [
 [[package]]
 name = "proton-vpn-netstack"
 version = "0.6.5"
-source = "sparse+https://rust.gitlab-pages.protontech.ch/shared/registry/index/"
-checksum = "4a2b141c08c0bbbb73a886e34bbbdd6a9dc22eeeb5198363a2d74fadfa43a7a8"
+source = "sparse+https://rust-registry.proton.me/index/"
+checksum = "afdec098c17d3f3dc97404845394e8ecb9747be7b61d78a7f4f83b4ec44b18b9"
 dependencies = [
  "derive_more 2.1.1",
  "futures",
@@ -2201,7 +2201,7 @@ dependencies = [
 
 [[package]]
 name = "proton-vpn-platform"
-version = "5.6.7"
+version = "5.6.8"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -2245,10 +2245,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "proton-vpn-toolkit"
+version = "0.1.0"
+source = "sparse+https://rust-registry.proton.me/index/"
+checksum = "16653ee08f3c25d6a59ae099ab60188a015eab441a69f4e3b069c1aeab8d3f4c"
+
+[[package]]
 name = "proton-vpn-yaourt"
 version = "0.2.2"
-source = "sparse+https://rust.gitlab-pages.protontech.ch/shared/registry/index/"
-checksum = "ac52551bc6053aaf86b7cfa5b14576e2ca7b5525d7bf4a285df320079937ed0a"
+source = "sparse+https://rust-registry.proton.me/index/"
+checksum = "262f94d0fdf4cb49e0fab93809bcafeb316c7b6a1cce079e46e8fa0ab354502a"
 dependencies = [
  "chacha20 0.9.1",
  "derive_more 2.1.1",
@@ -2282,9 +2288,9 @@ dependencies = [
 
 [[package]]
 name = "pvpnclient"
-version = "3.0.1"
-source = "sparse+https://rust.gitlab-pages.protontech.ch/shared/registry/index/"
-checksum = "a411a4c959f31591cd8255ea911015be8dbd9d41d71437b6bd6749eac2168569"
+version = "3.0.3"
+source = "sparse+https://rust-registry.proton.me/index/"
+checksum = "3c14ef052727e0204ec5e80cf8df50786db38a83b6a6557a188b78a4c264f380"
 dependencies = [
  "base64 0.13.1",
  "derive_more 2.1.1",
@@ -2295,6 +2301,7 @@ dependencies = [
  "proton-os-interface",
  "proton-pfff",
  "proton-vpn-netstack",
+ "proton-vpn-toolkit",
  "rand_chacha 0.9.0",
  "rand_xoshiro",
  "smoltcp",

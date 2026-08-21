@@ -22,7 +22,7 @@
 //! for optimal server selection.
 
 use crate::core::Result;
-pub use proton_vpn_binary_status::{Country, Load, Location, Logical};
+pub use proton_vpn_binary_status::{CountryCode, Load, Location, Logical};
 
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
@@ -35,7 +35,7 @@ pub struct ServerStatus {
     status_id: String,
     logicals: Vec<Logical>,
     user_location: Option<Location>,
-    user_country: Option<Country>,
+    user_country: Option<CountryCode>,
 }
 
 impl ServerStatus {
@@ -50,7 +50,7 @@ impl ServerStatus {
         status_id: &str,
         logicals: Vec<Logical>,
         user_location: Option<Location>,
-        user_country: Option<Country>,
+        user_country: Option<CountryCode>,
     ) -> Self {
         Self {
             status_id: status_id.into(),
@@ -67,7 +67,7 @@ impl ServerStatus {
     pub fn set_user_location(
         &mut self,
         location: Option<Location>,
-        country: Option<Country>,
+        country: Option<CountryCode>,
     ) {
         self.user_location = location;
         self.user_country = country;
@@ -181,7 +181,7 @@ mod tests {
                     latitude: 0.0,
                     longitude: 0.0,
                 },
-                exit_country: Country::new(b"FR")
+                exit_country: CountryCode::try_from(b"FR")
                     .expect("Invalid country code"),
             },
             Logical {
@@ -198,7 +198,7 @@ mod tests {
                     latitude: 0.0,
                     longitude: 0.0,
                 },
-                exit_country: Country::new(b"FR")
+                exit_country: CountryCode::try_from(b"FR")
                     .expect("Invalid country code"),
             },
         ];
@@ -224,7 +224,7 @@ mod tests {
                 latitude: 0.0,
                 longitude: 0.0,
             }),
-            Some(Country::new(b"FR").expect("Invalid country code")),
+            Some(CountryCode::try_from(b"FR").expect("Invalid country code")),
         );
 
         let loads = status
@@ -251,7 +251,7 @@ mod tests {
                 latitude: 45.0,
                 longitude: 0.0,
             }),
-            Some(Country::new(b"FR").expect("Invalid country code")),
+            Some(CountryCode::try_from(b"FR").expect("Invalid country code")),
         );
 
         let loads = status
