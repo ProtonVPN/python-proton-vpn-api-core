@@ -22,6 +22,9 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 # pylint: disable=duplicate-code
 # pylint: disable=duplicate-code
 import re
+import os
+import shutil
+import functools
 import subprocess  # nosec blacklist # nosemgrep: gitlab.bandit.B404
 import asyncio
 import concurrent.futures
@@ -35,6 +38,28 @@ from proton.vpn.backend.networkmanager.killswitch.wireguard.killswitch_connectio
 )
 
 logger = logging.getLogger(__name__)
+
+IP_BINARY_SEARCH_PATH = os.pathsep.join(["/usr/bin", "/usr/sbin", "/sbin", "/bin"])
+
+
+@functools.lru_cache(maxsize=1)
+def _find_ip_binary() -> str:
+    """Returns the path to the ip binary (iproute2).
+
+    The result is cached, since the binary is not expected to move while the
+    app is running.
+
+    :raises FileNotFoundError: if the ip binary was not found.
+    """
+    ip_binary = shutil.which("ip", path=IP_BINARY_SEARCH_PATH)
+
+    if not ip_binary:
+        raise FileNotFoundError(
+            f"The ip binary (iproute2) was not found in {IP_BINARY_SEARCH_PATH}."
+        )
+
+    logger.debug(f"Using ip binary at {ip_binary}.")
+    return ip_binary
 
 
 def _get_connection_id(permanent: bool, ipv6: bool = False):
@@ -195,9 +220,11 @@ class KillSwitchConnectionHandler:
 
     @staticmethod
     async def _run_ip_route_command():
+        ip_binary = _find_ip_binary()
+
         def run():
             return subprocess.run(  # nosec subprocess_without_shell_equals_true
-                ["/usr/sbin/ip", "route"], capture_output=True, encoding="utf-8", check=True
+                [ip_binary, "route"], capture_output=True, encoding="utf-8", check=True
             )
 
         loop = asyncio.get_running_loop()
