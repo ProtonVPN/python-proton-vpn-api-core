@@ -1,3 +1,10 @@
+version: 5.6.12
+time: 2026/08/26 09:44
+author: Axel Langenskiold
+email: axel.langenskiold@proton.ch
+description:
+- "feat: Send x-pm-locale and x-pm-timezone on auth requests"
+---
 version: 5.6.11
 time: 2026/08/25 07:46
 author: Pep Llaneras
