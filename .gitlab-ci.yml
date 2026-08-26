@@ -4,5 +4,5 @@ variables:
 
 include:
  - project: 'ProtonVPN/Linux/integration/ci-libraries-rust'
-   ref: develop
+   ref: 0eec9744bdc7c81a65ca5a63165d712c7c482729  # fix: [VPNLINUX-1848] Added missing tag creation functionality back in
    file: 'develop-pipeline.yml'

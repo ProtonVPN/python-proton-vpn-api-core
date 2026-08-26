@@ -97,3 +97,13 @@ class KillSwitchDBusClient:
         """Disables the kill switch, removing the firewall rules."""
         interface = await self._get_interface()
         await interface.call_disable()
+
+    async def enable_ipv6_leak_protection(self):
+        """Blocks IPv6 that is not going through the tunnel, leaving IPv4 be."""
+        interface = await self._get_interface()
+        await interface.call_enable_ipv6_leak_protection()
+
+    async def disable_ipv6_leak_protection(self):
+        """Disables IPv6 leak protection, leaving the kill switch alone."""
+        interface = await self._get_interface()
+        await interface.call_disable_ipv6_leak_protection()

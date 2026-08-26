@@ -31,7 +31,7 @@ setup(
     packages=['proton', 'proton.vpn'] + find_namespace_packages(include=[
         "proton.vpn.core*",
         "proton.vpn.connection*",
-        "proton.vpn.killswitch.interface*",
+        "proton.vpn.killswitch*",
         "proton.vpn.session*",
         "proton.vpn.logging*",
         "proton.vpn.split_tunneling*",

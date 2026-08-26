@@ -53,9 +53,6 @@ Requires: gobject-introspection
 Requires: python3-jinja2
 Requires: python3-dbus-fast
 
-# For busctl, used before removal to switch the kill switch off.
-Requires: systemd
-
 Conflicts: proton-vpn-gtk-app < 4.17.1~rc10
 Conflicts: proton-vpn-cli < 1.0.1~rc1
 Conflicts: python3-proton-vpn-network-manager < 0.13.5
@@ -108,24 +105,11 @@ install -D -m 644 proton-vpn-kill-switch.dbus-service $RPM_BUILD_ROOT/usr/share/
 /usr/share/dbus-1/system.d/me.proton.vpn.kill_switch.conf
 /usr/share/dbus-1/system-services/me.proton.vpn.kill_switch.service
 
-%preun
-# Runs before the package is removed, while the kill switch service and its
-# D-Bus policy still exist, so D-Bus activation can still service the call.
-# $1 == 0 means final removal rather than an upgrade: an upgrade must not turn
-# the user's kill switch off.
-if [ $1 -eq 0 ]; then
-    if ! ks_error=$(busctl call \
-            me.proton.vpn.kill_switch /me/proton/vpn/kill_switch \
-            me.proton.vpn.kill_switch Disable 2>&1); then
-        echo "warning: could not disable the Proton VPN kill switch: ${{ks_error}}" >&2
-    fi
-fi
-
 %postun
-# Runs after the old package is removed.
-# The kill switch service is D-Bus activated by preun's Disable call, so it is
-# running here. Left alone it would keep owning me.proton.vpn.kill_switch with a
-# deleted binary. -f because the name exceeds the 15 character limit for -x.
+# A running instance would keep owning me.proton.vpn.kill_switch with a deleted
+# binary, blocking activation of the replacement. It may not be running at all,
+# hence || true.
+# -f because the name exceeds the 15 characters -x matches against.
 pkill -f "^/usr/libexec/proton-vpn-kill-switch-service" || true
 
 %changelog

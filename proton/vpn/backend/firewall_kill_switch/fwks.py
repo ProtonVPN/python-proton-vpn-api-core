@@ -79,14 +79,18 @@ class FirewallKillSwitch(KillSwitch):
         await self._dbus_client.disable()
 
     async def enable_ipv6_leak_protection(self, permanent: bool = False):
-        """Enables IPv6 leak protection."""
-        logger.warning("Firewall kill switch doesn't support IPv6 leak protection yet.")
+        """
+        Enables IPv6 leak protection.
+
+        Installed in its own nftables table, independent of the kill switch:
+        this is what the client asks for when the kill switch is off, so it has
+        to survive disable().
+        """
+        await self._dbus_client.enable_ipv6_leak_protection()
 
     async def disable_ipv6_leak_protection(self):
-        """
-        Disables IPv6 leak protection.
-        """
-        # Not implemented yet
+        """Disables IPv6 leak protection, leaving the kill switch alone."""
+        await self._dbus_client.disable_ipv6_leak_protection()
 
     @staticmethod
     def _get_priority() -> int:
@@ -115,5 +119,7 @@ class FirewallKillSwitch(KillSwitch):
                 "Firewall kill switch service did not answer on the system bus."
             )
             return False
+
+        logger.info("Firewall kill switch backend enabled")
 
         return True
