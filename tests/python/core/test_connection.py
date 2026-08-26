@@ -19,9 +19,12 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 from proton.vpn.core.refresher import VPNDataRefresher
 from proton.vpn.core.registry import Registry
 from proton.vpn.session.servers import LogicalServer
+from proton.vpn.session.servers.types import TierEnum
+from proton.vpn.session.exceptions import ServerNotFoundError
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.core.vpnconnector import VPNConnector
 from proton.vpn.connection import events, exceptions, states
+from proton.vpn.connection.publisher import Publisher
 from unittest.mock import Mock, AsyncMock
 import pytest
 
@@ -346,3 +349,90 @@ def test_iter_available_protocols_returns_empty_when_no_protocols_match_group():
     result = list(connector.iter_available_protocols("nonexistent"))
 
     assert result == []
+
+
+def _connected_state(server_id="server-1"):
+    # server_id=None models a Connected state with no connection attached,
+    # which VPNConnector guards against defensively.
+    connected_event = events.Connected(
+        context=events.EventContext(connection=Mock(), connection_details=None)
+    )
+    connection = Mock(server_id=server_id) if server_id else None
+    state_context = states.StateContext(event=connected_event, connection=connection)
+    return states.Connected(context=state_context)
+
+
+def _connector_publisher(session_holder_mock):
+    publisher = Publisher()
+    VPNConnector(
+        session_holder=session_holder_mock,
+        settings_persistence=None,
+        usage_reporting=None,
+        registry=Registry(),
+        connection_persistence=Mock(),
+        publisher=publisher,
+        port_forward_file_handler=Mock(),
+    )
+    return publisher
+
+
+def test_on_state_change_remember_free_server_assigns_the_connected_server_for_free_tier():
+    session_holder_mock = Mock()
+    session_holder_mock.user_tier = TierEnum.FREE
+    server_mock = Mock(id="server-1", exit_country="US")
+    session_holder_mock.session.server_list.get_by_id.return_value = server_mock
+
+    publisher = _connector_publisher(session_holder_mock)
+
+    publisher.notify(_connected_state(server_id="server-1"))
+
+    session_holder_mock.session.server_list.get_by_id.assert_called_once_with("server-1")
+    session_holder_mock.session.free_server_assignment.set.assert_called_once_with("US", "server-1")
+
+
+def test_on_state_change_remember_free_server_ignores_non_connected_states():
+    session_holder_mock = Mock()
+    session_holder_mock.user_tier = TierEnum.FREE
+
+    publisher = _connector_publisher(session_holder_mock)
+
+    publisher.notify(states.Disconnected())
+
+    session_holder_mock.session.free_server_assignment.set.assert_not_called()
+
+
+def test_on_state_change_remember_free_server_ignores_paid_tier_users():
+    session_holder_mock = Mock()
+    session_holder_mock.user_tier = TierEnum.PLUS
+
+    publisher = _connector_publisher(session_holder_mock)
+
+    publisher.notify(_connected_state())
+
+    session_holder_mock.session.server_list.get_by_id.assert_not_called()
+    session_holder_mock.session.free_server_assignment.set.assert_not_called()
+
+
+def test_on_state_change_remember_free_server_ignores_a_connected_state_with_no_connection():
+    session_holder_mock = Mock()
+    session_holder_mock.user_tier = TierEnum.FREE
+
+    publisher = _connector_publisher(session_holder_mock)
+
+    publisher.notify(_connected_state(server_id=None))
+
+    session_holder_mock.session.server_list.get_by_id.assert_not_called()
+    session_holder_mock.session.free_server_assignment.set.assert_not_called()
+
+
+@pytest.mark.parametrize("error", [ServerNotFoundError("not found"), RuntimeError("not indexed")])
+def test_on_state_change_remember_free_server_handles_a_server_list_lookup_failure(error):
+    session_holder_mock = Mock()
+    session_holder_mock.user_tier = TierEnum.FREE
+    session_holder_mock.session.server_list.get_by_id.side_effect = error
+
+    publisher = _connector_publisher(session_holder_mock)
+
+    publisher.notify(_connected_state())
+
+    session_holder_mock.session.free_server_assignment.set.assert_not_called()

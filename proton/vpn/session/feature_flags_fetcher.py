@@ -32,6 +32,8 @@ if TYPE_CHECKING:
 REFRESH_INTERVAL = 2 * 60 * 60  # 2 hours
 FF_ENV_VAR = "PROTON_VPN_FEATURE_FLAG_{flag}"
 
+FREE_RESCOPE_FLAG = "FreeRescope"
+
 DEFAULT = {
     "toggles": [
         {
@@ -45,6 +47,15 @@ DEFAULT = {
         },
         {
             "name": "ProTunV1",
+            "enabled": False,
+            "impressionData": False,
+            "variant": {
+                "name": "disabled",
+                "enabled": False
+            }
+        },
+        {
+            "name": FREE_RESCOPE_FLAG,
             "enabled": False,
             "impressionData": False,
             "variant": {

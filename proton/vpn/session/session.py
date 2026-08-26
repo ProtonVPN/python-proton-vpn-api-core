@@ -37,6 +37,7 @@ from proton.vpn.session.dataclasses import \
     VPNLocation
 from proton.session.exceptions import ProtonAPIError, ProtonAPINotReachable
 from proton.vpn.session.exceptions import VPNAccountDecodeError, ServerListDecodeError
+from proton.vpn.session.free_server_assignment import FreeServerAssignment
 from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.location_names_fetcher import LocationTranslations
 from proton.vpn.session.feature_flags_fetcher import FeatureFlags
@@ -124,6 +125,7 @@ class VPNSession(Session):
         self._location_names = location_names
         self._locale = locale
         self._client_headers = _client_headers(locale, timezone)
+        self._free_server_assignment = FreeServerAssignment()
         super().__init__(*args, **kwargs)
 
         # Logged here rather than per request, auth requests never reach async_api_request.
@@ -293,6 +295,7 @@ class VPNSession(Session):
         self._feature_flags = None
         self._notifications = None
         self._location_names = None
+        self._free_server_assignment.clear()
         self._fetcher.clear_cache()
         return result
 
@@ -452,6 +455,11 @@ class VPNSession(Session):
     def server_list(self) -> ServerList:
         """The current server list."""
         return self._server_list
+
+    @property
+    def free_server_assignment(self) -> FreeServerAssignment:
+        """The servers assigned to each country for free tier users."""
+        return self._free_server_assignment
 
     async def update_server_loads(self) -> ServerList:
         """
