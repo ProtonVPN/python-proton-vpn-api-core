@@ -206,6 +206,7 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
     async def enable(self):
         """Start retrieving data periodically from Proton's REST API."""
         await self._refresh_vpn_session_if_necessary()
+        await self._session.update_and_set_location_if_necessary()
         self._enable()
 
     async def disable(self):

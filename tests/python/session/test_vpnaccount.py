@@ -110,7 +110,12 @@ class TestVpnAccountSerialize:
         assert location.ISP == VPN_LOCATION_API_RESPONSE["ISP"]
 
     def test_location_to_dict(self):
-        assert VPNLocation.from_dict(VPN_LOCATION_API_RESPONSE).to_dict() == VPN_LOCATION_API_RESPONSE
+        location = VPNLocation.from_dict(VPN_LOCATION_API_RESPONSE)
+        d = location.to_dict()
+        for key in ("IP", "Country", "ISP", "Long", "Lat"):
+            assert d[key] == VPN_LOCATION_API_RESPONSE[key]
+        # calculated field is present but unset
+        assert d["ExpirationTime"] is None
 
 
 class TestVpnAccount:
@@ -125,14 +130,16 @@ class TestVpnAccount:
             }
         }
         vpnsession.__setstate__(vpndata)
-
         vpn_account = vpnsession.vpn_account
+        location_dict = vpn_account.location.to_dict()
+        for key in ("IP", "Country", "ISP", "Long", "Lat"):
+            assert location_dict[key] == vpndata["vpn"]["location"][key]
+        assert location_dict["ExpirationTime"] is None
         assert vpn_account.max_tier == 0
         assert vpn_account.max_connections == 2
         assert vpn_account.plan_name == vpndata["vpn"]["vpninfo"]["VPN"]["PlanName"]
         assert vpn_account.plan_title == vpndata["vpn"]["vpninfo"]["VPN"]["PlanTitle"]
         assert not vpn_account.delinquent
-        assert vpn_account.location.to_dict() == vpndata["vpn"]["location"]
         vpncredentials = vpnsession.vpn_account.vpn_credentials
         assert vpncredentials.userpass_credentials.username == vpndata["vpn"]["vpninfo"]["VPN"]["Name"]
         assert vpncredentials.userpass_credentials.password == vpndata["vpn"]["vpninfo"]["VPN"]["Password"]

@@ -35,6 +35,7 @@ from proton.vpn.session.dataclasses import \
     NPSSurveyResponse, \
     VPNCertificate, \
     VPNLocation
+from proton.session.exceptions import ProtonAPIError, ProtonAPINotReachable
 from proton.vpn.session.exceptions import VPNAccountDecodeError, ServerListDecodeError
 from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.location_names_fetcher import LocationTranslations
@@ -411,6 +412,17 @@ class VPNSession(Session):
         If it was not loaded yet then None is returned instead.
         """
         return self._vpn_account
+
+    async def update_and_set_location_if_necessary(self):
+        """If location data is expired, update it from API and set it."""
+        current_location = self._vpn_account.location
+        if current_location.is_expired:
+            try:
+                new_location = await self._fetcher.fetch_location()
+            except (ProtonAPIError, ProtonAPINotReachable):
+                logger.warning("Location could not be refreshed")
+                return
+            self.set_location(new_location)
 
     def set_location(self, location: VPNLocation):
         """Set new location data and store it."""

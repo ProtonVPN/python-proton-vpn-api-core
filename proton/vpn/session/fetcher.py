@@ -17,7 +17,7 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
-
+import time
 from typing import TYPE_CHECKING, Optional
 
 from proton.vpn import logging
@@ -108,9 +108,9 @@ class VPNSessionFetcher:
 
     async def fetch_location(self) -> VPNLocation:
         """Fetches information about the physical location the VPN client is connected from."""
-        return VPNLocation.from_dict(
-            await rest_api_request(self._session, "/vpn/v1/location")
-        )
+        location_data = dict(await rest_api_request(self._session, "/vpn/v1/location"))
+        location_data["ExpirationTime"] = int(time.time()) + 15 * 60  # now + 15 min
+        return VPNLocation.from_dict(location_data)
 
     def load_server_list_from_cache(self) -> ServerList:
         """
