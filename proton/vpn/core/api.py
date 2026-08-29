@@ -217,8 +217,9 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         This only returns True if both conditions are met and if the user
         is currently authenticating a session that requires 2FA.
         """
-        lib_available = self.is_fido2_lib_available
-        supports_fido2 = self._session_holder.session.supports_fido2
+        session = self._session_holder.session
+        lib_available = session.fido2_lib_available
+        supports_fido2 = session.supports_fido2
         return bool(lib_available and supports_fido2)
 
     async def generate_2fa_fido2_assertion(
