@@ -27,6 +27,7 @@ from proton.vpn.connection import events, exceptions, states
 from proton.vpn.connection.publisher import Publisher
 from unittest.mock import Mock, AsyncMock
 import pytest
+import asyncio
 
 from tests.python.connection.test_vpnconnection import DummyVPNConnection
 
@@ -150,6 +151,25 @@ async def test__on_connection_event_reports_unexpected_exceptions_and_bubbles_th
 
     vpn_connector_wrapper._usage_reporting.report_error.assert_called_once_with(event.context.error)
 
+@pytest.mark.asyncio
+async def test_on_state_change_updates_location_when_disconnected_after_a_connection():
+    session_holder_mock = Mock()
+    session_holder_mock.session.update_and_set_location_if_necessary = AsyncMock()
+
+    publisher = _connector_publisher(session_holder_mock)
+    disconnected_state = states.Disconnected(
+        context=states.StateContext(
+            event=events.Disconnected(),
+            connection=Mock()
+        )
+    )
+
+    publisher.notify(disconnected_state)
+
+    # Give the event loop a chance to run the scheduled task
+    await asyncio.sleep(0)
+
+    session_holder_mock.session.update_and_set_location_if_necessary.assert_awaited_once()
 
 def test_on_state_change_stores_new_device_ip_when_successfully_connected_to_vpn_and_connection_details_and_device_ip_are_set():
     publisher_mock = Mock()

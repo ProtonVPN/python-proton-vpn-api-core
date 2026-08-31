@@ -514,7 +514,17 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         return new_event
 
     def _on_state_change_update_location(self, state: states.State):
-        """Updates the user location when the connection is established."""
+        """Updates the user location when the connection is established or ended."""
+        if isinstance(state, states.Disconnected):
+            # Only refresh after disconnection, not on the initial state.
+            if state.context.connection:
+                loop = asyncio.get_running_loop()
+                task = loop.create_task(
+                    self._session_holder.session.update_and_set_location_if_necessary()
+                )
+                self._background_tasks.add(task)
+            return
+
         connection_details = self._get_connection_details_from_state(state)
         if not connection_details:
             return

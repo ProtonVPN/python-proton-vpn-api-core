@@ -418,7 +418,10 @@ class VPNSession(Session):
 
     async def update_and_set_location_if_necessary(self):
         """If location data is expired, update it from API and set it."""
-        current_location = self._vpn_account.location
+        if self.vpn_account is None:
+            # logged out
+            return
+        current_location = self.vpn_account.location
         if current_location.is_expired:
             try:
                 new_location = await self._fetcher.fetch_location()

@@ -48,6 +48,8 @@ API_VPN_ACCELERATOR = "SplitTCP"
 API_MODERATE_NAT = "RandomNAT"
 API_PORT_FORWARDING = "PortForwarding"
 
+LOCATION_REFRESH_INTERVAL = 15 * 60
+
 
 class VPNSessionFetcher:
     """
@@ -109,7 +111,7 @@ class VPNSessionFetcher:
     async def fetch_location(self) -> VPNLocation:
         """Fetches information about the physical location the VPN client is connected from."""
         location_data = dict(await rest_api_request(self._session, "/vpn/v1/location"))
-        location_data["ExpirationTime"] = int(time.time()) + 15 * 60  # now + 15 min
+        location_data["ExpirationTime"] = int(time.time()) + LOCATION_REFRESH_INTERVAL
         return VPNLocation.from_dict(location_data)
 
     def load_server_list_from_cache(self) -> ServerList:
