@@ -4,5 +4,5 @@ variables:
 
 include:
  - project: 'ProtonVPN/Linux/integration/ci-libraries-rust'
-   ref: 0eec9744bdc7c81a65ca5a63165d712c7c482729  # fix: [VPNLINUX-1848] Added missing tag creation functionality back in
+   ref:  daac6539724df7cdeeadf3821bb3c6336a91b3b9  # chore: [VPNLINUX-1900] Rust tests should only enable a subset of features
    file: 'develop-pipeline.yml'
