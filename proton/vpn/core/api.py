@@ -21,7 +21,6 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import asyncio
 import copy
-import random
 import time
 from threading import Event
 from typing import Optional
@@ -35,11 +34,8 @@ from proton.vpn.core.settings import Settings, SettingsPersistence
 from proton.vpn.core.session_holder import SessionHolder, ClientTypeMetadata
 from proton.vpn.session.dataclasses import LoginResult, BugReportForm, NPSSurveyResponse
 from proton.vpn.session.account import VPNAccount
-from proton.vpn.session.exceptions import ServerNotFoundError
 from proton.vpn.session.location_names_fetcher import LocationTranslations
-from proton.vpn.session.servers.logicals import ServerList
-from proton.vpn.session.servers.types import LogicalServer, ServerFeatureEnum, TierEnum
-from proton.vpn.session import FeatureFlags, FREE_RESCOPE_FLAG
+from proton.vpn.session import FeatureFlags
 from proton.vpn.core.usage import UsageReporting
 from proton.vpn.connection.vpnconnection import VPNConnection
 
@@ -316,51 +312,6 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
     def location_names(self) -> LocationTranslations:
         """The last location translations fetched from the REST API."""
         return self._session_holder.session.location_names
-
-    def get_server_for_country(self, country_code: str) -> LogicalServer:
-        """Returns the server to connect to in the specified country.
-
-        While free rescope is enabled, free tier users are restricted to a single
-        server per country: the server already assigned to the country is
-        returned, or one of its available servers is picked at random when the
-        country has no usable assignment yet. The pick is only remembered once
-        the connection has been successfully established.
-
-        Every other user gets the fastest available server in the country.
-
-        :raises ServerNotFoundError: if there is no server available in the
-            specified country.
-        """
-        session = self._session_holder.session
-        server_list = session.server_list
-        # Default to free tier if the session is not loaded yet, matching
-        # ProtonVPNAPI.load_settings and VPNConnector._get_user_tier.
-        user_tier = self._session_holder.user_tier or 0
-        servers = server_list.logicals if server_list is not None else []
-        country_servers = ServerList.get_servers_in_country_code(servers, country_code)
-        country_servers = ServerList.get_available_servers(country_servers, user_tier)
-        country_servers = list(ServerList.get_servers_with_features(
-            country_servers,
-            exclude_features=ServerFeatureEnum.SECURE_CORE | ServerFeatureEnum.TOR
-        ))
-
-        if not country_servers:
-            raise ServerNotFoundError(
-                f"No server available in the current tier for {country_code}"
-            )
-
-        is_free_tier = user_tier == TierEnum.FREE
-        if bool(self.feature_flags.get(FREE_RESCOPE_FLAG)) and is_free_tier:
-            if assigned_server := session.free_server_assignment.get_assigned(
-                country_code,
-                country_servers
-            ):
-                return assigned_server
-
-            # nosemgrep: gitlab.bandit.B311
-            return random.choice(country_servers)  # nosec B311
-
-        return ServerList.get_fastest_server(country_servers)
 
     async def submit_bug_report(self, bug_report: BugReportForm):
         """

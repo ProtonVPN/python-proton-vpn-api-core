@@ -45,7 +45,6 @@ from proton.vpn.connection.publisher import Publisher
 from proton.vpn.connection.states import StateContext
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.session.dataclasses import VPNLocation
-from proton.vpn.session.exceptions import ServerNotFoundError
 from proton.vpn.session.servers import LogicalServer, ServerFeatureEnum
 from proton.vpn.core.usage import UsageReporting
 from proton.vpn.connection.exceptions import FeatureSyntaxError, FeatureError
@@ -129,7 +128,6 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
 
         self._publisher.register(self._on_state_change_update_location)
         self._publisher.register(self._port_forward_file_handler.on_state_change_update_port)
-        self._publisher.register(self._on_state_change_remember_free_server)
 
     @property
     def is_split_tunneling_available(self) -> bool:
@@ -534,31 +532,6 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         self._session_holder.session.set_location(
             self._create_new_vpn_location(connection_details, current_location)
         )
-
-    def _on_state_change_remember_free_server(self, state: states.State):
-        """Assigns the connected server to its country for free tier users."""
-        if not isinstance(state, states.Connected):
-            return
-
-        if not self._is_free_tier():
-            return
-
-        connection = state.context.connection
-        server_id = connection.server_id if connection else None
-        if not server_id:
-            return
-
-        session = self._session_holder.session
-        try:
-            server = session.server_list.get_by_id(server_id)
-        except (ServerNotFoundError, RuntimeError):
-            logger.warning(
-                f"Could not look up server {server_id}, "
-                "its country assignment was not remembered."
-            )
-            return
-
-        session.free_server_assignment.set(server.exit_country, server.id)
 
     def _get_connection_details_from_state(
             self, state: states.State

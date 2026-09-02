@@ -343,17 +343,6 @@ async def test_api_request_logs_the_endpoint(build_session, caplog):
     assert VPNSession.NPS_SURVEY_DISMISS_ENDPOINT in caplog.text
 
 
-@pytest.mark.asyncio
-async def test_logout_clears_the_free_server_assignment():
-    session = VPNSession()
-    session._fetcher = Mock()
-    session.free_server_assignment.set("US", "server-1")
-
-    await session.logout()
-
-    assert session.free_server_assignment.get("US") is None
-
-
 # ---------------------------------------------------------------------------
 # The three auth requests that never reach async_api_request
 # ---------------------------------------------------------------------------
