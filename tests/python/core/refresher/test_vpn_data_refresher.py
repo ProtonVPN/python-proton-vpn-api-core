@@ -55,6 +55,7 @@ async def test_enable_schedules_all_refreshers_when_loaded():
     await refresher.enable()
 
     assert scheduler.mock_calls == [
+        call.run_soon(session_holder.session.update_and_set_location_if_necessary),
         call.run_after(client_config_refresher.initial_refresh_delay, client_config_refresher.refresh),
         call.run_after(server_list_refresher.initial_refresh_delay, server_list_refresher.refresh),
         call.run_after(certificate_refresher.initial_refresh_delay, certificate_refresher.refresh),
@@ -111,7 +112,7 @@ async def test_enable_fetches_vpn_session_when_not_loaded_and_then_schedules_ref
 
     assert mock_manager.mock_calls == [
         call.session_holder.session.fetch_session_data(),
-        call.session_holder.session.update_and_set_location_if_necessary(),
+        call.scheduler.run_soon(session_holder.session.update_and_set_location_if_necessary),
         call.scheduler.run_after(client_config_refresher.initial_refresh_delay, client_config_refresher.refresh),
         call.scheduler.run_after(server_list_refresher.initial_refresh_delay, server_list_refresher.refresh),
         call.scheduler.run_after(certificate_refresher.initial_refresh_delay, certificate_refresher.refresh),
@@ -156,6 +157,7 @@ async def test_enable_does_not_schedule_the_location_names_refresher_without_a_l
     await refresher.enable()
 
     assert scheduler.mock_calls == [
+        call.run_soon(session_holder.session.update_and_set_location_if_necessary),
         call.run_after(client_config_refresher.initial_refresh_delay, client_config_refresher.refresh),
         call.run_after(server_list_refresher.initial_refresh_delay, server_list_refresher.refresh),
         call.run_after(certificate_refresher.initial_refresh_delay, certificate_refresher.refresh),
@@ -163,3 +165,4 @@ async def test_enable_does_not_schedule_the_location_names_refresher_without_a_l
         call.run_after(notifications_refresher.initial_refresh_delay, notifications_refresher.refresh),
         call.start()
     ]
+#here

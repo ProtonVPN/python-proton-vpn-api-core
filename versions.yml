@@ -1,3 +1,10 @@
+version: 5.6.20
+time: 2026/09/02 13:30
+author: Elena Švilpė
+email: elena.svilpe@proton.ch
+description:
+- "fix: add location call on startup to scheduler"
+---
 version: 5.6.19
 time: 2026/09/02 09:25
 author: Luke Titley
