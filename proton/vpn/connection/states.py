@@ -179,8 +179,11 @@ class Disconnected(State):
 
         if self.context.reconnection:
             # The Kill switch is enabled to avoid leaks when switching servers, even when
-            # the kill switch setting is off.
-            await self.context.kill_switch.enable()
+            # the kill switch setting is off. permanent is passed because letting it
+            # default would turn permanent mode off for the length of the switch.
+            await self.context.kill_switch.enable(
+                permanent=self.context.kill_switch_setting == KillSwitchSetting.PERMANENT
+            )
 
             # When a reconnection is expected, an Up event is returned to start a new connection.
             # straight away.

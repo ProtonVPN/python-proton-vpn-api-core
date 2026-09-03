@@ -268,10 +268,40 @@ async def test_disconnected_run_tasks_when_reconnection_is_requested_and_should_
 
     assert context.method_calls == [
         call.connection.remove_persistence(),
-        call.kill_switch.enable()  # Kill switch is enabled to avoid leaks when switching servers.
+        # Kill switch is enabled to avoid leaks when switching servers.
+        call.kill_switch.enable(permanent=False)
     ]
     assert isinstance(generated_event, events.Up)
     assert generated_event.context.connection is context.reconnection
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kill_switch_setting, expected_permanent", [
+    (KillSwitchSetting.PERMANENT, True),
+    (KillSwitchSetting.ON, False),
+    (KillSwitchSetting.OFF, False),
+])
+async def test_disconnected_run_tasks_keeps_permanent_mode_while_switching_servers(
+        kill_switch_setting, expected_permanent
+):
+    """
+    Switching servers must not turn permanent mode off, even briefly.
+
+    Letting permanent default to False here disables boot persistence for the
+    length of the switch, and it stays off if the app or the machine dies in
+    that window.
+    """
+    context = AsyncMock()
+    context.reconnection = Mock()
+    context.kill_switch_setting = kill_switch_setting
+    disconnected = states.Disconnected(context=context)
+
+    await disconnected.run_tasks()
+
+    assert context.method_calls == [
+        call.connection.remove_persistence(),
+        call.kill_switch.enable(permanent=expected_permanent)
+    ]
 
 
 @pytest.mark.asyncio

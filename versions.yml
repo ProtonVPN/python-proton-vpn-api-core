@@ -1,3 +1,10 @@
+version: 5.6.21
+time: 2026/09/03 15:28
+author: Pep Llaneras
+email: josep.llaneras@proton.ch
+description:
+- "fix: Keep permanent mode on while switching servers"
+---
 version: 5.6.20
 time: 2026/09/02 13:30
 author: Elena Švilpė
