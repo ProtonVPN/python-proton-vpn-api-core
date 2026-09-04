@@ -77,7 +77,7 @@ class KillSwitch(ABC):
         """
 
     @abstractmethod
-    async def enable_ipv6_leak_protection(self, permanent: bool = False):
+    async def enable_ipv6_leak_protection(self):
         """
         Enables IPv6 kill switch to prevent leaks.
         """

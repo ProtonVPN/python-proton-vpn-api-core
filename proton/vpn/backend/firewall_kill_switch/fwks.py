@@ -77,9 +77,7 @@ class FirewallKillSwitch(KillSwitch):
         """Disables the kill switch."""
         await self._dbus_client.disable()
 
-    # permanent is ignored: this table is only used while the kill switch is
-    # off, and the two are mutually exclusive, so it can never outlive a reboot.
-    async def enable_ipv6_leak_protection(self, permanent: bool = False):
+    async def enable_ipv6_leak_protection(self):
         """
         Enables IPv6 leak protection.
 

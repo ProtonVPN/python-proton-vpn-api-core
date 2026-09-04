@@ -86,7 +86,7 @@ class WGKillSwitch(KillSwitch):
         await self._ks_handler.remove_killswitch_connection()
         await self._ks_handler.remove_vpn_server_route()
 
-    async def enable_ipv6_leak_protection(self, permanent: bool = False):
+    async def enable_ipv6_leak_protection(self):
         """Enables IPv6 kill switch."""
         # Note that IPv6 leak protection is not required when using wireguard,
         # since wireguard already prevents IPv6 leaks. IPv6 leak protection is
