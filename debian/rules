@@ -21,4 +21,11 @@ override_dh_auto_build:
 	cp {{rust_triplet}}/release/proton-vpn-kill-switch-service usr/libexec/proton-vpn-kill-switch-service
 	cp $(CURDIR)/../resources/proton-vpn-kill-switch.conf me.proton.vpn.kill_switch.conf
 	cp $(CURDIR)/../resources/proton-vpn-kill-switch.dbus-service me.proton.vpn.kill_switch.service
+	cp $(CURDIR)/../resources/proton-vpn-kill-switch-boot.service proton-vpn-kill-switch-boot.service
 	dh_auto_build
+
+# Shipped disabled: the kill switch service enables the boot unit itself when
+# the user turns permanent mode on. --no-enable leaves an out-of-band
+# systemctl enable/disable untouched across upgrades.
+override_dh_installsystemd:
+	dh_installsystemd --no-enable --no-start proton-vpn-kill-switch-boot.service

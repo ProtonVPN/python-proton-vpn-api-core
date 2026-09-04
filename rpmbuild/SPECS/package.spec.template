@@ -36,6 +36,9 @@ BuildRequires: NetworkManager-openvpn-gnome
 BuildRequires: gobject-introspection
 BuildRequires: python3-jinja2
 BuildRequires: python3-dbus-fast
+# busctl, to switch the kill switch off before removal, and the systemd
+# manager the service talks to for permanent mode.
+Requires: systemd
 
 Requires: python3-proton-core >= 0.5.0
 Requires: python3-distro
@@ -94,6 +97,7 @@ install -D -m 644 nm-protun-service.conf $RPM_BUILD_ROOT/usr/share/dbus-1/system
 install -D -m 755 proton-vpn-kill-switch-service $RPM_BUILD_ROOT/usr/libexec/proton-vpn-kill-switch-service
 install -D -m 644 proton-vpn-kill-switch.conf $RPM_BUILD_ROOT/usr/share/dbus-1/system.d/me.proton.vpn.kill_switch.conf
 install -D -m 644 proton-vpn-kill-switch.dbus-service $RPM_BUILD_ROOT/usr/share/dbus-1/system-services/me.proton.vpn.kill_switch.service
+install -D -m 644 proton-vpn-kill-switch-boot.service $RPM_BUILD_ROOT/usr/lib/systemd/system/proton-vpn-kill-switch-boot.service
 
 %files -f %{{pyproject_files}}
 %defattr(-,root,root)
@@ -104,6 +108,23 @@ install -D -m 644 proton-vpn-kill-switch.dbus-service $RPM_BUILD_ROOT/usr/share/
 /usr/libexec/proton-vpn-kill-switch-service
 /usr/share/dbus-1/system.d/me.proton.vpn.kill_switch.conf
 /usr/share/dbus-1/system-services/me.proton.vpn.kill_switch.service
+/usr/lib/systemd/system/proton-vpn-kill-switch-boot.service
+
+%preun
+# Turn the kill switch off before the package goes away.
+# $1 == 0 is final removal, not an upgrade.
+if [ $1 -eq 0 ]; then
+    if ! ks_error=$(busctl call \
+            me.proton.vpn.kill_switch /me/proton/vpn/kill_switch \
+            me.proton.vpn.kill_switch Disable 2>&1); then
+        echo "warning: could not disable the Proton VPN kill switch: ${{ks_error}}" >&2
+    fi
+
+    # The symlink was created at runtime, so no package owns it and a
+    # plain "remove" leaves it in place. The Disable call above should already remove it
+    # but the extra redundancy is added due to the criticality of leaving this unit enabled.
+    systemctl disable proton-vpn-kill-switch-boot.service >/dev/null 2>&1 || true
+fi
 
 %postun
 # A running instance would keep owning me.proton.vpn.kill_switch with a deleted

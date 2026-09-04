@@ -35,7 +35,7 @@ async fn main() -> std::process::ExitCode {
     use proton_vpn_platform::kill_switch::{
         FirewallKillSwitch,
         parse_fwmark,
-        Config,
+        FirewallConfig,
         DEFAULT_FWMARK,
         DEFAULT_TUNNEL_IFACE,
     };
@@ -96,7 +96,7 @@ async fn main() -> std::process::ExitCode {
     .format_target(false)
     .init();
 
-    let mut ks = FirewallKillSwitch;
+    let mut ks = FirewallKillSwitch::default();
 
     let result = async {
         match Cli::parse().command {
@@ -109,18 +109,22 @@ async fn main() -> std::process::ExitCode {
                     .as_deref()
                     .map_or(Ok(DEFAULT_FWMARK), parse_fwmark)?;
 
-                ks.enable(&Config {
+                // The CLI is just for development purposes and doesn't allow
+                // persisting the firewall ruleset (advanced mode), that's why
+                // `apply_rules` is called instead of `enable`.
+                ks.apply_rules(&FirewallConfig {
                     fwmark,
                     tunnel_iface: iface,
                     server_ip,
+                    permanent: false,
                 })
                 .await
             }
-            Command::Down => ks.disable().await,
+            Command::Down => ks.remove_rules().await,
             Command::Ipv6Up { iface } => {
-                ks.enable_ipv6_leak_protection(&Config {
+                ks.enable_ipv6_leak_protection(&FirewallConfig {
                     tunnel_iface: iface,
-                    ..Config::default()
+                    ..FirewallConfig::default()
                 })
                 .await
             }

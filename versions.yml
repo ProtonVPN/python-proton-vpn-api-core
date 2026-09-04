@@ -1,3 +1,10 @@
+version: 5.6.22
+time: 2026/09/04 08:41
+author: Pep Llaneras
+email: josep.llaneras@proton.ch
+description:
+- "feat(fwks): Add permanent kill switch"
+---
 version: 5.6.21
 time: 2026/09/03 15:28
 author: Pep Llaneras

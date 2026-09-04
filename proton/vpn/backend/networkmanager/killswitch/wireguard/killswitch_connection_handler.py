@@ -223,7 +223,10 @@ class KillSwitchConnectionHandler:
         ip_binary = _find_ip_binary()
 
         def run():
-            return subprocess.run(  # nosec subprocess_without_shell_equals_true
+            # ip_binary comes from shutil.which over a hardcoded directory
+            # list, and the arguments are a list, so nothing external can
+            # influence what runs.
+            return subprocess.run(  # nosec subprocess_without_shell_equals_true  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
                 [ip_binary, "route"], capture_output=True, encoding="utf-8", check=True
             )
 

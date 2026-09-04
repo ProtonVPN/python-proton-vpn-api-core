@@ -24,12 +24,13 @@
 //!
 //! | method                       | signature | effect                             |
 //! |------------------------------|-----------|------------------------------------|
-//! | `Enable`                     | `(uss)`   | apply the kill switch rules        |
+//! | `Enable`                     | `(ussb)`  | apply the kill switch rules        |
 //! | `Disable`                    | *(none)*  | remove the kill switch table       |
 //! | `EnableIpv6LeakProtection`   | *(none)*  | block IPv6 only, leaving IPv4 be   |
 //! | `DisableIpv6LeakProtection`  | *(none)*  | remove the IPv6 table              |
 //!
-//! The `(uss)` argument is `fwmark`, `tunnel_iface`, `server_ip` — see
+//! The `(ussb)` argument is `fwmark`, `tunnel_iface`, `server_ip`,
+//! `permanent` — see
 //! [`ConfigWire`], where an empty `server_ip` means "none".
 //!
 //! The two pairs are independent — IPv6 leak protection is what the client asks
@@ -45,7 +46,7 @@
 //!
 //! ```text
 //! busctl call me.proton.vpn.kill_switch /me/proton/vpn/kill_switch \
-//!     me.proton.vpn.kill_switch Enable '(uss)' 245447468 proton0 ''
+//!     me.proton.vpn.kill_switch Enable '(ussb)' 245447468 proton0 '' false
 //!
 //! busctl call me.proton.vpn.kill_switch /me/proton/vpn/kill_switch \
 //!     me.proton.vpn.kill_switch Disable

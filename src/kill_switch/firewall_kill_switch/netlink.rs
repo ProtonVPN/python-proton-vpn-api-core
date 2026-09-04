@@ -24,7 +24,7 @@ use std::ffi::CString;
 
 use nftnl::FinalizedBatch;
 
-use super::super::error::{Error, Result};
+use super::super::error::{Result, RulesetError};
 
 // Sequence number for the table dump. A fresh socket is opened per call, so
 // there is nothing else in flight to disambiguate from; it just has to be
@@ -37,20 +37,20 @@ const DUMP_SEQ: u32 = 1;
 /// lands or none do, so the host is never left half-protected. Requires
 /// `CAP_NET_ADMIN`.
 fn sync_send_and_process(batch: FinalizedBatch) -> Result<()> {
-    let socket = mnl::Socket::new(mnl::Bus::Netfilter).map_err(Error::NetlinkOpen)?;
+    let socket = mnl::Socket::new(mnl::Bus::Netfilter).map_err(RulesetError::NetlinkOpen)?;
     let portid = socket.portid();
 
-    socket.send_all(&batch).map_err(Error::NetlinkSend)?;
+    socket.send_all(&batch).map_err(RulesetError::NetlinkSend)?;
 
     let mut buffer = vec![0u8; nftnl::nft_nlmsg_maxsize() as usize];
     let mut expected_seqs = batch.sequence_numbers();
 
     while !expected_seqs.is_empty() {
         let messages =
-            socket.recv(&mut buffer[..]).map_err(Error::NetlinkReceive)?;
+            socket.recv(&mut buffer[..]).map_err(RulesetError::NetlinkReceive)?;
 
         for message in messages {
-            let message = message.map_err(Error::NetlinkReceive)?;
+            let message = message.map_err(RulesetError::NetlinkReceive)?;
             let Some(expected_seq) = expected_seqs.next() else {
                 // More ACKs than requests: the kernel is talking about
                 // something we did not send, so stop rather than mismatch
@@ -58,7 +58,7 @@ fn sync_send_and_process(batch: FinalizedBatch) -> Result<()> {
                 break;
             };
             mnl::cb_run(message, expected_seq, portid)
-                .map_err(Error::NetlinkRejected)?;
+                .map_err(RulesetError::NetlinkRejected)?;
         }
     }
 
@@ -69,7 +69,7 @@ fn sync_send_and_process(batch: FinalizedBatch) -> Result<()> {
 pub(super) async fn send_and_process(batch: FinalizedBatch) -> Result<()> {
     tokio::task::spawn_blocking(move || sync_send_and_process(batch))
         .await
-        .map_err(Error::Runtime)?
+        .map_err(RulesetError::Runtime)?
 }
 
 /// Ask the kernel for the names of every nftables table, across all families.
@@ -78,12 +78,12 @@ pub(super) async fn send_and_process(batch: FinalizedBatch) -> Result<()> {
 /// capability on the netlink socket regardless of the operation.
 fn sync_list_tables() -> Result<HashSet<CString>> {
     let socket =
-        mnl::Socket::new(mnl::Bus::Netfilter).map_err(Error::NetlinkOpen)?;
+        mnl::Socket::new(mnl::Bus::Netfilter).map_err(RulesetError::NetlinkOpen)?;
     let portid = socket.portid();
 
     socket
         .send(&nftnl::table::get_tables_nlmsg(DUMP_SEQ))
-        .map_err(Error::NetlinkSend)?;
+        .map_err(RulesetError::NetlinkSend)?;
 
     let mut tables = HashSet::new();
     let mut buffer = vec![0u8; nftnl::nft_nlmsg_maxsize() as usize];
@@ -93,7 +93,7 @@ fn sync_list_tables() -> Result<HashSet<CString>> {
     loop {
         let len = socket
             .recv_raw(&mut buffer)
-            .map_err(Error::NetlinkReceive)?;
+            .map_err(RulesetError::NetlinkReceive)?;
 
         let result = mnl::cb_run2(
             &buffer[..len],
@@ -102,7 +102,7 @@ fn sync_list_tables() -> Result<HashSet<CString>> {
             nftnl::table::get_tables_cb,
             &mut tables,
         )
-        .map_err(Error::NetlinkReceive)?;
+        .map_err(RulesetError::NetlinkReceive)?;
 
         if matches!(result, mnl::CbResult::Stop) {
             break;
@@ -116,5 +116,5 @@ fn sync_list_tables() -> Result<HashSet<CString>> {
 pub(super) async fn list_tables() -> Result<HashSet<CString>> {
     tokio::task::spawn_blocking(sync_list_tables)
         .await
-        .map_err(Error::Runtime)?
+        .map_err(RulesetError::Runtime)?
 }

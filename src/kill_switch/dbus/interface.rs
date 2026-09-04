@@ -21,7 +21,7 @@
 use tokio::sync::Mutex;
 use zbus::{interface, message::Header, Connection};
 
-use super::super::config::Config;
+use super::super::config::FirewallConfig;
 use super::super::error::Error;
 use super::super::FirewallKillSwitch;
 use super::config_wire::ConfigWire;
@@ -34,7 +34,7 @@ pub struct KillSwitch(Mutex<FirewallKillSwitch>);
 
 impl Default for KillSwitch {
     fn default() -> Self {
-        Self(Mutex::new(FirewallKillSwitch))
+        Self(Mutex::new(FirewallKillSwitch::default()))
     }
 }
 
@@ -63,7 +63,10 @@ impl Default for KillSwitch {
 // bus level, which is the cheapest option if no unprivileged caller needs it.
 #[interface(name = "me.proton.vpn.kill_switch")]
 impl KillSwitch {
-    /// Enable the kill switch. Argument wire format: `(uss)`.
+    /// Enable the kill switch. Argument wire format: `(ussb)`.
+    ///
+    /// When `permanent` is set this also enables the boot unit, so the rules
+    /// come back after a reboot; when it is clear the boot unit is disabled.
     ///
     /// Idempotent: calling it again replaces the rules already installed.
     async fn enable(
@@ -74,15 +77,16 @@ impl KillSwitch {
     ) -> zbus::fdo::Result<()> {
         let caller = caller_uid(connection, &header).await?;
 
-        let config = Config::try_from(config)?;
+        let config = FirewallConfig::try_from(config)?;
         log::info!(
             "Enabling kill switch on behalf of uid {caller} \
-             (fwmark={:#x}, tunnel-iface={}, server-ip={})",
+             (fwmark={:#x}, tunnel-iface={}, server-ip={}, permanent={})",
             config.fwmark,
             config.tunnel_iface,
             config
                 .server_ip
                 .map_or_else(|| "none".to_owned(), |ip| ip.to_string()),
+            config.permanent,
         );
 
         self.0.lock().await.enable(&config).await?;
@@ -102,7 +106,9 @@ impl KillSwitch {
 
         log::info!("Disabling kill switch on behalf of uid {caller}");
 
-        self.0.lock().await.disable().await?;
+        self.0.lock().await.disable().await.inspect_err(|e| {
+            log::error!("Disabling the kill switch failed: {e}");
+        })?;
 
         Ok(())
     }
@@ -129,7 +135,7 @@ impl KillSwitch {
         self.0
             .lock()
             .await
-            .enable_ipv6_leak_protection(&Config::default())
+            .enable_ipv6_leak_protection(&FirewallConfig::default())
             .await?;
 
         Ok(())
@@ -176,25 +182,32 @@ async fn caller_uid(
 /// they can tell a bad request from a genuine failure to apply the rules.
 impl From<Error> for zbus::fdo::Error {
     fn from(err: Error) -> Self {
+        let message = err.to_string();
+
         match err {
-            Error::InvalidServerIp(..)
-            | Error::InvalidInterfaceName(..)
-            | Error::InvalidFwmark(..) => {
-                zbus::fdo::Error::InvalidArgs(err.to_string())
-            }
-            other => zbus::fdo::Error::Failed(other.to_string()),
+            // Anything the caller could have got right, so they can tell a bad
+            // request from a genuine failure to apply the rules.
+            Error::Config(_) => zbus::fdo::Error::InvalidArgs(message),
+            Error::Ruleset(_) => zbus::fdo::Error::Failed(message),
+            // Not Failed: the rules *are* up, only their persistence is not,
+            // which is a different thing for the caller to decide about.
+            Error::Persistence(_) => zbus::fdo::Error::IOError(message),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::super::super::error::{
+        ConfigError, PersistenceError, RulesetError,
+    };
     use super::*;
 
     #[test]
     fn bad_arguments_are_reported_as_invalid_args() {
-        let err =
-            zbus::fdo::Error::from(Error::InvalidInterfaceName(String::new()));
+        let err = zbus::fdo::Error::from(Error::Config(
+            ConfigError::InterfaceName(String::new()),
+        ));
 
         assert!(matches!(err, zbus::fdo::Error::InvalidArgs(_)));
     }
@@ -203,11 +216,23 @@ mod tests {
     fn netlink_failures_are_reported_as_failed() {
         // A caller can't fix these by sending different arguments, so they
         // must not come back as InvalidArgs.
-        let err = zbus::fdo::Error::from(Error::NetlinkOpen(
-            std::io::Error::from(std::io::ErrorKind::PermissionDenied),
-        ));
+        let err =
+            zbus::fdo::Error::from(Error::Ruleset(RulesetError::NetlinkOpen(
+                std::io::Error::from(std::io::ErrorKind::PermissionDenied),
+            )));
 
         assert!(matches!(err, zbus::fdo::Error::Failed(_)));
+    }
+
+    #[test]
+    fn persistence_failures_are_not_reported_as_plain_failures() {
+        // The rules are up; only the reboot half failed. Reporting it the same
+        // way as "nothing was applied" would lose that distinction.
+        let err = zbus::fdo::Error::from(Error::Persistence(
+            PersistenceError::Enable("unit", zbus::Error::InvalidReply),
+        ));
+
+        assert!(matches!(err, zbus::fdo::Error::IOError(_)));
     }
 
     #[test]

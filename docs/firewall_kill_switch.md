@@ -82,14 +82,14 @@ sudo systemctl reload dbus
 ## Calling it
 
 The service starts on the first call, so nothing needs launching. `Enable`
-takes one `(uss)` struct - fwmark, tunnel interface, server IP - where `0` and
-the empty string mean "use the service defaults".
+takes one `(ussb)` struct - fwmark, tunnel interface, server IP, permanent -
+where `0`, the empty string and `false` mean "use the service defaults".
 
 ```shell
 KS="me.proton.vpn.kill_switch /me/proton/vpn/kill_switch me.proton.vpn.kill_switch"
 
 busctl introspect me.proton.vpn.kill_switch /me/proton/vpn/kill_switch
-busctl call $KS Enable '(uss)' 0 "" 1.2.3.4
+busctl call $KS Enable '(ussb)' 0 "" 1.2.3.4 false
 busctl call $KS Disable
 
 # IPv6 leak protection, independent of the above. No arguments: the service
@@ -116,6 +116,24 @@ and stable repos, which uninstalls and reinstalls and so would drop the user's
 kill switch mid-toggle. Until that is solved, uninstalling with the kill switch
 on leaves a drop-by-default firewall and no service left able to remove it —
 `nft delete table` is then the only way out.
+
+## Permanent mode
+
+`permanent` makes the rules survive a reboot. There is no state file: the
+service enables `proton-vpn-kill-switch-boot.service`, a one-shot that
+re-applies the default ruleset before the network comes up, and that unit's
+enablement *is* the setting.
+
+```shell
+systemctl is-enabled proton-vpn-kill-switch-boot   # Is permanent mode on?
+sudo systemctl disable proton-vpn-kill-switch-boot # Escape hatch
+```
+
+The unit ships disabled and is only ever enabled by the service. `fwks`
+cannot turn permanent mode on: it applies rules over netlink directly, and
+the boot unit only exists once the package is installed. Note that
+removing the table by hand frees the current boot only - if the boot unit is
+still enabled, the rules come back on the next one.
 
 ## Inspecting and recovering
 

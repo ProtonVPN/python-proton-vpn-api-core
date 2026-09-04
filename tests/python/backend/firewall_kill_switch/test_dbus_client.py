@@ -28,19 +28,23 @@ from proton.vpn.backend.firewall_kill_switch.dbus_client import KillSwitchDBusCl
     "server_ip, expected_server_ip",
     [(None, ""), ("1.1.1.1", "1.1.1.1")]
 )
+@pytest.mark.parametrize("permanent", [False, True])
 async def test_enable_sends_the_config_struct_in_field_order(
-        server_ip, expected_server_ip
+        server_ip, expected_server_ip, permanent
 ):
-    # Enable takes one (uss) struct: fwmark, tunnel interface, server IP.
-    # Getting the order wrong would be silent, so it is pinned here: a swap
-    # would put the server IP in the fwmark field and still marshal fine.
-    # 0 and "" are the values that tell the service to use its own defaults.
+    # Enable takes one (ussb) struct: fwmark, tunnel interface, server IP,
+    # permanent. Getting the order wrong would be silent, so it is pinned here:
+    # a swap would put the server IP in the fwmark field and still marshal fine.
+    # 0 and "" are the values that tell the service to use its own defaults;
+    # permanent has no such value, so False means non-permanent.
     interface = AsyncMock()
 
-    await KillSwitchDBusClient(interface).enable(server_ip=server_ip)
+    await KillSwitchDBusClient(interface).enable(
+        server_ip=server_ip, permanent=permanent
+    )
 
     assert interface.method_calls == [
-        call.call_enable([0, "", expected_server_ip])
+        call.call_enable([0, "", expected_server_ip, permanent])
     ]
 
 

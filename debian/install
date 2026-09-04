@@ -5,3 +5,4 @@ nm-protun-service.conf  usr/share/dbus-1/system.d/
 usr/libexec/proton-vpn-kill-switch-service  usr/libexec/
 me.proton.vpn.kill_switch.conf  usr/share/dbus-1/system.d/
 me.proton.vpn.kill_switch.service  usr/share/dbus-1/system-services/
+proton-vpn-kill-switch-boot.service  lib/systemd/system/

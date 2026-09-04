@@ -33,7 +33,7 @@
 //! - LAN, link-local and multicast subnets
 //! - NDP (IPv6 neighbor/router discovery) and DHCPv4
 //! - the VPN server IP during the connecting phase, when
-//!   [`Config::server_ip`] is set
+//!   [`FirewallConfig::server_ip`] is set
 //!
 //! [`FirewallKillSwitch::disable`] removes the table entirely.
 //!
@@ -77,8 +77,9 @@ use std::ffi::{CStr, CString};
 
 use nftnl::{Batch, Chain, Hook, MsgType, Policy, ProtoFamily, Table};
 
-use super::config::Config;
-use super::error::{Error, Result};
+use super::config::FirewallConfig;
+use super::error::{ConfigError, Result};
+use super::systemd;
 use expr::End;
 use netlink::send_and_process;
 
@@ -99,15 +100,34 @@ const LOOPBACK_IFACE: &CStr = c"lo";
 // ones. This is the standard priority for filtering rules (NF_IP_PRI_FILTER).
 const FILTER_PRIORITY: i32 = 0;
 
-#[derive(Default)]
-pub struct FirewallKillSwitch;
+pub struct FirewallKillSwitch {
+    boot_unit: Box<dyn systemd::BootUnit>,
+}
+
+impl Default for FirewallKillSwitch {
+    fn default() -> Self {
+        Self {
+            boot_unit: Box::new(systemd::SystemdBootUnit),
+        }
+    }
+}
 
 impl FirewallKillSwitch
 {
-    /// Enable the kill switch, replacing any rules a previous call installed.
+    /// Substitute the boot-persistence backend. Tests only; production goes
+    /// through [`Default`].
+    #[cfg(test)]
+    fn with_boot_unit(boot_unit: Box<dyn systemd::BootUnit>) -> Self {
+        Self { boot_unit }
+    }
+
+    /// Apply the kill switch rules, replacing any a previous call installed.
+    ///
+    /// Rules only, so it is safe for the boot one-shot, which runs before
+    /// `dbus.service` exists. Ignores [`FirewallConfig::permanent`].
     ///
     /// Idempotent: calling it twice leaves the same rule set in place.
-    pub async fn enable(&mut self, config: &Config) -> Result<()> {
+    pub async fn apply_rules(&mut self, config: &FirewallConfig) -> Result<()> {
         let tunnel_iface = iface_name(&config.tunnel_iface)?;
 
         let table = Table::new(TABLE_NAME, ProtoFamily::Inet);
@@ -151,7 +171,8 @@ impl FirewallKillSwitch
         // add an input-chain rule accepting new inbound on the tunnel interface
         // (iif == tunnel) to the forwarded port, for TCP and UDP. The forwarded
         // port is assigned at runtime by NAT-PMP and can change, so it must be
-        // passed in (new `Config` field) and the rule rebuilt whenever it's
+        // passed in (new `FirewallConfig` field) and the rule rebuilt when
+        // it's
         // renewed — scope the rule to that specific port rather than opening all
         // inbound on the tunnel.
         rules::add_allow_established_connections_rule(&mut batch, &in_chain, None);
@@ -268,7 +289,7 @@ impl FirewallKillSwitch
         // hardened values in place.
 
         log::info!(
-            "Kill switch enabled (fwmark={:#x}, tunnel-iface={}, server-ip={})",
+            "Kill switch rules applied (fwmark={:#x}, tunnel-iface={}, server-ip={})",
             config.fwmark,
             config.tunnel_iface,
             config
@@ -279,17 +300,51 @@ impl FirewallKillSwitch
         Ok(())
     }
 
+    /// Apply the rules, then line up boot persistence with
+    /// [`FirewallConfig::permanent`].
+    ///
+    /// Needs the system bus, so not usable at early boot — see
+    /// [`Self::apply_rules`]. Rules go on first, so a failure never leaves the
+    /// boot unit promising protection that was not applied.
+    ///
+    /// Idempotent.
+    pub async fn enable(&mut self, config: &FirewallConfig) -> Result<()> {
+        self.apply_rules(config).await?;
+        self.persist(config.permanent).await
+    }
+
+    /// Line up boot persistence with `permanent`.
+    async fn persist(&self, permanent: bool) -> Result<()> {
+        if permanent {
+            self.boot_unit.enable().await
+        } else {
+            self.boot_unit.disable().await
+        }
+    }
+
     /// Disable the kill switch by removing the nftables table.
     ///
     /// Idempotent: succeeds even when the kill switch was never enabled.
     pub async fn disable(&mut self) -> Result<()> {
+        // Both run unconditionally: a boot unit that cannot be updated must
+        // not leave the user stuck behind a firewall they asked to remove.
+        let persisted = self.persist(false).await;
+        let removed = self.remove_rules().await;
+
+        removed.and(persisted)
+    }
+
+    /// Remove the kill switch table, leaving boot persistence alone.
+    ///
+    /// Idempotent: succeeds even when the kill switch was never enabled.
+    pub async fn remove_rules(&mut self) -> Result<()> {
         let table = Table::new(TABLE_NAME, ProtoFamily::Inet);
         let mut batch = Batch::new();
 
         remove_table(&mut batch, &table);
         send_and_process(batch.finalize()).await?;
 
-        log::info!("Kill switch disabled");
+        log::info!("Kill switch rules removed");
 
         Ok(())
     }
@@ -311,7 +366,7 @@ impl FirewallKillSwitch
     /// subset of the full kill switch's.
     pub async fn enable_ipv6_leak_protection(
         &mut self,
-        config: &Config,
+        config: &FirewallConfig,
     ) -> Result<()> {
         let tunnel_iface = iface_name(&config.tunnel_iface)?;
 
@@ -447,13 +502,67 @@ fn add_chain<'a>(
 
 /// Convert an interface name into the NUL-terminated form netlink expects.
 fn iface_name(iface: &str) -> Result<CString> {
-    CString::new(iface)
-        .map_err(|_| Error::InvalidInterfaceName(iface.to_owned()))
+    Ok(CString::new(iface)
+        .map_err(|_| ConfigError::InterfaceName(iface.to_owned()))?)
 }
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    use super::super::error::Error;
     use super::*;
+
+    /// Records what `persist` asked for. Cloneable so the test keeps a handle
+    /// after the kill switch takes ownership of one.
+    ///
+    /// Only `persist` is covered: `enable`/`disable` apply real rules, which
+    /// needs `CAP_NET_ADMIN`.
+    #[derive(Clone, Default)]
+    struct SpyBootUnit {
+        enabled: Arc<AtomicUsize>,
+        disabled: Arc<AtomicUsize>,
+    }
+
+    #[async_trait::async_trait]
+    impl systemd::BootUnit for SpyBootUnit {
+        async fn enable(&self) -> Result<()> {
+            self.enabled.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+        async fn disable(&self) -> Result<()> {
+            self.disabled.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+    }
+
+    /// (enable calls, disable calls) after one `persist`.
+    async fn persist_calls(permanent: bool) -> (usize, usize) {
+        let spy = SpyBootUnit::default();
+
+        FirewallKillSwitch::with_boot_unit(Box::new(spy.clone()))
+            .persist(permanent)
+            .await
+            .unwrap();
+
+        (
+            spy.enabled.load(Ordering::SeqCst),
+            spy.disabled.load(Ordering::SeqCst),
+        )
+    }
+
+    #[tokio::test]
+    async fn permanent_mode_enables_the_boot_unit() {
+        assert_eq!(persist_calls(true).await, (1, 0));
+    }
+
+    #[tokio::test]
+    async fn non_permanent_mode_disables_the_boot_unit() {
+        // Not a no-op: the user may be switching permanent off, and leaving
+        // the unit enabled would resurrect the kill switch at the next boot.
+        assert_eq!(persist_calls(false).await, (0, 1));
+    }
 
     #[test]
     fn iface_name_accepts_a_plain_name() {
@@ -466,6 +575,6 @@ mod tests {
         // rule could end up matching a different interface than intended.
         let err = iface_name("proton0\0eth0").unwrap_err();
 
-        assert!(matches!(err, Error::InvalidInterfaceName(_)));
+        assert!(matches!(err, Error::Config(ConfigError::InterfaceName(_))));
     }
 }

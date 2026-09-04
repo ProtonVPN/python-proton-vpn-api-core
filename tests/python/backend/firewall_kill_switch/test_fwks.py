@@ -50,7 +50,9 @@ async def test_enable_without_vpn_server_does_not_send_a_server_ip():
 
     await FirewallKillSwitch(dbus_client).enable()
 
-    assert dbus_client.method_calls == [call.enable(server_ip=None)]
+    assert dbus_client.method_calls == [
+        call.enable(server_ip=None, permanent=False)
+    ]
 
 
 @pytest.mark.asyncio
@@ -59,19 +61,22 @@ async def test_enable_with_vpn_server_sends_its_ip(vpn_server):
 
     await FirewallKillSwitch(dbus_client).enable(vpn_server)
 
-    assert dbus_client.method_calls == [call.enable(server_ip="1.1.1.1")]
+    assert dbus_client.method_calls == [
+        call.enable(server_ip="1.1.1.1", permanent=False)
+    ]
 
 
 @pytest.mark.asyncio
-async def test_enable_in_permanent_mode_raises_without_applying_anything():
+async def test_enable_in_permanent_mode_forwards_the_flag():
     dbus_client = AsyncMock()
 
-    with pytest.raises(NotImplementedError):
-        await FirewallKillSwitch(dbus_client).enable(permanent=True)
+    await FirewallKillSwitch(dbus_client).enable(permanent=True)
 
-    # It has to refuse rather than quietly fall back to a non-permanent kill
-    # switch, which would leave the user less protected than they asked for.
-    assert dbus_client.method_calls == []
+    # Quietly falling back to a non-permanent kill switch would leave the user
+    # less protected than they asked for, so the flag has to reach the service.
+    assert dbus_client.method_calls == [
+        call.enable(server_ip=None, permanent=True)
+    ]
 
 
 @pytest.mark.asyncio

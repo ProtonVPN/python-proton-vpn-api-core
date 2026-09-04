@@ -86,12 +86,13 @@ class KillSwitchDBusClient:
 
         return self._interface
 
-    async def enable(self, server_ip: Optional[str] = None):
+    async def enable(self, server_ip: Optional[str] = None, permanent: bool = False):
         """Enables the kill switch."""
         interface = await self._get_interface()
-        # (uss): fwmark, tunnel interface, server IP. 0 and the empty string
-        # tell the service to use its defaults.
-        await interface.call_enable([0, "", server_ip or ""])
+        # (ussb): fwmark, tunnel interface, server IP, permanent. 0 and the
+        # empty string tell the service to use its defaults; permanent has no
+        # such "unset" value, so False means non-permanent.
+        await interface.call_enable([0, "", server_ip or "", permanent])
 
     async def disable(self):
         """Disables the kill switch, removing the firewall rules."""

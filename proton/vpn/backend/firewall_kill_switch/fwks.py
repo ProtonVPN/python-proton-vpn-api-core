@@ -63,21 +63,22 @@ class FirewallKillSwitch(KillSwitch):
     async def enable(
             self, vpn_server: Optional["VPNServer"] = None, permanent: bool = False
     ):  # noqa
-        """Enables the kill switch."""
-        if permanent:
-            raise NotImplementedError(
-                "Advanced mode not available yet for the firewall kill switch"
-            )
+        """Enables the kill switch.
 
+        With permanent set, the service also enables a boot unit that
+        re-applies the rules after a reboot.
+        """
         # Without a server IP the service skips the rule allowing traffic to it.
         server_ip = vpn_server.server_ip if vpn_server else None
 
-        await self._dbus_client.enable(server_ip=server_ip)
+        await self._dbus_client.enable(server_ip=server_ip, permanent=permanent)
 
     async def disable(self):
         """Disables the kill switch."""
         await self._dbus_client.disable()
 
+    # permanent is ignored: this table is only used while the kill switch is
+    # off, and the two are mutually exclusive, so it can never outlive a reboot.
     async def enable_ipv6_leak_protection(self, permanent: bool = False):
         """
         Enables IPv6 leak protection.
@@ -115,8 +116,12 @@ class FirewallKillSwitch(KillSwitch):
             return False
 
         if not dbus_client.is_service_available():
-            logger.info(
-                "Firewall kill switch service did not answer on the system bus."
+            # Warning, not info: this silently downgrades to the
+            # NetworkManager backend, which cannot see - let alone remove -
+            # any rules or boot unit this one left behind.
+            logger.warning(
+                "Firewall kill switch service did not answer on the system bus;"
+                " falling back to another backend."
             )
             return False
 

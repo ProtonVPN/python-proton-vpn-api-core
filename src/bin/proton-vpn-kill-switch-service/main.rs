@@ -25,10 +25,39 @@
 #[cfg(feature = "kill_switch")]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    use clap::Parser;
+
+    /// Kill switch service.
+    #[derive(Parser)]
+    #[command(name = "proton-vpn-kill-switch-service")]
+    #[command(version, about, long_about = None)]
+    struct Cli {
+        /// Apply the default kill switch rules and exit, instead of serving
+        /// D-Bus. Used by the boot unit.
+        #[arg(long)]
+        apply_boot_rules: bool,
+    }
+
+    let cli = Cli::parse();
+
     env_logger::Builder::from_env(
         env_logger::Env::default().default_filter_or("info"),
     )
     .init();
+
+    // The boot one-shot runs before dbus.service exists, so this path must
+    // stay netlink-only: apply the default rules and exit, never serve the bus.
+    if cli.apply_boot_rules {
+        use proton_vpn_platform::kill_switch::{FirewallConfig, FirewallKillSwitch};
+
+        let config = FirewallConfig::default();
+        log::info!("Applying kill switch rules at boot ({})", config.tunnel_iface);
+
+        return FirewallKillSwitch::default()
+            .apply_rules(&config)
+            .await
+            .map_err(Into::into);
+    }
 
     proton_vpn_platform::kill_switch::dbus::run().await
 }

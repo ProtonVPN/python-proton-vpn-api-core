@@ -1,0 +1,22 @@
+#!/bin/sh
+set -e
+case "$1" in
+    remove|purge)
+        # Turn the kill switch off before the package goes away.
+        if ! ks_error=$(busctl call \
+                me.proton.vpn.kill_switch /me/proton/vpn/kill_switch \
+                me.proton.vpn.kill_switch Disable 2>&1); then
+            # Never block removal on this, but do not fail silently either.
+            echo "warning: could not disable the Proton VPN kill switch: ${ks_error}" >&2
+        fi
+
+        # The symlink was created at runtime, so no package owns it and a
+        # plain "remove" leaves it in place. The Disable call above should already remove it
+        # but the extra redundancy is added due to the criticality of leaving this unit enabled.
+        systemctl disable proton-vpn-kill-switch-boot.service >/dev/null 2>&1 || true
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

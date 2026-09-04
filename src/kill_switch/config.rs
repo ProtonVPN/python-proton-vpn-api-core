@@ -20,14 +20,15 @@
 
 use std::net::IpAddr;
 
-use super::error::{Error, Result};
+use super::error::{ConfigError, Result};
 
 pub use crate::FWMARK as DEFAULT_FWMARK;
 pub use crate::TUNNEL_IFACE as DEFAULT_TUNNEL_IFACE;
 
-/// What the kill switch must allow through while blocking everything else.
+/// How to configure the firewall kill switch: what to let through, and
+/// whether the rules outlive a reboot.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Config {
+pub struct FirewallConfig {
     /// The fwmark WireGuard stamps on the packets it sends to the VPN server.
     pub fwmark: u32,
 
@@ -39,14 +40,20 @@ pub struct Config {
     /// phase, before the tunnel is up and WireGuard starts marking packets.
     /// When `None`, that rule is skipped.
     pub server_ip: Option<IpAddr>,
+
+    /// Whether the rules should be re-applied after a reboot. The ruleset is
+    /// identical either way; only `enable` acts on this, by toggling the boot
+    /// unit.
+    pub permanent: bool,
 }
 
-impl Default for Config {
+impl Default for FirewallConfig {
     fn default() -> Self {
         Self {
             fwmark: DEFAULT_FWMARK,
             tunnel_iface: DEFAULT_TUNNEL_IFACE.to_owned(),
             server_ip: None,
+            permanent: false,
         }
     }
 }
@@ -61,7 +68,7 @@ pub fn parse_fwmark(fwmark: &str) -> Result<u32> {
         None => fwmark.parse::<u32>(),
     };
 
-    parsed.map_err(|e| Error::InvalidFwmark(fwmark.to_owned(), e))
+    Ok(parsed.map_err(|e| ConfigError::Fwmark(fwmark.to_owned(), e))?)
 }
 
 #[cfg(test)]
@@ -70,11 +77,12 @@ mod tests {
 
     #[test]
     fn default_config_targets_the_proton_tunnel() {
-        let config = Config::default();
+        let config = FirewallConfig::default();
 
         assert_eq!(config.fwmark, DEFAULT_FWMARK);
         assert_eq!(config.tunnel_iface, "proton0");
         assert_eq!(config.server_ip, None);
+        assert!(!config.permanent);
     }
 
     #[test]

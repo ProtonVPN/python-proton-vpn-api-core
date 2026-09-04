@@ -1,0 +1,19 @@
+# Shipped disabled: this unit's enablement is where "permanent mode" is stored.
+#
+# Ordering mirrors ufw.service. Wants= is needed because nothing else pulls the
+# passive network-pre.target into the transaction.
+[Unit]
+Description=Proton VPN permanent kill switch
+DefaultDependencies=no
+After=local-fs.target
+Wants=network-pre.target
+Before=network-pre.target
+Conflicts=shutdown.target
+Before=shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/proton-vpn-kill-switch-service --apply-boot-rules
+
+[Install]
+WantedBy=multi-user.target

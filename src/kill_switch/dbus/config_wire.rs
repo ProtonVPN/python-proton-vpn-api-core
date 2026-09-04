@@ -20,10 +20,10 @@
 
 use std::net::IpAddr;
 
-use super::super::config::Config;
-use super::super::error::{Error, Result};
+use super::super::config::FirewallConfig;
+use super::super::error::{ConfigError, Error, Result};
 
-/// [`Config`] as it crosses D-Bus. Wire format: `(uss)`.
+/// [`FirewallConfig`] as it crosses D-Bus. Wire format: `(ussb)`.
 ///
 /// D-Bus has neither an optional type nor an IP-address type, so `server_ip`
 /// carries the address as a string and uses the **empty string to mean "no
@@ -49,10 +49,14 @@ pub struct ConfigWire {
 
     /// VPN server IP, or the empty string for none.
     pub server_ip: String,
+
+    /// Whether the rules should survive a reboot. `false` is the default,
+    /// same as `0` and `""` are for the fields above.
+    pub permanent: bool,
 }
 
-impl From<&Config> for ConfigWire {
-    fn from(config: &Config) -> Self {
+impl From<&FirewallConfig> for ConfigWire {
+    fn from(config: &FirewallConfig) -> Self {
         Self {
             fwmark: config.fwmark,
             tunnel_iface: config.tunnel_iface.clone(),
@@ -60,11 +64,12 @@ impl From<&Config> for ConfigWire {
                 .server_ip
                 .map(|ip| ip.to_string())
                 .unwrap_or_default(),
+            permanent: config.permanent,
         }
     }
 }
 
-impl TryFrom<ConfigWire> for Config {
+impl TryFrom<ConfigWire> for FirewallConfig {
     type Error = Error;
 
     /// Validate a wire config coming from an untrusted caller, applying the
@@ -73,13 +78,13 @@ impl TryFrom<ConfigWire> for Config {
     /// Defaulting here rather than in every caller keeps the fwmark and the
     /// tunnel interface name defined in exactly one place.
     fn try_from(wire: ConfigWire) -> Result<Self> {
-        let defaults = Config::default();
+        let defaults = FirewallConfig::default();
 
         let server_ip = if wire.server_ip.is_empty() {
             None
         } else {
             Some(wire.server_ip.parse::<IpAddr>().map_err(|e| {
-                Error::InvalidServerIp(wire.server_ip.clone(), e)
+                ConfigError::ServerIp(wire.server_ip.clone(), e)
             })?)
         };
 
@@ -97,6 +102,7 @@ impl TryFrom<ConfigWire> for Config {
                 wire.tunnel_iface
             },
             server_ip,
+            permanent: wire.permanent,
         })
     }
 }
@@ -117,10 +123,10 @@ mod tests {
     }
 
     #[test]
-    fn wire_signature_is_uss() {
+    fn wire_signature_is_ussb() {
         // Callers in other languages hardcode this signature, so a change
         // here breaks them.
-        assert_eq!(*ConfigWire::SIGNATURE, "(uss)");
+        assert_eq!(*ConfigWire::SIGNATURE, "(ussb)");
     }
 
     #[test]
@@ -129,6 +135,7 @@ mod tests {
             fwmark: 245_447_468,
             tunnel_iface: "proton0".to_owned(),
             server_ip: "185.159.157.1".to_owned(),
+            permanent: true,
         };
 
         assert_eq!(roundtrip(&wire), wire);
@@ -136,28 +143,29 @@ mod tests {
 
     #[test]
     fn config_survives_a_round_trip_through_the_wire() {
-        let config = Config {
+        let config = FirewallConfig {
             fwmark: 42,
             tunnel_iface: "proton0".to_owned(),
             server_ip: Some(IpAddr::V6(Ipv6Addr::LOCALHOST)),
+            permanent: true,
         };
 
         let wire = roundtrip(&ConfigWire::from(&config));
 
-        assert_eq!(Config::try_from(wire).unwrap(), config);
+        assert_eq!(FirewallConfig::try_from(wire).unwrap(), config);
     }
 
     #[test]
     fn absent_server_ip_maps_to_the_empty_string_and_back() {
-        let config = Config {
+        let config = FirewallConfig {
             server_ip: None,
-            ..Config::default()
+            ..FirewallConfig::default()
         };
 
         let wire = ConfigWire::from(&config);
         assert_eq!(wire.server_ip, "");
 
-        assert_eq!(Config::try_from(wire).unwrap().server_ip, None);
+        assert_eq!(FirewallConfig::try_from(wire).unwrap().server_ip, None);
     }
 
     #[test]
@@ -166,11 +174,12 @@ mod tests {
             fwmark: 42,
             tunnel_iface: "proton0".to_owned(),
             server_ip: "not-an-ip".to_owned(),
+            permanent: false,
         };
 
-        let err = Config::try_from(wire).unwrap_err();
+        let err = FirewallConfig::try_from(wire).unwrap_err();
 
-        assert!(matches!(err, Error::InvalidServerIp(..)));
+        assert!(matches!(err, Error::Config(ConfigError::ServerIp(..))));
     }
 
     #[test]
@@ -180,9 +189,24 @@ mod tests {
             fwmark: 0,
             tunnel_iface: String::new(),
             server_ip: String::new(),
+            permanent: false,
         };
 
-        assert_eq!(Config::try_from(wire).unwrap(), Config::default());
+        assert_eq!(FirewallConfig::try_from(wire).unwrap(), FirewallConfig::default());
+    }
+
+    #[test]
+    fn permanent_is_never_defaulted() {
+        // The other fields treat the zero value as "service decides"; this one
+        // must not, or a caller sending defaults would silently get permanence.
+        let wire = ConfigWire {
+            fwmark: 0,
+            tunnel_iface: String::new(),
+            server_ip: String::new(),
+            permanent: true,
+        };
+
+        assert!(FirewallConfig::try_from(wire).unwrap().permanent);
     }
 
     #[test]
@@ -191,9 +215,10 @@ mod tests {
             fwmark: 42,
             tunnel_iface: "wg0".to_owned(),
             server_ip: String::new(),
+            permanent: false,
         };
 
-        let config = Config::try_from(wire).unwrap();
+        let config = FirewallConfig::try_from(wire).unwrap();
 
         assert_eq!(config.fwmark, 42);
         assert_eq!(config.tunnel_iface, "wg0");

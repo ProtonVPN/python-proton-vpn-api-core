@@ -29,6 +29,7 @@ mod config;
 mod error;
 
 pub mod dbus;
+pub mod systemd;
 pub mod firewall_kill_switch;
 
 pub use firewall_kill_switch::FirewallKillSwitch;

@@ -1,6 +1,6 @@
 [package]
 name = "proton-vpn-platform"
-version = "5.6.21"
+version = "5.6.22"
 edition = "2021"
 
 [features]
@@ -31,7 +31,8 @@ nm_protun_auth_dialog = ["dep:clap", "dep:oo7", "dep:tokio", "dep:libc"]
 
 core = ["dep:proton-vpn-binary-status", "dep:serde", "dep:serde_json"]
 kill_switch = ["dep:nftnl", "dep:mnl", "dep:ipnetwork", "dep:clap",
-               "dep:zbus", "dep:zvariant", "dep:serde", "dep:tokio"]
+               "dep:zbus", "dep:zvariant", "dep:serde", "dep:tokio",
+               "dep:async-trait"]
 python = ["proton-vpn-binary-status/serde", "dep:pyo3", "dep:pythonize",
           "dep:pyo3-async-runtimes"]
 local_agent = ["dep:serde", "dep:serde_json", "dep:async-trait",
