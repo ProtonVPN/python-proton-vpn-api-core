@@ -67,7 +67,7 @@ def test_get_vpn_server_returns_vpn_server_built_from_logical_server_and_client_
       session_holder=None,
       settings_persistence=None,
       usage_reporting=None,
-      registry=Registry()
+      registry=Registry(),
     )
 
     logical_server = LogicalServer(data=LOGICAL_SERVER_DATA)
@@ -336,7 +336,9 @@ async def test_connector_updates_connection_credentials_when_certificate_is_refr
         state=current_state
     )
 
-    refresher = VPNDataRefresher(session_holder=session_holder, scheduler=Mock())
+    refresher = VPNDataRefresher(
+        session_holder=session_holder, scheduler=Mock()
+    )
     connector.subscribe_to_certificate_updates(refresher)
 
     # Trigger certificated updated callback

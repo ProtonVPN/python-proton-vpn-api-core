@@ -29,6 +29,9 @@ from proton.vpn import logging
 from proton.vpn.core.vpnconnector import VPNConnector
 from proton.vpn.core.registry import Registry
 from proton.vpn.core.refresher.scheduler import Scheduler
+from proton.vpn.core.refresher.telemetry_publisher import (
+    TELEMETRY_QUEUE_CAP, TelemetryPublisher,
+)
 from proton.vpn.core.refresher.vpn_data_refresher import VPNDataRefresher
 from proton.vpn.core.settings import Settings, SettingsPersistence
 from proton.vpn.core.session_holder import SessionHolder, ClientTypeMetadata
@@ -44,6 +47,9 @@ from proton.session.api import Fido2Assertion
 from proton.vpn.session.u2f_interaction import UserInteraction
 
 import proton.vpn.platform.local_agent  # pylint: disable=no-name-in-module, import-error, line-too-long
+from proton.vpn.platform.telemetry import (  # pylint: disable=no-name-in-module, import-error
+    TelemetryEvents,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +71,7 @@ def init_platform_logger(get_logger=proton.vpn.logging.getLogger):
     return PLATFORM_LOGGER
 
 
-class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
+class ProtonVPNAPI:  # pylint: disable=too-many-public-methods, too-many-instance-attributes
     """Class exposing the Proton VPN facade."""
     def __init__(self, client_type_metadata: ClientTypeMetadata,
                  registry: Optional[Registry] = None,
@@ -81,8 +87,12 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         self._vpn_connector = None
         self._usage_reporting = UsageReporting(
             client_type_metadata=client_type_metadata)
+        self._telemetry_events = TelemetryEvents(TELEMETRY_QUEUE_CAP)
         self.refresher = VPNDataRefresher(
-            self._session_holder, Scheduler()
+            self._session_holder, Scheduler(),
+            telemetry_publisher=TelemetryPublisher(
+                self._session_holder, self._telemetry_events,
+            ),
         )
         self._split_tunneling_client = None
         self._registry = registry or self.create_registry()
@@ -120,6 +130,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
             settings_persistence=self._settings_persistence,
             usage_reporting=self._usage_reporting,
             registry=self._registry,
+            telemetry=self._telemetry_events,
         )
         self._vpn_connector.subscribe_to_certificate_updates(self.refresher)
 
@@ -151,6 +162,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
             user_tier
         )
         self._usage_reporting.enabled = settings.anonymous_crash_reports
+        self._telemetry_events.enable(settings.telemetry)
 
         # We have to return a copy of the settings to force the caller to
         # use the `save_settings` method to apply the changes.
@@ -167,6 +179,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods
         await loop.run_in_executor(None, self._settings_persistence.save, settings)
         await self._vpn_connector.apply_settings(settings)
         self._usage_reporting.enabled = settings.anonymous_crash_reports
+        self._telemetry_events.enable(settings.telemetry)
 
     async def login(self, username: str, password: str) -> LoginResult:
         """

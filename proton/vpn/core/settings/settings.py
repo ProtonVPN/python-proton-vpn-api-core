@@ -46,10 +46,11 @@ SETTINGS = os.path.join(
 DEFAULT_PROTOCOL = "wireguard"
 DEFAULT_KILLSWITCH = KillSwitchState.OFF.value
 DEFAULT_ANONYMOUS_CRASH_REPORTS = True
+DEFAULT_TELEMETRY = True
 
 
 @dataclass
-class Settings:
+class Settings:  # pylint: disable=too-many-instance-attributes
     """Contains general settings."""
     protocol: str
     killswitch: int
@@ -58,6 +59,7 @@ class Settings:
     anonymous_crash_reports: bool
     features: Features
     packet_capture: PacketCapture
+    telemetry: bool
 
     @staticmethod
     def from_dict(data: dict, user_tier: int) -> Settings:
@@ -82,7 +84,8 @@ class Settings:
             ),
             features=features,
             # We dont want to persist packet capture settings for now
-            packet_capture=default.packet_capture
+            packet_capture=default.packet_capture,
+            telemetry=data.get("telemetry", default.telemetry),
         )
 
     def to_dict(self) -> dict:
@@ -94,6 +97,7 @@ class Settings:
             "ipv6": self.ipv6,
             "anonymous_crash_reports": self.anonymous_crash_reports,
             "features": self.features.to_dict(),
+            "telemetry": self.telemetry,
         }
 
     @staticmethod
@@ -106,7 +110,8 @@ class Settings:
             ipv6=True,
             anonymous_crash_reports=DEFAULT_ANONYMOUS_CRASH_REPORTS,
             features=Features.default(user_tier),
-            packet_capture=PacketCapture.default()
+            packet_capture=PacketCapture.default(),
+            telemetry=DEFAULT_TELEMETRY,
         )
 
 

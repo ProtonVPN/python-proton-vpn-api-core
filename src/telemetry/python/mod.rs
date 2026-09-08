@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2025 Proton AG
+// Copyright (c) 2026 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -16,27 +16,15 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-//! ProtonVPN Linux client library.
-//!
-//! Provides VPN connection management, server load computation, and
-//! NetworkManager integration for Linux.
-/// fwmark used to stamp VPN traffic.
-pub const FWMARK: u32 = 245_447_468;
+use pyo3::types::PyModule;
 
-/// Name of the VPN tunnel interface.
-pub const TUNNEL_IFACE: &str = "proton0";
+pub fn register(py: pyo3::Python<'_>) -> pyo3::PyResult<pyo3::Bound<'_, PyModule>> {
+    use pyo3::types::PyModuleMethods as _;
 
-pub mod error;
-
-#[cfg(feature = "core")]
-pub mod core;
-#[cfg(feature = "kill_switch")]
-pub mod kill_switch;
-#[cfg(feature = "local_agent")]
-pub mod local_agent;
-#[cfg(feature = "protun")]
-pub mod protun;
-#[cfg(feature = "python")]
-pub mod python;
-#[cfg(feature = "telemetry")]
-pub mod telemetry;
+    let telemetry = PyModule::new(py, "telemetry")?;
+    telemetry.add_class::<super::ConnectionOutcome>()?;
+    telemetry.add_class::<super::ConnectionEventBuilder>()?;
+    telemetry.add_class::<super::EventInfo>()?;
+    telemetry.add_class::<super::TelemetryEvents>()?;
+    Ok(telemetry)
+}

@@ -33,6 +33,7 @@ REFRESH_INTERVAL = 2 * 60 * 60  # 2 hours
 FF_ENV_VAR = "PROTON_VPN_FEATURE_FLAG_{flag}"
 
 FREE_RESCOPE_FLAG = "FreeRescope"
+TELEMETRY_FEATURE_FLAG = "LinuxTelemetry"
 
 DEFAULT = {
     "toggles": [
@@ -56,6 +57,15 @@ DEFAULT = {
         },
         {
             "name": FREE_RESCOPE_FLAG,
+            "enabled": False,
+            "impressionData": False,
+            "variant": {
+                "name": "disabled",
+                "enabled": False
+            }
+        },
+        {
+            "name": TELEMETRY_FEATURE_FLAG,
             "enabled": False,
             "impressionData": False,
             "variant": {

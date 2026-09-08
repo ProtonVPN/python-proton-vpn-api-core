@@ -39,6 +39,8 @@ async def test_enable_schedules_all_refreshers_when_loaded():
     notifications_refresher.initial_refresh_delay = 0
     location_names_refresher = Mock()
     location_names_refresher.initial_refresh_delay = 0
+    telemetry_publisher = Mock()
+    telemetry_publisher.initial_refresh_delay = 0
     refresher = VPNDataRefresher(
         session_holder=session_holder,
         scheduler=scheduler,
@@ -47,7 +49,8 @@ async def test_enable_schedules_all_refreshers_when_loaded():
         certificate_refresher=certificate_refresher,
         feature_flags_refresher=feature_flag_refresher,
         notifications_refresher=notifications_refresher,
-        location_names_refresher=location_names_refresher
+        location_names_refresher=location_names_refresher,
+        telemetry_publisher=telemetry_publisher,
     )
 
     session_holder.session.loaded = True
@@ -62,6 +65,7 @@ async def test_enable_schedules_all_refreshers_when_loaded():
         call.run_after(feature_flag_refresher.initial_refresh_delay, feature_flag_refresher.refresh),
         call.run_after(notifications_refresher.initial_refresh_delay, notifications_refresher.refresh),
         call.run_after(location_names_refresher.initial_refresh_delay, location_names_refresher.refresh),
+        call.run_after(telemetry_publisher.initial_refresh_delay, telemetry_publisher.publish),
         call.start()
     ]
 
@@ -82,6 +86,8 @@ async def test_enable_fetches_vpn_session_when_not_loaded_and_then_schedules_ref
     notifications_refresher.initial_refresh_delay = 0
     location_names_refresher = Mock()
     location_names_refresher.initial_refresh_delay = 0
+    telemetry_publisher = Mock()
+    telemetry_publisher.initial_refresh_delay = 0
 
     mock_manager = Mock()
     mock_manager.session_holder = session_holder
@@ -92,6 +98,7 @@ async def test_enable_fetches_vpn_session_when_not_loaded_and_then_schedules_ref
     mock_manager.feature_flag_refresher = feature_flag_refresher
     mock_manager.notifications_refresher = notifications_refresher
     mock_manager.location_names_refresher = location_names_refresher
+    mock_manager.telemetry_publisher = telemetry_publisher
 
     refresher = VPNDataRefresher(
         session_holder=session_holder,
@@ -101,7 +108,8 @@ async def test_enable_fetches_vpn_session_when_not_loaded_and_then_schedules_ref
         certificate_refresher=certificate_refresher,
         feature_flags_refresher=feature_flag_refresher,
         notifications_refresher=notifications_refresher,
-        location_names_refresher=location_names_refresher
+        location_names_refresher=location_names_refresher,
+        telemetry_publisher=telemetry_publisher,
     )
 
     session_holder.session.loaded = False
@@ -119,6 +127,7 @@ async def test_enable_fetches_vpn_session_when_not_loaded_and_then_schedules_ref
         call.scheduler.run_after(feature_flag_refresher.initial_refresh_delay, feature_flag_refresher.refresh),
         call.scheduler.run_after(notifications_refresher.initial_refresh_delay, notifications_refresher.refresh),
         call.scheduler.run_after(location_names_refresher.initial_refresh_delay, location_names_refresher.refresh),
+        call.scheduler.run_after(telemetry_publisher.initial_refresh_delay, telemetry_publisher.publish),
         call.scheduler.start()
     ]
 
@@ -140,6 +149,8 @@ async def test_enable_does_not_schedule_the_location_names_refresher_without_a_l
     notifications_refresher.initial_refresh_delay = 0
     location_names_refresher = Mock()
     location_names_refresher.initial_refresh_delay = 0
+    telemetry_publisher = Mock()
+    telemetry_publisher.initial_refresh_delay = 0
     refresher = VPNDataRefresher(
         session_holder=session_holder,
         scheduler=scheduler,
@@ -148,7 +159,8 @@ async def test_enable_does_not_schedule_the_location_names_refresher_without_a_l
         certificate_refresher=certificate_refresher,
         feature_flags_refresher=feature_flag_refresher,
         notifications_refresher=notifications_refresher,
-        location_names_refresher=location_names_refresher
+        location_names_refresher=location_names_refresher,
+        telemetry_publisher=telemetry_publisher,
     )
 
     session_holder.session.loaded = True
@@ -163,6 +175,7 @@ async def test_enable_does_not_schedule_the_location_names_refresher_without_a_l
         call.run_after(certificate_refresher.initial_refresh_delay, certificate_refresher.refresh),
         call.run_after(feature_flag_refresher.initial_refresh_delay, feature_flag_refresher.refresh),
         call.run_after(notifications_refresher.initial_refresh_delay, notifications_refresher.refresh),
+        call.run_after(telemetry_publisher.initial_refresh_delay, telemetry_publisher.publish),
         call.start()
     ]
 #here

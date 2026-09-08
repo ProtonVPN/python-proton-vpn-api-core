@@ -51,5 +51,8 @@ fn py_init_platform(
     #[cfg(feature = "protun")]
     m.add_import_submodule(py, &super::protun::python::register(py)?, "proton.vpn.platform.protun")?;
 
+    #[cfg(feature = "telemetry")]
+    m.add_import_submodule(py, &super::telemetry::python::register(py)?, "proton.vpn.platform.telemetry")?;
+
     Ok(())
 }

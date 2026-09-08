@@ -33,6 +33,7 @@ from proton.vpn.core.refresher.location_names_refresher import LocationNamesRefr
 from proton.vpn.core.refresher.notifications_refresher import NotificationsRefresher
 from proton.vpn.core.refresher.scheduler import Scheduler
 from proton.vpn.core.refresher.server_list_refresher import ServerListRefresher
+from proton.vpn.core.refresher.telemetry_publisher import TelemetryPublisher
 from proton.vpn.core.session_holder import SessionHolder
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.session import FeatureFlags, Notifications
@@ -58,10 +59,12 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
         certificate_refresher: CertificateRefresher = None,
         feature_flags_refresher: FeatureFlagsRefresher = None,
         notifications_refresher: NotificationsRefresher = None,
-        location_names_refresher: LocationNamesRefresher = None
+        location_names_refresher: LocationNamesRefresher = None,
+        telemetry_publisher: TelemetryPublisher = None,
     ):
         self._session_holder = session_holder
         self._scheduler = scheduler
+        self._telemetry_publisher = telemetry_publisher
         self._client_config_refresher = client_config_refresher or ClientConfigRefresher(
             session_holder
         )
@@ -86,6 +89,7 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
         self._feature_flags_refresher_task_id = None
         self._notifications_refresher_task_id = None
         self._location_names_refresher_task_id = None
+        self._telemetry_publisher_task_id = None
 
     def set_error_callback(self, error_callback: Callable[[Exception], None] = None):
         """Sets the error callback to be called when an error occurs while executing a task."""
@@ -228,6 +232,9 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
         self._scheduler.cancel_task(self._location_names_refresher_task_id)
         self._location_names_refresher_task_id = None
 
+        self._scheduler.cancel_task(self._telemetry_publisher_task_id)
+        self._telemetry_publisher_task_id = None
+
         await self._scheduler.stop()
         logger.info(
             "VPN data refresher service disabled.",
@@ -293,6 +300,16 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
             logger.info(
                 f"Next location names refresh scheduled in "
                 f"{timedelta(seconds=self._location_names_refresher.initial_refresh_delay)}"
+            )
+
+        if self._telemetry_publisher is not None:
+            self._telemetry_publisher_task_id = self._scheduler.run_after(
+                self._telemetry_publisher.initial_refresh_delay,
+                self._telemetry_publisher.publish
+            )
+            logger.debug(
+                f"Next telemetry publish scheduled in "
+                f"{timedelta(seconds=self._telemetry_publisher.initial_refresh_delay)}"
             )
 
         self._scheduler.start()

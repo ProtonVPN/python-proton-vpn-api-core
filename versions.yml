@@ -1,3 +1,10 @@
+version: 5.7.0
+time: 2026/09/08 16:35
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "feat: Add Telemetry"
+---
 version: 5.6.23
 time: 2026/09/04 16:00
 author: Pep Llaneras

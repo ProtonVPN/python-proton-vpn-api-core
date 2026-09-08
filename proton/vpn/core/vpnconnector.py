@@ -50,6 +50,11 @@ from proton.vpn.core.usage import UsageReporting
 from proton.vpn.connection.exceptions import FeatureSyntaxError, FeatureError
 from proton.vpn.split_tunneling.interface import SplitTunneling
 from proton.vpn.core.cache_handlers import PortForwardFileHandler
+from proton.vpn.core.vpnconnector_telemetry import VPNConnectorTelemetry
+
+from proton.vpn.platform.telemetry import (  # pylint: disable=no-name-in-module, import-error
+    TelemetryEvents,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +89,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         usage_reporting: UsageReporting,
         registry: Registry,
         kill_switch: KillSwitch = None,
+        telemetry: TelemetryEvents = None,
     ):
         """
         Builds a VPN connector instance and initializes it.
@@ -95,7 +101,8 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             kill_switch=kill_switch,
             usage_reporting=usage_reporting,
             split_tunneling=split_tunneling,
-            registry=registry
+            registry=registry,
+            telemetry=telemetry,
         )
         await connector.initialize_state()
         return connector
@@ -112,6 +119,7 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
             split_tunneling: Optional[SplitTunneling] = None,
             publisher: Optional[Publisher] = None,
             port_forward_file_handler: PortForwardFileHandler = None,
+            telemetry: TelemetryEvents = None,
     ):
         self._session_holder = session_holder
         self._settings_persistence = settings_persistence
@@ -125,9 +133,13 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         self._usage_reporting = usage_reporting
         self._registry = registry
         self._port_forward_file_handler = port_forward_file_handler or PortForwardFileHandler()
+        self._telemetry = VPNConnectorTelemetry(
+            session_holder, telemetry=telemetry,
+        )
 
         self._publisher.register(self._on_state_change_update_location)
         self._publisher.register(self._port_forward_file_handler.on_state_change_update_port)
+        self._publisher.register(self._telemetry.report_telemetry)
 
     @property
     def is_split_tunneling_available(self) -> bool:

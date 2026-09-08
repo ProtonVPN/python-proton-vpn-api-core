@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Copyright (c) 2025 Proton AG
+// Copyright (c) 2026 Proton AG
 //
 // This file is part of ProtonVPN.
 //
@@ -16,27 +16,16 @@
 // You should have received a copy of the GNU General Public License
 // along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 // -----------------------------------------------------------------------------
-//! ProtonVPN Linux client library.
+//! Telemetry event queue for VPN connection attempts.
 //!
-//! Provides VPN connection management, server load computation, and
-//! NetworkManager integration for Linux.
-/// fwmark used to stamp VPN traffic.
-pub const FWMARK: u32 = 245_447_468;
+//! Records one `vpn_connection` event per completed attempt, batched in a
+//! bounded in-memory queue and drained by the Python publisher.
 
-/// Name of the VPN tunnel interface.
-pub const TUNNEL_IFACE: &str = "proton0";
+mod telemetry_events;
+mod wire;
 
-pub mod error;
-
-#[cfg(feature = "core")]
-pub mod core;
-#[cfg(feature = "kill_switch")]
-pub mod kill_switch;
-#[cfg(feature = "local_agent")]
-pub mod local_agent;
-#[cfg(feature = "protun")]
-pub mod protun;
 #[cfg(feature = "python")]
-pub mod python;
-#[cfg(feature = "telemetry")]
-pub mod telemetry;
+pub(crate) mod python;
+
+pub use telemetry_events::TelemetryEvents;
+pub use wire::{ConnectionEvent, ConnectionEventBuilder, ConnectionOutcome, EventInfo};

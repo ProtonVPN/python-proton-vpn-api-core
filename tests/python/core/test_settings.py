@@ -62,6 +62,7 @@ def default_free_settings_dict():
                 }
             },
         },
+        "telemetry": True,
     }
 
 
