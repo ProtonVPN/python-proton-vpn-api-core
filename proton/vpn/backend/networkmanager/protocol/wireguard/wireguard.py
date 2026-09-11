@@ -254,6 +254,7 @@ class Wireguard(LinuxNetworkManager, LocalAgentMixin):
         )
 
         peer.set_public_key(self._vpnserver.x25519pk, False)
+        peer.set_persistent_keepalive(25)
 
         if self.enable_ipv6_support:
             peer.append_allowed_ip(wg_config.ipv6.allowed_ip, False)
