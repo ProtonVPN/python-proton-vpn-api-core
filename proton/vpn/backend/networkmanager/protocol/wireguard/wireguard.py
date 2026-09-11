@@ -100,6 +100,11 @@ class Wireguard(LinuxNetworkManager, LocalAgentMixin):
     connection: Optional[NM.SimpleConnection] = None
     FWMARK: int = FWMARK_VALUE
 
+    @property
+    def enable_ipv6_support(self) -> bool:
+        # IPv6 DNS follows the kill-switch dummy and blackholes Local Agent.
+        return False
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         LocalAgentMixin.__init__(self, self._user_tier)
