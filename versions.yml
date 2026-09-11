@@ -1,3 +1,12 @@
+version: 5.6.11
+time: 2026/09/11 16:02
+author: dfosterj
+email: dfosterj@pm.me
+description:
+- "fix: Prefer WireGuard UDP 51820 over advertised udp[0]"
+- "fix: Set WireGuard persistent-keepalive to 25"
+- "fix: Disable IPv6 on the WireGuard NM profile"
+---
 version: 5.6.10
 time: 2026/08/21 15:28
 author: Luke Titley
