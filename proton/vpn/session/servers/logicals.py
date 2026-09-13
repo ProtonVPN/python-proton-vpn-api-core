@@ -35,6 +35,43 @@ logger = logging.getLogger(__name__)
 
 UNIX_EPOCH = "Thu, 01 Jan 1970 00:00:00 GMT"
 
+_SHARED_SERVER_STRING_FIELDS = frozenset({
+    "EntryCountry", "ExitCountry", "HostCountry", "City", "State", "Domain",
+    "EntryIP", "ExitIP", "Generation", "Label", "ServicesDownReason",
+    "X25519PublicKey",
+})
+
+
+def _server_string_object_hook() -> Callable[[dict], dict]:
+    """Creates a JSON object hook that shares immutable server strings."""
+    shared_strings = {}
+
+    def share_strings(item: dict) -> dict:
+        for field, value in item.items():
+            if (
+                    field in _SHARED_SERVER_STRING_FIELDS
+                    and isinstance(value, str)
+            ):
+                item[field] = shared_strings.setdefault(value, value)
+        return item
+
+    return share_strings
+
+
+def _deduplicate_server_strings(logicals: List[dict]) -> None:
+    """Shares common immutable strings within a decoded server list.
+
+    This remains necessary for freshly downloaded responses, which have
+    already been decoded by the HTTP client. Cached lists use the same helper
+    as a JSON object hook so duplicate strings need not coexist in memory.
+    """
+    share_strings = _server_string_object_hook()
+
+    for logical in logicals:
+        share_strings(logical)
+        for physical in logical.get("Servers", ()):
+            share_strings(physical)
+
 
 class PersistenceKeys(Enum):
     """JSON Keys used to persist the ServerList to disk."""
@@ -426,7 +463,9 @@ class ServerList:  # pylint: disable=R0902, R0904
         """
         try:
             user_tier = data[PersistenceKeys.USER_TIER.value]
-            logicals = [LogicalServer(logical_dict) for logical_dict in data["LogicalServers"]]
+            logical_dicts = data[PersistenceKeys.LOGICALS.value]
+            _deduplicate_server_strings(logical_dicts)
+            logicals = [LogicalServer(logical_dict) for logical_dict in logical_dicts]
         except KeyError as error:
             raise ServerListDecodeError("Error building server list from dict") from error
 

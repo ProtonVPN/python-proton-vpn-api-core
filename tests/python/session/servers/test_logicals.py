@@ -17,18 +17,21 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 import functools
+import json
+from copy import deepcopy
 from typing import List
 
 import pytest
-from unittest.mock import Mock
 
 from proton.vpn.session.servers import LogicalServer, ServerFeatureEnum
 from proton.vpn.session.servers.logicals import (
+    _server_string_object_hook,
     sort_servers_alphabetically_by_country_and_server_name,
     sort_servers_by_country_and_location_and_enabled_and_load,
     ServerList
 )
 from proton.vpn.session.location_names_fetcher import LocationTranslations
+from proton.vpn.core.cache_handler import CacheHandler
 
 
 def _compact_features(features: List[ServerFeatureEnum]) -> ServerFeatureEnum:
@@ -128,6 +131,125 @@ def fixture_api_response() -> str:
             },
         ]
     }
+
+
+def test_from_dict_deduplicates_common_server_strings():
+    country_1 = bytes((67, 72)).decode()
+    country_2 = bytes((67, 72)).decode()
+    city_1 = bytes((90, 117, 114, 105, 99, 104)).decode()
+    city_2 = bytes((90, 117, 114, 105, 99, 104)).decode()
+    label_1 = bytes((110, 111, 110, 101)).decode()
+    label_2 = bytes((110, 111, 110, 101)).decode()
+    domain_bytes = (110, 111, 100, 101, 46, 101, 120, 97, 109, 112, 108, 101)
+    domain_1 = bytes(domain_bytes).decode()
+    domain_2 = bytes(domain_bytes).decode()
+    entry_ip_1 = bytes((49, 57, 50, 46, 48, 46, 50, 46, 49)).decode()
+    entry_ip_2 = bytes((49, 57, 50, 46, 48, 46, 50, 46, 49)).decode()
+    assert country_1 is not country_2
+    assert city_1 is not city_2
+    assert label_1 is not label_2
+    assert domain_1 is not domain_2
+    assert entry_ip_1 is not entry_ip_2
+
+    payload = {
+        "MaxTier": 2,
+        "LogicalServers": [
+            {
+                "ID": "1", "Name": "CH#1", "ExitCountry": country_1,
+                "City": city_1, "Domain": domain_1,
+                "Servers": [{
+                    "Label": label_1, "Domain": domain_1,
+                    "EntryIP": entry_ip_1,
+                }],
+            },
+            {
+                "ID": "2", "Name": "CH#2", "ExitCountry": country_2,
+                "City": city_2, "Domain": domain_2,
+                "Servers": [{
+                    "Label": label_2, "Domain": domain_2,
+                    "EntryIP": entry_ip_2,
+                }],
+            },
+        ],
+    }
+    expected_values = deepcopy(payload)
+
+    server_list = ServerList.from_dict(payload)
+
+    assert server_list[0].exit_country is server_list[1].exit_country
+    assert server_list[0].city is server_list[1].city
+    assert (
+        server_list[0].physical_servers[0].label
+        is server_list[1].physical_servers[0].label
+    )
+    assert (
+        server_list[0].physical_servers[0].domain
+        is server_list[1].physical_servers[0].domain
+    )
+    assert (
+        server_list[0].physical_servers[0].entry_ip
+        is server_list[1].physical_servers[0].entry_ip
+    )
+    assert server_list[0].id is not server_list[1].id
+    assert payload == expected_values
+
+
+def test_json_object_hook_deduplicates_strings_during_decode():
+    data = json.loads(
+        '{"LogicalServers": ['
+        '{"ExitCountry": "CH", "Servers": [{"Domain": "node.example"}]},'
+        '{"ExitCountry": "CH", "Servers": [{"Domain": "node.example"}]}'
+        ']}',
+        object_hook=_server_string_object_hook(),
+    )
+
+    first, second = data["LogicalServers"]
+    assert first["ExitCountry"] is second["ExitCountry"]
+    assert first["Servers"][0]["Domain"] is second["Servers"][0]["Domain"]
+
+
+def test_string_sharing_preserves_missing_and_non_string_fields():
+    payload = {
+        "MaxTier": 2,
+        "LogicalServers": [{
+            "ID": "1",
+            "Name": "CH#1",
+            "ExitCountry": "CH",
+            "City": None,
+            "HostCountry": 42,
+            "Servers": [{"Label": False}],
+        }],
+    }
+
+    server_list = ServerList.from_dict(payload)
+
+    assert server_list[0].city is None
+    assert server_list[0].host_country == 42
+    assert server_list[0].physical_servers[0].label is False
+    assert "State" not in payload["LogicalServers"][0]
+
+
+def test_cached_string_pool_is_not_retained_between_loads(tmp_path):
+    shared_value = "shared-value-too-long-for-python-interning"
+    payload = {
+        "MaxTier": 2,
+        "LogicalServers": [
+            {"ID": "1", "Name": "CH#1", "ExitCountry": shared_value},
+            {"ID": "2", "Name": "CH#2", "ExitCountry": shared_value},
+        ],
+    }
+    cache = CacheHandler(
+        tmp_path / "server-list.json",
+        object_hook_factory=_server_string_object_hook,
+    )
+    cache.save(payload)
+
+    first = cache.load()["LogicalServers"]
+    second = cache.load()["LogicalServers"]
+
+    assert first[0]["ExitCountry"] is first[1]["ExitCountry"]
+    assert second[0]["ExitCountry"] is second[1]["ExitCountry"]
+    assert first[0]["ExitCountry"] is not second[0]["ExitCountry"]
 
 
 def test_set_location_translations_applies_to_every_logical(api_response: str):

@@ -23,6 +23,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 from pathlib import Path
+from typing import Callable, Optional
 from proton.vpn import logging
 
 
@@ -31,8 +32,15 @@ logger = logging.getLogger(__name__)
 
 class CacheHandler:
     """Used to save, load, and remove cache files."""
-    def __init__(self, filepath: str):
+    def __init__(
+            self,
+            filepath: str,
+            object_hook_factory: Optional[
+                Callable[[], Callable[[dict], dict]]
+            ] = None
+    ):
         self._fp = Path(filepath)
+        self._object_hook_factory = object_hook_factory
 
     @property
     def exists(self):
@@ -55,7 +63,11 @@ class CacheHandler:
 
         try:
             with open(self._fp, "r", encoding="utf-8") as f:  # pylint: disable=C0103
-                return json.load(f)  # pylint: disable=C0103
+                object_hook = self._object_hook_factory() \
+                    if self._object_hook_factory else None
+                return json.load(  # pylint: disable=C0103
+                    f, object_hook=object_hook
+                )
         except (json.decoder.JSONDecodeError, UnicodeDecodeError):
             filename = os.path.basename(self._fp)
             logger.warning(
