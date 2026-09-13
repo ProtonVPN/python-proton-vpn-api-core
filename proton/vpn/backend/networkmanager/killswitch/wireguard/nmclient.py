@@ -21,7 +21,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 # pylint: disable=duplicate-code
 
-from concurrent.futures import Future
+from concurrent.futures import Future, InvalidStateError
 from threading import Thread, Lock
 from typing import Optional, List
 
@@ -139,76 +139,143 @@ class NMClient:
             self, connection: NM.Connection, save_to_disk: bool = False
     ) -> Future:
         """
-        Adds a new connection asynchronously.
-        https://lazka.github.io/pgi-docs/#NM-1.0/classes/Client.html#NM.Client.add_connection_async
-        :param connection: connection to be added.
-        :return: a Future to keep track of completion.
+        Ensures the requested protection connection is explicitly activated.
+
+        Adding a profile alone relies on device autoconnect, which a manual
+        device disconnect disables. Reuse matching profiles after failure and
+        observe the returned ActiveConnection rather than device creation.
         """
-        future_conn_activated = _create_future()
+        # Keep this future cancellable: asyncio's bounded wait must also retire
+        # GLib work and signal handlers. Other NMClient operations are unchanged.
+        future_conn_activated = Future()
+        cancellable = Gio.Cancellable()
+        signal_handlers = []
 
-        def _on_interface_state_changed(_device, new_state, _old_state, _reason):
-            """
-            Monitors kill switch interface state changes and resolves
-            the future as soon as the interface reaches the activated state
-            """
-            logger.debug(
-                f"{connection.get_interface_name()} interface state changed "
-                f"to {NM.DeviceState(new_state).value_name}"
-            )
-            if (
-                    NM.DeviceState(new_state) == NM.DeviceState.ACTIVATED
-                    and not future_conn_activated.done()
-            ):
-                future_conn_activated.set_result(None)
+        def _cleanup():
+            cancellable.cancel()
+            for obj, handler in signal_handlers:
+                GObject.signal_handler_disconnect(obj, handler)
+            signal_handlers.clear()
 
-        def _on_interface_added(_nm_client, device):
-            """
-            Monitors interface creation. As soon as the kill switch interface
-            is created it sets up the call back to monitor interface state changes.
-            """
-            logger.debug(
-                f"{device.get_iface()} interface added in state {device.get_state().value_name}"
-            )
-            if not device.get_iface() == connection.get_interface_name():
+        future_conn_activated.add_done_callback(
+            lambda _future: self._run_on_glib_loop_thread(_cleanup)
+        )
+
+        def _failed(error):
+            try:
+                future_conn_activated.set_exception(error)
+            except InvalidStateError:
+                # Cancellation can race the GLib completion callback.
+                pass
+
+        def _on_state_changed(_active, new_state, _reason):
+            if future_conn_activated.done():
                 return
+            if new_state == NM.ActiveConnectionState.ACTIVATED:
+                try:
+                    future_conn_activated.set_result(None)
+                except InvalidStateError:
+                    pass
+            elif new_state in (
+                    NM.ActiveConnectionState.DEACTIVATING,
+                    NM.ActiveConnectionState.DEACTIVATED
+            ):
+                _failed(RuntimeError(
+                    "Kill switch connection activation failed"
+                ))
 
-            handler_id = device.connect("state-changed", _on_interface_state_changed)
-            future_conn_activated.add_done_callback(
-                lambda f: self._run_on_glib_loop_thread(
-                    GObject.signal_handler_disconnect, device, handler_id
-                ).result()
+        def _watch_activation(active):
+            if future_conn_activated.done():
+                return
+            signal_handlers.append((
+                active, active.connect("state-changed", _on_state_changed)
+            ))
+            # Connect first, then inspect: activation may precede this callback.
+            _on_state_changed(active, active.get_state(), 0)
+
+        def _on_activated(nm_client, res, _user_data):
+            try:
+                _watch_activation(nm_client.activate_connection_finish(res))
+            except Exception as exc:  # pylint: disable=broad-except
+                _failed(exc)
+
+        def _activate(remote):
+            if future_conn_activated.done():
+                return
+            for active in self._nm_client.get_active_connections():
+                if (
+                        active.get_uuid() == remote.get_uuid()
+                        and active.get_state() in (
+                            NM.ActiveConnectionState.ACTIVATED,
+                            NM.ActiveConnectionState.ACTIVATING
+                        )
+                ):
+                    _watch_activation(active)
+                    return
+            self._nm_client.activate_connection_async(
+                connection=remote,
+                device=None,
+                specific_object=None,
+                cancellable=cancellable,
+                callback=_on_activated,
+                user_data=None
             )
 
         def _on_connection_added(nm_client, res, _user_data):
             try:
-                # Make sure exceptions creating the connection are passed to the future.
-                nm_client.add_connection_finish(res)
+                _activate(nm_client.add_connection_finish(res))
             except Exception as exc:  # pylint: disable=broad-except
-                future_conn_activated.set_exception(
-                    RuntimeError(
-                        f"Error adding KS connection: {exc}"
-                    ).with_traceback(exc.__traceback__)
-                )
-                return
+                _failed(exc)
 
         def _add_connection_async():
-            # Set up interface connection monitoring, which resolves the future
-            # once the kill switch is active.
-            handler_id = self._nm_client.connect("device-added", _on_interface_added)
-            future_conn_activated.add_done_callback(
-                lambda f: self._run_on_glib_loop_thread(
-                    GObject.signal_handler_disconnect, self._nm_client, handler_id
-                ).result()
-            )
+            if future_conn_activated.done():
+                return
+            try:
+                matching = []
+                for existing in self._nm_client.get_connections():
+                    if existing.get_id() != connection.get_id():
+                        continue
+                    expected = NM.SimpleConnection.new_clone(connection)
+                    # NetworkManager normalizes profiles before storing them.
+                    # Compare that form without changing the caller's request.
+                    expected.normalize()
+                    expected.get_setting_connection().set_property(
+                        NM.SETTING_CONNECTION_UUID, existing.get_uuid()
+                    )
+                    if not existing.compare(
+                            expected,
+                            NM.SettingCompareFlags.IGNORE_TIMESTAMP
+                    ):
+                        raise RuntimeError(
+                            "Existing kill switch profile has unexpected settings"
+                        )
+                    matching.append(existing)
 
-            # Add kill switch connection asynchronously.
-            self._nm_client.add_connection_async(
-                connection=connection,
-                save_to_disk=save_to_disk,
-                cancellable=None,
-                callback=_on_connection_added,
-                user_data=None
-            )
+                # A previous attempt may already be active or activating. Do
+                # not create or activate another profile for the same request.
+                for active in self._nm_client.get_active_connections():
+                    if any(
+                            active.get_uuid() == item.get_uuid()
+                            for item in matching
+                    ) and active.get_state() in (
+                            NM.ActiveConnectionState.ACTIVATED,
+                            NM.ActiveConnectionState.ACTIVATING
+                    ):
+                        _watch_activation(active)
+                        return
+
+                if matching:
+                    _activate(matching[0])
+                else:
+                    self._nm_client.add_connection_async(
+                        connection=connection,
+                        save_to_disk=save_to_disk,
+                        cancellable=cancellable,
+                        callback=_on_connection_added,
+                        user_data=None
+                    )
+            except Exception as exc:  # pylint: disable=broad-except
+                _failed(exc)
 
         self._run_on_glib_loop_thread(_add_connection_async).result()
 
