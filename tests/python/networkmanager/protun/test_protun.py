@@ -18,11 +18,17 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import gi
 import pytest
 
+gi.require_version("NM", "1.0")
+from gi.repository import NM  # pylint: disable=wrong-import-position
+
 from proton.vpn.backend.networkmanager.protocol.protun.protun import (
+    PRIVATE_KEY, PRIVATE_KEY_FLAGS, SYSTEM_OWNED_PRIVATE_KEY,
     Protun, ProtunUDP, ProtunTCP, ProtunTLS, ProtunSmart, generate_capture_path,
 )
 from proton.vpn.backend.networkmanager.core.networkmanager import LinuxNetworkManager
@@ -34,6 +40,7 @@ from proton.vpn.core.settings.packet_capture import PacketCaptureMode
 def test_generate_capture_path():
     result = generate_capture_path("/tmp", datetime(2026, 4, 30, 14, 30, 45))
     assert result == Path("/tmp/proton_vpn__2026_04_30__14_30_45.pcap")
+
 
 # ─── Protun class methods ─────────────────────────────────────────────────────
 
@@ -99,6 +106,42 @@ def _make_instance(mode, directory_path="/tmp", max_bytes=512 * 1024 * 1024, pro
     settings.packet_capture = packet_capture
     instance._settings = settings
     return instance
+
+
+def test_vpn_private_key_is_owned_by_transient_networkmanager_profile():
+    instance = object.__new__(ProtunUDP)
+    instance.connection = NM.SimpleConnection.new()
+    instance._vpnserver = SimpleNamespace(
+        server_name="CH#1",
+        server_ip="192.0.2.1",
+        x25519pk="public-key",
+        wireguard_ports=SimpleNamespace(udp=[51820]),
+    )
+    instance._vpncredentials = SimpleNamespace(
+        pubkey_credentials=SimpleNamespace(wg_private_key="private-key")
+    )
+
+    instance._set_vpn_settings()
+
+    vpn_settings = instance.connection.get_setting_vpn()
+    assert vpn_settings.get_secret(PRIVATE_KEY) == "private-key"
+    assert vpn_settings.get_data_item(PRIVATE_KEY_FLAGS) == SYSTEM_OWNED_PRIVATE_KEY
+    assert SYSTEM_OWNED_PRIVATE_KEY == str(int(NM.SettingSecretFlags.NONE))
+
+
+def test_setup_explicitly_adds_an_unsaved_profile():
+    instance = object.__new__(ProtunUDP)
+    instance.connection = MagicMock()
+    instance._generate_connection = MagicMock()
+    instance._modify_connection = MagicMock()
+    instance._LinuxNetworkManager__nm_client = MagicMock()
+
+    result = instance.setup()
+
+    assert result is instance.nm_client.add_connection_async.return_value
+    instance.nm_client.add_connection_async.assert_called_once_with(
+        instance.connection, save_to_disk=False
+    )
 
 
 # ─── start_packet_capture ────────────────────────────────────────────────────

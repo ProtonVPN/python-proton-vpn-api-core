@@ -59,7 +59,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 SERVICE_TYPE = "org.freedesktop.NetworkManager.protun"
-STORE_PRIVATE_KEY_IN_KEYRING = "1"
+SYSTEM_OWNED_PRIVATE_KEY = str(int(NM.SettingSecretFlags.NONE))
 PRIVATE_KEY = "private-key"
 PRIVATE_KEY_FLAGS = "private-key-flags"
 
@@ -142,7 +142,9 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
         """Creates and registers the NM VPN connection."""
         self._generate_connection()
         self._modify_connection()
-        return self.nm_client.add_connection_async(self.connection)
+        return self.nm_client.add_connection_async(
+            self.connection, save_to_disk=False
+        )
 
     def start_connection_async(self, connection: NM.Connection) -> Future:
         """Activates the ProTun VPN plugin, explicitly passing the best physical
@@ -304,16 +306,18 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
 
         vpn_settings.add_data_item("settings", settings_str)
 
-        # The WireGuard private key is stored as a VPN secret.
-        # NM passes it to the protun auth-dialog which forwards it to the plugin.
+        # The WireGuard private key is stored as a VPN secret. NM passes it
+        # directly to the plugin for this unsaved connection.
         vpn_settings.add_secret(
             PRIVATE_KEY,
             self._vpncredentials.pubkey_credentials.wg_private_key
         )
 
-        # Use the keyring to store the connection private key.
+        # Keep the key in NetworkManager instead of delegating it to a desktop
+        # secret agent. The profile is added with save_to_disk=False, so the
+        # key remains tied to the transient connection.
         vpn_settings.add_data_item(PRIVATE_KEY_FLAGS,
-                                   STORE_PRIVATE_KEY_IN_KEYRING)
+                                   SYSTEM_OWNED_PRIVATE_KEY)
 
         self.connection.add_setting(vpn_settings)
 
