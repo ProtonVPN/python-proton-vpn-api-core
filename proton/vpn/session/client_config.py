@@ -79,11 +79,14 @@ DEFAULT_CLIENT_CONFIG = {
         "DaysLastReviewPassed": 100,
         "DaysConnected": 3,
         "DaysFromFirstConnection": 14
-    }
+    },
+    "ChangeServerAttemptLimit": 4,
+    "ChangeServerShortDelayInSeconds": 90,
+    "ChangeServerLongDelayInSeconds": 1200
 }
 
 
-class ClientConfig:
+class ClientConfig:  # pylint: disable=too-many-instance-attributes
     """
     General configuration used to connect to VPN servers.
     """
@@ -94,13 +97,19 @@ class ClientConfig:
     def __init__(
         self, openvpn_ports, wireguard_ports, holes_ips,
         server_refresh_interval,
-        expiration_time
+        expiration_time,
+        change_server_attempt_limit,
+        change_server_short_delay_sec,
+        change_server_long_delay_sec
     ):  # pylint: disable=R0913
         self.openvpn_ports = openvpn_ports
         self.wireguard_ports = wireguard_ports
         self.holes_ips = holes_ips
         self.server_refresh_interval = server_refresh_interval
         self.expiration_time = expiration_time
+        self.change_server_attempt_limit = change_server_attempt_limit
+        self.change_server_short_delay_sec = change_server_short_delay_sec
+        self.change_server_long_delay_sec = change_server_long_delay_sec
 
     @classmethod
     def from_dict(cls, apidata: dict) -> ClientConfig:
@@ -111,6 +120,9 @@ class ClientConfig:
             holes_ips = apidata["HolesIPs"]
             server_refresh_interval = apidata["ServerRefreshInterval"]
             expiration_time = float(apidata.get("ExpirationTime", cls.get_expiration_time()))
+            change_server_attempt_limit = int(apidata["ChangeServerAttemptLimit"])
+            change_server_short_delay_sec = int(apidata["ChangeServerShortDelayInSeconds"])
+            change_server_long_delay_sec = int(apidata["ChangeServerLongDelayInSeconds"])
 
             return ClientConfig(
                 # No need to copy openvpn_ports, OpenVPNPorts takes care of it.
@@ -120,7 +132,10 @@ class ClientConfig:
                 # We copy the holes_ips list to avoid side effects if it's modified.
                 holes_ips.copy(),
                 server_refresh_interval,
-                expiration_time
+                expiration_time,
+                change_server_attempt_limit,
+                change_server_short_delay_sec,
+                change_server_long_delay_sec
             )
         except (KeyError, ValueError) as error:
             raise ClientConfigDecodeError(

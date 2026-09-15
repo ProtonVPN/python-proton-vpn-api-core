@@ -71,7 +71,10 @@ def apidata():
             "DaysConnected": 3,
             "DaysFromFirstConnection": 14
         },
-        "ExpirationTime": EXPIRATION_TIME
+        "ExpirationTime": EXPIRATION_TIME,
+        "ChangeServerAttemptLimit": 4,
+        "ChangeServerShortDelayInSeconds": 90,
+        "ChangeServerLongDelayInSeconds": 1200
     }
 
 
@@ -85,6 +88,11 @@ def test_from_dict(apidata):
     assert client_config.holes_ips == apidata["HolesIPs"]
     assert client_config.server_refresh_interval == apidata["ServerRefreshInterval"]
     assert client_config.expiration_time == EXPIRATION_TIME
+    assert client_config.change_server_attempt_limit == apidata["ChangeServerAttemptLimit"]
+    assert client_config.change_server_short_delay_sec \
+        == apidata["ChangeServerShortDelayInSeconds"]
+    assert client_config.change_server_long_delay_sec \
+        == apidata["ChangeServerLongDelayInSeconds"]
 
 
 def test_from_dict_raises_error_when_dict_does_not_have_expected_keys():
