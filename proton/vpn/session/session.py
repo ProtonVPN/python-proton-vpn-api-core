@@ -35,6 +35,7 @@ from proton.vpn.session.dataclasses import \
     NPSSurveyResponse, \
     VPNCertificate, \
     VPNLocation
+from proton.session.exceptions import ProtonAPIError, ProtonAPINotReachable
 from proton.vpn.session.exceptions import VPNAccountDecodeError, ServerListDecodeError
 from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.location_names_fetcher import LocationTranslations
@@ -47,6 +48,19 @@ logger = logging.getLogger(__name__)
 BINARY_SERVER_STATUS = "BinaryServerStatus"
 LOCALE_HEADER = "x-pm-locale"
 TIMEZONE_HEADER = "x-pm-timezone"
+
+
+def _client_headers(locale: Optional[str], timezone: Optional[str]) -> dict:
+    """The headers describing this client.
+
+    Carried by requests that go through async_api_request, and by the auth requests
+    those headers are passed to. Each header is omitted when its value can't be resolved.
+    """
+    # The locale is a catalog locale (e.g. "fr_FR"), sent in tag form ("fr-FR").
+    return {
+        **({LOCALE_HEADER: locale.replace("_", "-")} if locale else {}),
+        **({TIMEZONE_HEADER: timezone} if timezone else {}),
+    }
 
 
 # pylint: disable=too-many-public-methods,too-many-instance-attributes
@@ -109,8 +123,16 @@ class VPNSession(Session):
         self._notifications = notifications
         self._location_names = location_names
         self._locale = locale
-        self._timezone = timezone
+        self._client_headers = _client_headers(locale, timezone)
         super().__init__(*args, **kwargs)
+
+        # Logged here rather than per request, auth requests never reach async_api_request.
+        # Both values are fixed for the lifetime of the session.
+        logger.info(
+            f"{LOCALE_HEADER}: {self._client_headers.get(LOCALE_HEADER, 'omitted')}, "
+            f"{TIMEZONE_HEADER}: {self._client_headers.get(TIMEZONE_HEADER, 'omitted')}",
+            category="api", event="headers"
+        )
 
     @property
     def locale(self) -> Optional[str]:
@@ -172,7 +194,9 @@ class VPNSession(Session):
         if self.logged_in:
             return LoginResult(success=True, authenticated=True, twofa_required=False)
 
-        if not await self.async_authenticate(username, password):
+        if not await self.async_authenticate(
+                username, password, additional_headers=self._client_headers
+        ):
             return LoginResult(success=False, authenticated=False, twofa_required=False)
 
         if self.needs_twofa:
@@ -185,7 +209,9 @@ class VPNSession(Session):
         Submits the 2FA code.
         :returns: whether the 2FA was successful or not.
         """
-        valid_code = await super().async_validate_2fa_code(code)
+        valid_code = await self.async_validate_2fa_code(
+            code, additional_headers=self._client_headers
+        )
 
         if not valid_code:
             return LoginResult(success=False, authenticated=True, twofa_required=True)
@@ -228,7 +254,9 @@ class VPNSession(Session):
         if not self.fido2_lib_available:
             raise RuntimeError("U2F/FIDO2 support is not available on this platform")
 
-        valid_assertion = await super().async_validate_2fa_fido2(fido2_assertion)
+        valid_assertion = await self.async_validate_2fa_fido2(
+            fido2_assertion, additional_headers=self._client_headers
+        )
 
         if not valid_assertion:
             return LoginResult(success=False, authenticated=True, twofa_required=True)
@@ -240,27 +268,15 @@ class VPNSession(Session):
             *args, **kwargs
     ):
         """
-        Adds the x-pm-locale and x-pm-timezone headers to the API requests going
-        through this method.
+        Adds client headers to API requests going through this method.
 
-        Sent on all requests, ignored when not needed. Each header is omitted if
-        its value can't be resolved.
+        Sent whether or not the endpoint uses them, API ignores when not needed.
+        `auth` requests don't come through here, they have headers attached by hand.
         """
-        # The locale is a catalog locale (e.g. "fr_FR"), sent in tag form ("fr-FR").
-        locale = self._locale.replace("_", "-") if self._locale else None
-
         # Caller's headers unpacked last, they win on conflict.
-        additional_headers = {
-            **({LOCALE_HEADER: locale} if locale else {}),
-            **({TIMEZONE_HEADER: self._timezone} if self._timezone else {}),
-            **(additional_headers or {})
-        }
+        additional_headers = {**self._client_headers, **(additional_headers or {})}
 
-        logger.info(
-            f"'{endpoint}'", category="api", event="request",
-            optional=f"{LOCALE_HEADER}: {locale or 'omitted'}, "
-                     f"{TIMEZONE_HEADER}: {self._timezone or 'omitted'}"
-        )
+        logger.info(f"'{endpoint}'", category="api", event="request")
 
         return await super().async_api_request(
             endpoint, jsondata, data, additional_headers, *args, **kwargs
@@ -396,6 +412,20 @@ class VPNSession(Session):
         If it was not loaded yet then None is returned instead.
         """
         return self._vpn_account
+
+    async def update_and_set_location_if_necessary(self):
+        """If location data is expired, update it from API and set it."""
+        if self.vpn_account is None:
+            # logged out
+            return
+        current_location = self.vpn_account.location
+        if current_location.is_expired:
+            try:
+                new_location = await self._fetcher.fetch_location()
+            except (ProtonAPIError, ProtonAPINotReachable):
+                logger.warning("Location could not be refreshed")
+                return
+            self.set_location(new_location)
 
     def set_location(self, location: VPNLocation):
         """Set new location data and store it."""

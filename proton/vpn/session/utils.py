@@ -135,7 +135,6 @@ class RefreshCalculator:
 
 
 async def rest_api_request(session, route, **api_request_kwargs):  # noqa: E501 pylint: disable=missing-function-docstring
-    # The request is logged by VPNSession.async_api_request, which sees all of them.
     response = await session.async_api_request(
         route, **api_request_kwargs
     )

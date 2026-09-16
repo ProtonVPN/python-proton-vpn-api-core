@@ -20,17 +20,22 @@
 //!
 //! The service must run as root, since applying the rules needs
 //! `CAP_NET_ADMIN`. It owns [`DBUS_SERVICE_NAME`] on the **system** bus and
-//! serves [`DBUS_INTERFACE_NAME`] at [`DBUS_OBJECT_PATH`], with two methods:
+//! serves [`DBUS_INTERFACE_NAME`] at [`DBUS_OBJECT_PATH`]:
 //!
-//! | method     | signature | effect                            |
-//! |------------|-----------|-----------------------------------|
-//! | `Enable`   | `(uss)`   | apply the kill switch rules       |
-//! | `Disable`  | *(none)*  | remove the nftables table         |
+//! | method                       | signature | effect                             |
+//! |------------------------------|-----------|------------------------------------|
+//! | `Enable`                     | `(uss)`   | apply the kill switch rules        |
+//! | `Disable`                    | *(none)*  | remove the kill switch table       |
+//! | `EnableIpv6LeakProtection`   | *(none)*  | block IPv6 only, leaving IPv4 be   |
+//! | `DisableIpv6LeakProtection`  | *(none)*  | remove the IPv6 table              |
 //!
 //! The `(uss)` argument is `fwmark`, `tunnel_iface`, `server_ip` — see
 //! [`ConfigWire`], where an empty `server_ip` means "none".
 //!
-//! Both methods are idempotent.
+//! The two pairs are independent — IPv6 leak protection is what the client asks
+//! for when the kill switch is off, so it outlives `Disable`.
+//!
+//! Every method is idempotent.
 //!
 //! **Access is currently unrestricted** — any local user the D-Bus policy lets
 //! through can enable or disable the kill switch. See the TODO in
@@ -44,6 +49,12 @@
 //!
 //! busctl call me.proton.vpn.kill_switch /me/proton/vpn/kill_switch \
 //!     me.proton.vpn.kill_switch Disable
+//!
+//! busctl call me.proton.vpn.kill_switch /me/proton/vpn/kill_switch \
+//!     me.proton.vpn.kill_switch EnableIpv6LeakProtection
+//!
+//! busctl call me.proton.vpn.kill_switch /me/proton/vpn/kill_switch \
+//!     me.proton.vpn.kill_switch DisableIpv6LeakProtection
 //! ```
 
 mod config_wire;

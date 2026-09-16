@@ -138,25 +138,27 @@ pub(super) fn check_ip(
     }
 }
 
-/// Add an ICMPv6 type match expression to a rule.
+/// Add an ICMPv6 type and code match expression to a rule.
 ///
-/// Checks l4proto == ICMPv6 (58), then compares the ICMPv6 message type
-/// field. No nfproto check needed — IPPROTO_ICMPV6 (58) is IPv6-only.
+/// Checks l4proto == ICMPv6 (58), then compares the ICMPv6 message type and
+/// code fields. No nfproto check needed — IPPROTO_ICMPV6 (58) is IPv6-only.
 ///
-/// TODO: also match the ICMPv6 code byte, not just the type. Every ICMPv6
-/// message has a type (what kind of message) and a code (a sub-type within
-/// it). The NDP messages we allow are all defined to use code 0, so matching
-/// code == 0 would admit only well-formed NDP. As written we accept any code
-/// for a given type, so a malformed packet (e.g. type 135 with a non-zero
-/// code) passes the firewall — harmless in practice (the kernel discards it),
-/// just less precise. Fix: add a `code: u8` parameter, compare the
-/// Icmpv6HeaderField::Code field against it, and pass 0 at every (NDP) call
-/// site.
-pub(super) fn check_icmpv6(rule: &mut Rule<'_>, icmpv6_type: u8) {
+/// Every ICMPv6 message has a type (what kind of message) and a code (a
+/// sub-type within it). NDP messages are all defined to use code 0, so matching
+/// the code admits only well-formed NDP.
+pub(super) fn check_icmpv6(
+    rule: &mut Rule<'_>,
+    icmpv6_type: u8,
+    icmpv6_code: u8,
+) {
     rule.add_expr(&nft_expr!(meta l4proto));
     rule.add_expr(&nft_expr!(cmp == IPPROTO_ICMPV6));
     rule.add_expr(&Payload::Transport(TransportHeaderField::Icmpv6(
         Icmpv6HeaderField::Type,
     )));
     rule.add_expr(&nft_expr!(cmp == icmpv6_type));
+    rule.add_expr(&Payload::Transport(TransportHeaderField::Icmpv6(
+        Icmpv6HeaderField::Code,
+    )));
+    rule.add_expr(&nft_expr!(cmp == icmpv6_code));
 }

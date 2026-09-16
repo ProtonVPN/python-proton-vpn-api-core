@@ -23,7 +23,7 @@ setup(
     install_requires=[
         "proton-core", "distro", "sentry-sdk",
         "cryptography", "PyNaCl", "distro", "fido2", "packaging", "dbus-fast",
-        "pygobject", "pycairo", "jinja2", "proton-vpn-local-agent"  # network manager backend
+        "pygobject", "pycairo", "jinja2"
     ],
     extras_require={
         "development": ["pytest", "pytest-coverage", "pylint", "flake8", "pytest-asyncio", "PyYAML"]
@@ -31,7 +31,7 @@ setup(
     packages=['proton', 'proton.vpn'] + find_namespace_packages(include=[
         "proton.vpn.core*",
         "proton.vpn.connection*",
-        "proton.vpn.killswitch.interface*",
+        "proton.vpn.killswitch*",
         "proton.vpn.session*",
         "proton.vpn.logging*",
         "proton.vpn.split_tunneling*",

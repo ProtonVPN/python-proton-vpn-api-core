@@ -17,6 +17,8 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
+import time
+
 from dataclasses import dataclass
 from typing import Optional
 from proton.vpn.session.utils import Serializable
@@ -32,6 +34,7 @@ class VPNLocation(Serializable):
     ISP: str
     Long: Optional[float]
     Lat: Optional[float]
+    ExpirationTime: Optional[int] = None
 
     @staticmethod
     def _deserialize(dict_data: dict) -> VPNLocation:
@@ -45,4 +48,14 @@ class VPNLocation(Serializable):
             ISP=dict_data["ISP"],
             Long=dict_data.get("Long"),
             Lat=dict_data.get("Lat"),
+            ExpirationTime=dict_data.get("ExpirationTime"),
         )
+
+    @property
+    def is_expired(self) -> bool:
+        """
+        Returns True if current location expiration time is None or before current time.
+        """
+        if self.ExpirationTime is None:
+            return True
+        return time.time() > self.ExpirationTime

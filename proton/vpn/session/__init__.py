@@ -21,7 +21,7 @@ from proton.vpn.session.account import VPNAccount
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.session.servers.logicals import ServerList
 from proton.vpn.session.credentials import VPNPubkeyCredentials
-from proton.vpn.session.feature_flags_fetcher import FeatureFlags
+from proton.vpn.session.feature_flags_fetcher import FeatureFlags, FREE_RESCOPE_FLAG
 from proton.vpn.session.notifications_fetcher import Notifications
 
 __all__ = [
@@ -31,5 +31,6 @@ __all__ = [
     "ServerList",
     "VPNPubkeyCredentials",
     "FeatureFlags",
+    "FREE_RESCOPE_FLAG",
     "Notifications"
 ]

@@ -235,6 +235,7 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
         )
 
     def _enable(self):
+        self._scheduler.run_soon(self._session.update_and_set_location_if_necessary)
         logger.info(
             "VPN data refresher service enabled.",
             category="app", subcategory="vpn_data_refresher", event="enable"

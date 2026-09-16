@@ -38,7 +38,7 @@ impl Default for KillSwitch {
     }
 }
 
-// TODO: authorize callers. Both methods below are currently open to any local
+// TODO: authorize callers. Every method below is currently open to any local
 // user that the D-Bus policy lets through, which means:
 //   - any user can disable protection another user (or the VPN client) turned
 //     on, defeating the point of a kill switch;
@@ -106,6 +106,51 @@ impl KillSwitch {
 
         Ok(())
     }
+
+    /// Enable IPv6 leak protection, blocking IPv6 that is not going through the
+    /// tunnel and leaving IPv4 alone.
+    ///
+    /// Takes no arguments: the fwmark and tunnel interface come from the
+    /// service's own defaults, so callers do not have to carry those constants.
+    ///
+    /// Independent of [`enable`](Self::enable) — the client asks for this when
+    /// the kill switch is off, so it outlives `Disable`.
+    ///
+    /// Idempotent: calling it again replaces the rules already installed.
+    async fn enable_ipv6_leak_protection(
+        &self,
+        #[zbus(header)] header: Header<'_>,
+        #[zbus(connection)] connection: &Connection,
+    ) -> zbus::fdo::Result<()> {
+        let caller = caller_uid(connection, &header).await?;
+
+        log::info!("Enabling IPv6 leak protection on behalf of uid {caller}");
+
+        self.0
+            .lock()
+            .await
+            .enable_ipv6_leak_protection(&Config::default())
+            .await?;
+
+        Ok(())
+    }
+
+    /// Disable IPv6 leak protection, leaving the kill switch table alone.
+    ///
+    /// Idempotent: succeeds even when it was never enabled.
+    async fn disable_ipv6_leak_protection(
+        &self,
+        #[zbus(header)] header: Header<'_>,
+        #[zbus(connection)] connection: &Connection,
+    ) -> zbus::fdo::Result<()> {
+        let caller = caller_uid(connection, &header).await?;
+
+        log::info!("Disabling IPv6 leak protection on behalf of uid {caller}");
+
+        self.0.lock().await.disable_ipv6_leak_protection().await?;
+
+        Ok(())
+    }
 }
 
 /// Resolve the D-Bus caller's Unix uid from the message header.
@@ -163,5 +208,28 @@ mod tests {
         ));
 
         assert!(matches!(err, zbus::fdo::Error::Failed(_)));
+    }
+
+    #[test]
+    fn method_names_are_stable() {
+        // zbus derives these from the Rust function names, so renaming a method
+        // silently renames the D-Bus API. Callers in other languages hardcode
+        // them, so pin them here.
+        use zbus::object_server::Interface;
+
+        let mut xml = String::new();
+        KillSwitch::default().introspect_to_writer(&mut xml, 0);
+
+        for method in [
+            "Enable",
+            "Disable",
+            "EnableIpv6LeakProtection",
+            "DisableIpv6LeakProtection",
+        ] {
+            assert!(
+                xml.contains(&format!("name=\"{method}\"")),
+                "{method} missing from introspection XML:\n{xml}"
+            );
+        }
     }
 }

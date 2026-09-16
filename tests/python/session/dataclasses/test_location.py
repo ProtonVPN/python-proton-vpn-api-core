@@ -28,7 +28,8 @@ def vpnlocation_data():
         "Country": "Switzerland",
         "ISP": "SwissRandomProvider",
         "Long": 7.4474,
-        "Lat": 46.9480
+        "Lat": 46.9480,
+        "ExpirationTime": 1787740518,
     }
 
 

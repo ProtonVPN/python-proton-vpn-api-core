@@ -18,10 +18,14 @@
 // -----------------------------------------------------------------------------
 //! nftables kill switch for WireGuard-based connections.
 //!
-//! [`enable`] creates an `inet` table `protonvpn_ks` with three
-//! drop-by-default chains — `input`, `output` and `forward` — so inbound,
-//! outbound and forwarded (e.g. from VMs/containers) traffic is all blocked
-//! unless a rule allows it. Allowed traffic is:
+//! Two independent tables, each with three drop-by-default chains — `input`,
+//! `output` and `forward` — so inbound, outbound and forwarded (e.g. from
+//! VMs/containers) traffic is all blocked unless a rule allows it.
+//!
+//! # The kill switch: `inet proton_vpn_ks`
+//!
+//! [`FirewallKillSwitch::enable`] installs it, covering both address families.
+//! Allowed traffic is:
 //!
 //! - loopback, in both directions
 //! - established/related return traffic
@@ -31,9 +35,29 @@
 //! - the VPN server IP during the connecting phase, when
 //!   [`Config::server_ip`] is set
 //!
-//! Everything else is dropped. [`disable`] removes the table entirely.
+//! [`FirewallKillSwitch::disable`] removes the table entirely.
 //!
-//! Both calls require `CAP_NET_ADMIN` (netlink/netfilter access).
+//! # IPv6 leak protection: `ip6 proton_vpn_ks_ipv6`
+//!
+//! [`FirewallKillSwitch::enable_ipv6_leak_protection`] installs a second table
+//! that blocks IPv6 while leaving IPv4 untouched. Its rules are a subset of the
+//! kill switch's, restricted to IPv6, plus explicit DHCPv6.
+//!
+//! It is separate because the client asks for it when the kill switch is
+//! *off* — the minimum protection you get without one — so it has to survive
+//! [`FirewallKillSwitch::disable`]. IPv6 reaches the VPN inside the IPv4
+//! tunnel, so tunneled IPv6 stays permitted.
+//!
+//! # Both tables
+//!
+//! Whatever is not accepted is rejected at the end of the output and forward
+//! chains, so blocked traffic fails at once instead of hanging until a timeout:
+//! TCP gets an RST, anything else an ICMP no-route. The input chain drops
+//! silently, to avoid advertising the host to unsolicited inbound. The chains'
+//! drop policies remain as the fail-closed backstop.
+//!
+//! Everything here requires `CAP_NET_ADMIN` (netlink/netfilter access),
+//! including [`FirewallKillSwitch::list_installed_tables`], which only reads.
 //!
 //! # Known limitations
 //!
@@ -42,9 +66,8 @@
 //! - **Port forwarding not supported.** Inbound connections initiated from the
 //!   VPN side (e.g. ProtonVPN NAT-PMP) are dropped for now; only return
 //!   traffic for connections this host started is allowed in.
-//! - **IPv6-only networks not supported.** Address configuration via DHCPv6 is
-//!   blocked (only DHCPv4 is allowed), so a host that relies on it can't
-//!   obtain or renew its lease while the kill switch is active.
+//! - **No permanent mode.** The rules do not survive a reboot and nothing
+//!   re-applies them at boot.
 
 mod expr;
 mod netlink;
@@ -59,7 +82,14 @@ use super::error::{Error, Result};
 use expr::End;
 use netlink::send_and_process;
 
-const TABLE_NAME: &CStr = c"protonvpn_ks";
+const TABLE_NAME: &CStr = c"proton_vpn_ks";
+// Separate table so IPv6 leak protection can be enabled and removed without
+// touching the full kill switch, and vice versa.
+const IPV6_TABLE_NAME: &CStr = c"proton_vpn_ks_ipv6";
+
+// Family names as nft spells them, for reporting.
+const TABLE_FAMILY: &str = "inet";
+const IPV6_TABLE_FAMILY: &str = "ip6";
 const IN_CHAIN_NAME: &CStr = c"input";
 const OUT_CHAIN_NAME: &CStr = c"output";
 const FWD_CHAIN_NAME: &CStr = c"forward";
@@ -158,10 +188,13 @@ impl FirewallKillSwitch
         // resolvers). The DNS drop must be added BEFORE these LAN/tunnel allow
         // rules so queries can't leak to the LAN or to the wrong in-tunnel IP.
 
-        // Allow traffic to/from LAN subnets (local network access).
-        rules::add_lan_rules(&mut batch, &out_chain, End::Dst);
-        rules::add_lan_rules(&mut batch, &in_chain, End::Src);
-        rules::add_lan_rules(&mut batch, &fwd_chain, End::Dst);
+        // Allow traffic to/from LAN subnets (local network access). The two
+        // families are passed separately so each can be narrowed on its own.
+        for nets in [rules::LAN_NETS_V4, rules::LAN_NETS_V6] {
+            rules::add_lan_rules(&mut batch, &out_chain, End::Dst, nets);
+            rules::add_lan_rules(&mut batch, &in_chain, End::Src, nets);
+            rules::add_lan_rules(&mut batch, &fwd_chain, End::Dst, nets);
+        }
 
         // TODO: mitigate CVE-2019-14899. Allowing LAN access lets an attacker on
         // the same LAN infer the in-tunnel IP by sending crafted packets to it
@@ -257,6 +290,133 @@ impl FirewallKillSwitch
         send_and_process(batch.finalize()).await?;
 
         log::info!("Kill switch disabled");
+
+        Ok(())
+    }
+
+    /// Enable IPv6 leak protection: block IPv6 that is not going through the
+    /// tunnel, leaving IPv4 untouched.
+    ///
+    /// This lives in its own table because it has a lifetime independent of the
+    /// full kill switch — the client asks for it precisely when the kill switch
+    /// is *off*, so it has to survive [`disable`](Self::disable).
+    ///
+    /// Reads `tunnel_iface` and `fwmark` from `config`. The server IP does not
+    /// apply: it admits the encrypted outer packets during connection setup, and
+    /// those are IPv4.
+    ///
+    /// Idempotent: calling it twice leaves the same rule set in place.
+    ///
+    /// The two tables are meant to be mutually exclusive. These rules are a
+    /// subset of the full kill switch's.
+    pub async fn enable_ipv6_leak_protection(
+        &mut self,
+        config: &Config,
+    ) -> Result<()> {
+        let tunnel_iface = iface_name(&config.tunnel_iface)?;
+
+        let table = Table::new(IPV6_TABLE_NAME, ProtoFamily::Ipv6);
+        let mut batch = Batch::new();
+
+        remove_table(&mut batch, &table);
+        batch.add(&table, MsgType::Add);
+
+        let out_chain =
+            add_chain(&mut batch, &table, OUT_CHAIN_NAME, Hook::Out);
+        let in_chain = add_chain(&mut batch, &table, IN_CHAIN_NAME, Hook::In);
+        let fwd_chain =
+            add_chain(&mut batch, &table, FWD_CHAIN_NAME, Hook::Forward);
+
+        // Order is deliberate: the precise rules come before the broad LAN
+        // accepts, so narrowing the latter later stays a local change and cannot
+        // silently take neighbour discovery or lease renewal with it.
+        rules::add_loopback_rules(
+            &mut batch,
+            &out_chain,
+            &in_chain,
+            LOOPBACK_IFACE,
+        );
+
+        rules::add_allow_established_connections_rule(
+            &mut batch, &in_chain, None,
+        );
+        rules::add_allow_established_connections_rule(
+            &mut batch,
+            &fwd_chain,
+            Some(&tunnel_iface),
+        );
+
+        // Neighbour discovery and DHCPv6: without these, blocking IPv6 breaks
+        // address resolution and lease renewal on the local network.
+        rules::add_ndp_rules(&mut batch, &out_chain, &in_chain);
+        rules::add_dhcpv6_rules(&mut batch, &out_chain, &in_chain);
+
+        let nets = rules::LAN_NETS_V6;
+        rules::add_lan_rules(&mut batch, &out_chain, End::Dst, nets);
+        rules::add_lan_rules(&mut batch, &in_chain, End::Src, nets);
+        rules::add_lan_rules(&mut batch, &fwd_chain, End::Dst, nets);
+
+        // IPv6 reaches the VPN inside the IPv4 tunnel, so tunneled IPv6 has to
+        // keep working.
+        rules::add_tunnel_iface_rule(&mut batch, &out_chain, &tunnel_iface);
+        rules::add_tunnel_iface_rule(&mut batch, &fwd_chain, &tunnel_iface);
+
+        // Split tunneling marks the traffic it excludes from the VPN, so that
+        // WireGuard leaves it alone and it goes out the physical interface. That
+        // traffic can be IPv6, and blocking it here would break the feature.
+        rules::add_fwmark_rule(&mut batch, &out_chain, config.fwmark);
+        rules::add_fwmark_rule(&mut batch, &fwd_chain, config.fwmark);
+
+        rules::add_reject_rules(&mut batch, &out_chain);
+        rules::add_reject_rules(&mut batch, &fwd_chain);
+
+        log::info!(
+            "Enabling IPv6 leak protection (tunnel-iface={})",
+            config.tunnel_iface
+        );
+
+        send_and_process(batch.finalize()).await?;
+
+        Ok(())
+    }
+
+    /// The kill switch tables currently installed, in a stable order, each as
+    /// `"<family> <name>"` — the form `nft list table` expects.
+    ///
+    /// Presence only — the names are all a table dump gives us. Reading the
+    /// rules back would mean parsing every expression out of netlink, and
+    /// `nft list table` already does that far better.
+    ///
+    /// Takes `&self` rather than `&mut self` since it changes nothing, but it
+    /// still requires `CAP_NET_ADMIN`: netfilter demands it even to read.
+    pub async fn list_installed_tables(&self) -> Result<Vec<String>> {
+        let installed = netlink::list_tables().await?;
+
+        // A table dump reports names without families, so the family is paired
+        // back on here. Our two names are distinctive enough that a same-named
+        // table in another family is not a real concern.
+        Ok([
+            (TABLE_FAMILY, TABLE_NAME),
+            (IPV6_TABLE_FAMILY, IPV6_TABLE_NAME),
+        ]
+        .into_iter()
+        .filter(|(_, name)| installed.contains(*name))
+        .map(|(family, name)| format!("{family} {}", name.to_string_lossy()))
+        .collect())
+    }
+
+    /// Disable IPv6 leak protection by removing its nftables table.
+    ///
+    /// Idempotent: succeeds even when it was never enabled. Leaves the full kill
+    /// switch table alone.
+    pub async fn disable_ipv6_leak_protection(&mut self) -> Result<()> {
+        let table = Table::new(IPV6_TABLE_NAME, ProtoFamily::Ipv6);
+        let mut batch = Batch::new();
+
+        remove_table(&mut batch, &table);
+        send_and_process(batch.finalize()).await?;
+
+        log::info!("IPv6 leak protection disabled");
 
         Ok(())
     }

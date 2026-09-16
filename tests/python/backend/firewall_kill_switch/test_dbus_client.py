@@ -51,3 +51,23 @@ async def test_disable_takes_no_arguments():
     await KillSwitchDBusClient(interface).disable()
 
     assert interface.method_calls == [call.call_disable()]
+
+
+@pytest.mark.asyncio
+async def test_enable_ipv6_leak_protection_delegates_to_the_dbus_interface():
+    # The service supplies the fwmark and tunnel interface from its own
+    # defaults, so this carries none of those constants.
+    interface = AsyncMock()
+
+    await KillSwitchDBusClient(interface).enable_ipv6_leak_protection()
+
+    assert interface.method_calls == [call.call_enable_ipv6_leak_protection()]
+
+
+@pytest.mark.asyncio
+async def test_disable_ipv6_leak_protection_delegates_to_the_dbus_interface():
+    interface = AsyncMock()
+
+    await KillSwitchDBusClient(interface).disable_ipv6_leak_protection()
+
+    assert interface.method_calls == [call.call_disable_ipv6_leak_protection()]

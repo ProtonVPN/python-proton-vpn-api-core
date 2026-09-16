@@ -26,6 +26,7 @@ from proton.session.exceptions import ProtonAPINotReachable
 from proton.session.transports import TransportFactory
 
 from proton.vpn.session import VPNSession
+from proton.vpn.session.session import _client_headers
 from proton.vpn.session.dataclasses import BugReportForm
 from proton.vpn.session.dataclasses.notifications.nps_survey_response import NPSSurveyResponse
 
@@ -250,6 +251,18 @@ async def test_submit_nps_response_uses_post_method(nps_session, mock_transport)
 # x-pm-locale and x-pm-timezone headers
 # ---------------------------------------------------------------------------
 
+def test_client_headers_sends_the_locale_as_a_language_tag():
+    """The session holds a catalog locale ("fr_FR"), the header wants a tag."""
+    assert _client_headers("fr_FR", MOCK_TIMEZONE) == {
+        "x-pm-locale": "fr-FR",
+        "x-pm-timezone": MOCK_TIMEZONE,
+    }
+
+
+def test_client_headers_omits_the_values_that_could_not_be_resolved():
+    assert _client_headers(None, None) == {}
+
+
 @pytest.fixture
 def build_session(mock_transport):
     """Builds a session with an injected locale and timezone, so that these tests
@@ -281,46 +294,116 @@ async def test_api_request_accepts_the_positional_arguments_of_the_base_session(
 
 
 @pytest.mark.asyncio
-async def test_api_request_omits_the_locale_header_when_no_locale_is_set(
+async def test_api_request_lets_the_caller_win_on_a_conflicting_header(
     build_session, mock_transport
 ):
-    session = build_session(locale=None)
+    session = build_session(locale="fr_FR", timezone=MOCK_TIMEZONE)
+
+    await session.async_api_request("/foo", None, None, {"x-pm-locale": "de-DE"})
+
+    assert mock_transport.async_api_request.call_args.args[3]["x-pm-locale"] == "de-DE"
+
+
+@pytest.mark.asyncio
+async def test_api_request_omits_the_headers_that_could_not_be_resolved(
+    build_session, mock_transport
+):
+    session = build_session(locale=None, timezone=None)
 
     await session.submit_nps_response(NPSSurveyResponse())
 
     additional_headers = mock_transport.async_api_request.call_args.args[3]
     assert "x-pm-locale" not in additional_headers
-
-
-@pytest.mark.asyncio
-async def test_api_request_logs_the_locale_header(build_session, caplog):
-    """QA verifies this feature from the client logs."""
-    session = build_session(locale="fr_FR")
-
-    with caplog.at_level(logging.INFO):
-        await session.submit_nps_response(NPSSurveyResponse())
-
-    assert "x-pm-locale: fr-FR" in caplog.text
-
-
-@pytest.mark.asyncio
-async def test_api_request_omits_the_timezone_header_when_it_cannot_be_resolved(
-    build_session, mock_transport
-):
-    session = build_session(timezone=None)
-
-    await session.submit_nps_response(NPSSurveyResponse())
-
-    additional_headers = mock_transport.async_api_request.call_args.args[3]
     assert "x-pm-timezone" not in additional_headers
 
 
+def test_session_logs_the_headers_once_when_it_is_created(caplog):
+    """QA verifies this feature from the client logs. Logged at creation so that
+    the auth requests, which never reach async_api_request, are covered too."""
+    with caplog.at_level(logging.INFO):
+        VPNSession(locale="fr_FR", timezone=MOCK_TIMEZONE)
+
+    assert f"x-pm-locale: fr-FR, x-pm-timezone: {MOCK_TIMEZONE}" in caplog.text
+
+
+def test_session_logs_the_headers_it_could_not_resolve_as_omitted(caplog):
+    with caplog.at_level(logging.INFO):
+        VPNSession()
+
+    assert "x-pm-locale: omitted, x-pm-timezone: omitted" in caplog.text
+
+
 @pytest.mark.asyncio
-async def test_api_request_logs_the_timezone_header(build_session, caplog):
-    """QA verifies this feature from the client logs."""
-    session = build_session(timezone=MOCK_TIMEZONE)
+async def test_api_request_logs_the_endpoint(build_session, caplog):
+    session = build_session(locale="fr_FR", timezone=MOCK_TIMEZONE)
 
     with caplog.at_level(logging.INFO):
         await session.submit_nps_response(NPSSurveyResponse())
 
-    assert f"x-pm-timezone: {MOCK_TIMEZONE}" in caplog.text
+    assert VPNSession.NPS_SURVEY_DISMISS_ENDPOINT in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# The three auth requests that never reach async_api_request
+# ---------------------------------------------------------------------------
+
+class RecordingAuthSession(VPNSession):
+    """Records the headers the base Session is handed, without reaching a transport.
+
+    The auth requests are made by proton-core below async_api_request, so the
+    only thing worth asserting here is what VPNSession passes down to it.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.received_headers = None
+
+    async def async_authenticate(  # pylint: disable=too-many-arguments
+            self, username, password, client_secret=None,
+            no_condition_check=False, additional_headers=None
+    ):
+        self.received_headers = additional_headers
+        return False
+
+    async def async_validate_2fa_code(self, code, no_condition_check=False,
+                                      additional_headers=None):
+        self.received_headers = additional_headers
+        return False
+
+    async def async_validate_2fa_fido2(self, fido2_assertion, no_condition_check=False,
+                                       additional_headers=None):
+        self.received_headers = additional_headers
+        return False
+
+
+EXPECTED_AUTH_HEADERS = {"x-pm-locale": "fr-FR", "x-pm-timezone": MOCK_TIMEZONE}
+
+
+@pytest.fixture
+def auth_session():
+    session = RecordingAuthSession(locale="fr_FR", timezone=MOCK_TIMEZONE)
+    # provide_2fa_fido2 refuses to run without a FIDO2 library, which CI has no
+    # reason to install. These tests are about the headers, not about key support.
+    session._u2f_keys = Mock()
+    return session
+
+
+@pytest.mark.asyncio
+async def test_login_sends_the_client_headers(auth_session):
+    await auth_session.login("username", "password")
+
+    assert auth_session.received_headers == EXPECTED_AUTH_HEADERS
+
+
+@pytest.mark.asyncio
+async def test_provide_2fa_code_sends_the_client_headers(auth_session):
+    await auth_session.provide_2fa_code("123456")
+
+    assert auth_session.received_headers == EXPECTED_AUTH_HEADERS
+
+
+@pytest.mark.asyncio
+async def test_provide_2fa_fido2_sends_the_client_headers(auth_session):
+    await auth_session.provide_2fa_fido2(Mock())
+
+    assert auth_session.received_headers == EXPECTED_AUTH_HEADERS

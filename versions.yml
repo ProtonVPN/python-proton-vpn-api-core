@@ -1,11 +1,72 @@
-version: 5.6.11
-time: 2026/09/11 16:02
-author: dfosterj
-email: dfosterj@pm.me
+version: 5.6.20
+time: 2026/09/02 13:30
+author: Elena Švilpė
+email: elena.svilpe@proton.ch
 description:
-- "fix: Prefer WireGuard UDP 51820 over advertised udp[0]"
-- "fix: Set WireGuard persistent-keepalive to 25"
-- "fix: Disable IPv6 on the WireGuard NM profile"
+- "fix: add location call on startup to scheduler"
+---
+version: 5.6.19
+time: 2026/09/02 09:25
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "chore: Remove local agent from setup.py"
+---
+version: 5.6.18
+time: 2026/08/31 16:55
+author: Richard Paterson
+email: richard.paterson@proton.ch
+description:
+- "feat: Remove country-level server pinning for free tier users (behind feature flag)"
+---
+version: 5.6.17
+time: 2026/08/31 15:50
+author: Elena Svilpe
+email: elena.svilpe@proton.ch
+description:
+- "feat: add location refresh on disconnect if expired"
+---
+version: 5.6.16
+time: 2026/08/27 15:00
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "chore: All features are default"
+---
+version: 5.6.15
+time: 2026/08/26 16:40
+author: Pep Llaneras
+email: josep.llaneras@proton.ch
+description:
+- "feat(fwks): Add IPv6 leak protection"
+---
+version: 5.6.14
+time: 2026/08/26 15:33
+author: Richard Paterson
+email: richard.paterson@proton.ch
+description:
+- "feat: Assign one server for each free country for free tier users (behind feature flag)"
+---
+version: 5.6.13
+time: 2026/08/26 10:23
+author: Elena Švilpė
+email: elena.svilpe@proton.ch
+description:
+- "feat: add location refresh on refresher start if expired"
+---
+version: 5.6.12
+time: 2026/08/26 09:44
+author: Axel Langenskiold
+email: axel.langenskiold@proton.ch
+description:
+- "feat: Send x-pm-locale and x-pm-timezone on auth requests"
+---
+version: 5.6.11
+time: 2026/08/25 07:46
+author: Pep Llaneras
+email: josep.llaneras@proton.ch
+description:
+- "fix: Don't hardcode the path to the ip binary"
 ---
 version: 5.6.10
 time: 2026/08/21 15:28

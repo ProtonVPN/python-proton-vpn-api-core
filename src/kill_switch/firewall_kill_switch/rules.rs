@@ -42,7 +42,8 @@ use super::expr::{
     NFPROTO_IPV4,
 };
 
-const LAN_NETS: &[&str] = &[
+// Split by family so an ip6-family table can be given only the IPv6 entries.
+pub(super) const LAN_NETS_V4: &[&str] = &[
     "10.0.0.0/8",
     "172.16.0.0/12",
     "192.168.0.0/16",
@@ -51,6 +52,9 @@ const LAN_NETS: &[&str] = &[
     // IPv4 multicast — RFC 5771, IANA:
     // https://www.iana.org/assignments/multicast-addresses
     "224.0.0.0/4",
+];
+
+pub(super) const LAN_NETS_V6: &[&str] = &[
     // IPv6 ULA — RFC 4193: https://www.rfc-editor.org/rfc/rfc4193
     "fc00::/7",
     // IPv6 link-local — RFC 4291 §2.5.6:
@@ -59,6 +63,17 @@ const LAN_NETS: &[&str] = &[
     // IPv6 multicast — RFC 4291 §2.7, IANA:
     // https://www.iana.org/assignments/ipv6-multicast-addresses
     "ff00::/8",
+];
+
+// DHCPv6 — RFC 8415. Client port 546, server port 547. Requests go to one of
+// two well-known multicast addresses rather than a broadcast as in DHCPv4.
+const DHCPV6_CLIENT_PORT: u16 = 546;
+const DHCPV6_SERVER_PORT: u16 = 547;
+// ff02::1:2 — All_DHCP_Relay_Agents_and_Servers (link-local scope)
+// ff05::1:3 — All_DHCP_Servers (site-local scope)
+const DHCPV6_SERVER_ADDRS: [Ipv6Addr; 2] = [
+    Ipv6Addr::new(0xff02, 0, 0, 0, 0, 0, 1, 2),
+    Ipv6Addr::new(0xff05, 0, 0, 0, 0, 0, 1, 3),
 ];
 
 // NDP (Neighbor Discovery Protocol) addresses
@@ -143,7 +158,7 @@ pub(super) fn add_ndp_rules(
     {
         let mut rule = Rule::new(out_chain);
         check_ip(&mut rule, End::Dst, NDP_ALL_ROUTERS);
-        check_icmpv6(&mut rule, 133);
+        check_icmpv6(&mut rule, 133, 0);
         rule.add_expr(&Verdict::Accept);
         batch.add(&rule, MsgType::Add);
     }
@@ -152,7 +167,7 @@ pub(super) fn add_ndp_rules(
     {
         let mut rule = Rule::new(out_chain);
         check_net(&mut rule, End::Dst, solicited_node);
-        check_icmpv6(&mut rule, 135);
+        check_icmpv6(&mut rule, 135, 0);
         rule.add_expr(&Verdict::Accept);
         batch.add(&rule, MsgType::Add);
     }
@@ -161,7 +176,7 @@ pub(super) fn add_ndp_rules(
     {
         let mut rule = Rule::new(out_chain);
         check_net(&mut rule, End::Dst, link_local);
-        check_icmpv6(&mut rule, 135);
+        check_icmpv6(&mut rule, 135, 0);
         rule.add_expr(&Verdict::Accept);
         batch.add(&rule, MsgType::Add);
     }
@@ -170,7 +185,7 @@ pub(super) fn add_ndp_rules(
     {
         let mut rule = Rule::new(out_chain);
         check_net(&mut rule, End::Dst, link_local);
-        check_icmpv6(&mut rule, 136);
+        check_icmpv6(&mut rule, 136, 0);
         rule.add_expr(&Verdict::Accept);
         batch.add(&rule, MsgType::Add);
     }
@@ -179,7 +194,7 @@ pub(super) fn add_ndp_rules(
     {
         let mut rule = Rule::new(in_chain);
         check_net(&mut rule, End::Src, link_local);
-        check_icmpv6(&mut rule, 134);
+        check_icmpv6(&mut rule, 134, 0);
         rule.add_expr(&Verdict::Accept);
         batch.add(&rule, MsgType::Add);
     }
@@ -187,7 +202,7 @@ pub(super) fn add_ndp_rules(
     {
         let mut rule = Rule::new(in_chain);
         check_net(&mut rule, End::Src, link_local);
-        check_icmpv6(&mut rule, 137);
+        check_icmpv6(&mut rule, 137, 0);
         rule.add_expr(&Verdict::Accept);
         batch.add(&rule, MsgType::Add);
     }
@@ -195,14 +210,14 @@ pub(super) fn add_ndp_rules(
     {
         let mut rule = Rule::new(in_chain);
         check_net(&mut rule, End::Src, link_local);
-        check_icmpv6(&mut rule, 135);
+        check_icmpv6(&mut rule, 135, 0);
         rule.add_expr(&Verdict::Accept);
         batch.add(&rule, MsgType::Add);
     }
     // Incoming: Neighbor Advertisement (136) — reply, no source restriction.
     {
         let mut rule = Rule::new(in_chain);
-        check_icmpv6(&mut rule, 136);
+        check_icmpv6(&mut rule, 136, 0);
         rule.add_expr(&Verdict::Accept);
         batch.add(&rule, MsgType::Add);
     }
@@ -247,9 +262,8 @@ pub(super) fn add_dhcp_rules(
         // DHCP server port: always 67 per RFC 2131
         rule.add_expr(&nft_expr!(payload udp dport));
         rule.add_expr(&nft_expr!(cmp == 67u16.to_be()));
-        // Limited broadcast destination: 255.255.255.255
         rule.add_expr(&nft_expr!(payload ipv4 daddr));
-        rule.add_expr(&nft_expr!(cmp == Ipv4Addr::new(255, 255, 255, 255)));
+        rule.add_expr(&nft_expr!(cmp == Ipv4Addr::BROADCAST));
         rule.add_expr(&Verdict::Accept);
         batch.add(&rule, MsgType::Add);
     }
@@ -271,12 +285,64 @@ pub(super) fn add_dhcp_rules(
     }
 }
 
+/// Allow DHCPv6 lease request/renewal traffic in both directions.
+///
+/// Client rules, like [`add_dhcp_rules`]. Only needed by a table that blocks
+/// IPv6 more narrowly than the LAN rules do: in the main table the LAN accepts
+/// already cover this traffic, since both server addresses are inside
+/// `ff00::/8` and the response comes from a link-local address.
+///
+/// The source is link-local in both directions — that is the only address a
+/// client has before it holds a lease.
+pub(super) fn add_dhcpv6_rules(
+    batch: &mut Batch,
+    out_chain: &Chain,
+    in_chain: &Chain,
+) {
+    let link_local = net(NDP_LINK_LOCAL);
+
+    // Outgoing request (sport 546 → dport 547), once per server address.
+    for server in DHCPV6_SERVER_ADDRS {
+        let mut rule = Rule::new(out_chain);
+        check_net(&mut rule, End::Src, link_local);
+        rule.add_expr(&nft_expr!(meta l4proto));
+        rule.add_expr(&nft_expr!(cmp == IPPROTO_UDP));
+        rule.add_expr(&nft_expr!(payload udp sport));
+        rule.add_expr(&nft_expr!(cmp == DHCPV6_CLIENT_PORT.to_be()));
+        check_ip(&mut rule, End::Dst, server);
+        rule.add_expr(&nft_expr!(payload udp dport));
+        rule.add_expr(&nft_expr!(cmp == DHCPV6_SERVER_PORT.to_be()));
+        rule.add_expr(&Verdict::Accept);
+        batch.add(&rule, MsgType::Add);
+    }
+
+    // Incoming response (sport 547 → dport 546).
+    {
+        let mut rule = Rule::new(in_chain);
+        check_net(&mut rule, End::Src, link_local);
+        rule.add_expr(&nft_expr!(meta l4proto));
+        rule.add_expr(&nft_expr!(cmp == IPPROTO_UDP));
+        rule.add_expr(&nft_expr!(payload udp sport));
+        rule.add_expr(&nft_expr!(cmp == DHCPV6_SERVER_PORT.to_be()));
+        check_net(&mut rule, End::Dst, link_local);
+        rule.add_expr(&nft_expr!(payload udp dport));
+        rule.add_expr(&nft_expr!(cmp == DHCPV6_CLIENT_PORT.to_be()));
+        rule.add_expr(&Verdict::Accept);
+        batch.add(&rule, MsgType::Add);
+    }
+}
+
 /// Allow traffic to or from the LAN subnets (local network access).
 ///
 /// Pass [`End::Dst`] for the output/forward chains (match on destination
 /// address), [`End::Src`] for the input chain (match on source address).
-pub(super) fn add_lan_rules(batch: &mut Batch, chain: &Chain, end: End) {
-    for cidr in LAN_NETS {
+pub(super) fn add_lan_rules(
+    batch: &mut Batch,
+    chain: &Chain,
+    end: End,
+    nets: &[&str],
+) {
+    for cidr in nets {
         let mut rule = Rule::new(chain);
         check_net(&mut rule, end, net(cidr));
         rule.add_expr(&Verdict::Accept);
@@ -356,7 +422,7 @@ mod tests {
     fn hardcoded_subnets_are_parseable() {
         // `net` panics on a malformed CIDR, so this covers every constant
         // that the rule builders feed to it.
-        for cidr in LAN_NETS {
+        for cidr in LAN_NETS_V4.iter().chain(LAN_NETS_V6) {
             net(cidr);
         }
         net(NDP_SOLICITED_NODE_MULTICAST);
@@ -364,8 +430,11 @@ mod tests {
     }
 
     #[test]
-    fn lan_nets_cover_both_address_families() {
-        assert!(LAN_NETS.iter().any(|cidr| net(cidr).is_ipv4()));
-        assert!(LAN_NETS.iter().any(|cidr| net(cidr).is_ipv6()));
+    fn lan_nets_are_split_by_family() {
+        // The IPv6 table is ip6-family, so an IPv4 CIDR reaching it would be
+        // meaningless. Keep the two lists honest about what they hold.
+        assert!(LAN_NETS_V4.iter().all(|cidr| net(cidr).is_ipv4()));
+        assert!(LAN_NETS_V6.iter().all(|cidr| net(cidr).is_ipv6()));
+        assert!(!LAN_NETS_V4.is_empty() && !LAN_NETS_V6.is_empty());
     }
 }

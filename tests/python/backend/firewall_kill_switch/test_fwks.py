@@ -83,6 +83,36 @@ async def test_disable_removes_the_rules():
     assert dbus_client.method_calls == [call.disable()]
 
 
+@pytest.mark.asyncio
+async def test_enable_ipv6_leak_protection_delegates_to_the_dbus_client():
+    dbus_client = AsyncMock()
+
+    await FirewallKillSwitch(dbus_client).enable_ipv6_leak_protection()
+
+    assert dbus_client.method_calls == [call.enable_ipv6_leak_protection()]
+
+
+@pytest.mark.asyncio
+async def test_disable_ipv6_leak_protection_delegates_to_the_dbus_client():
+    dbus_client = AsyncMock()
+
+    await FirewallKillSwitch(dbus_client).disable_ipv6_leak_protection()
+
+    assert dbus_client.method_calls == [call.disable_ipv6_leak_protection()]
+
+
+@pytest.mark.asyncio
+async def test_disable_leaves_ipv6_leak_protection_alone():
+    # They are separate tables with independent lifetimes: the client asks for
+    # leak protection when the kill switch is off, so disabling the kill switch
+    # must not take it down.
+    dbus_client = AsyncMock()
+
+    await FirewallKillSwitch(dbus_client).disable()
+
+    assert call.disable_ipv6_leak_protection() not in dbus_client.method_calls
+
+
 @pytest.mark.parametrize(
     "validate_params",
     [None, {}, {"protocol": None}, {"protocol": "openvpn"}]
