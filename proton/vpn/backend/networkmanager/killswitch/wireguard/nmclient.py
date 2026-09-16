@@ -215,10 +215,14 @@ class NMClient:
         return future_conn_activated
 
     def get_physical_devices(self) -> List[NM.Device]:
-        """Returns all the active ethernet/wifi devices."""
+        """Returns all the active ethernet/wifi/vlan devices."""
         return [
             device for device in self._nm_client.get_devices() if (
-                device.get_device_type() in (NM.DeviceType.ETHERNET, NM.DeviceType.WIFI)
+                device.get_device_type() in (
+                    NM.DeviceType.ETHERNET,
+                    NM.DeviceType.WIFI,
+                    NM.DeviceType.VLAN,
+                )
                 and device.get_state() is NM.DeviceState.ACTIVATED
                 and device.get_active_connection()  # Maybe this is redundant.
             )
@@ -226,7 +230,9 @@ class NMClient:
 
     def _is_ethernet_or_wifi_connection(self, active_connection: NM.ActiveConnection):
         return active_connection.props.type in (
-            NM.SETTING_WIRED_SETTING_NAME, NM.SETTING_WIRELESS_SETTING_NAME
+            NM.SETTING_WIRED_SETTING_NAME,
+            NM.SETTING_WIRELESS_SETTING_NAME,
+            NM.SETTING_VLAN_SETTING_NAME,
         )
 
     def get_ethernet_and_wifi_connections(self) -> List[NM.ActiveConnection]:
