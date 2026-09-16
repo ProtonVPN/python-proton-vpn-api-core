@@ -1,3 +1,10 @@
+version: 5.7.2
+time: 2026/09/16 11:28
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "fix: Open pcap file with exclusive ownership"
+---
 version: 5.7.1
 time: 2026/09/15 15:40
 author: Richard Paterson

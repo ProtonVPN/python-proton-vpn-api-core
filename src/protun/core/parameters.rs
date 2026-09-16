@@ -67,7 +67,7 @@ impl PcapFileInfo {
     pub fn from_path(path: &Path, mode: FileWriteMode) -> Result<Self, std::io::Error> {
         let owned_fd: OwnedFd = {
             let std_fd: std::os::fd::OwnedFd = File::options()
-                .create(true)
+                .create_new(true)
                 .write(true)
                 .append(matches!(mode, FileWriteMode::Append))
                 .mode(0o600)
