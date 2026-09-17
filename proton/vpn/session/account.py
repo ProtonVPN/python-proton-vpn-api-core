@@ -67,6 +67,10 @@ class VPNAccount:
         """
         self._certificate = new_certificate
 
+    def set_vpn_info(self, new_info: VPNSettings):
+        """Set new VPN info"""
+        self._vpninfo = new_info
+
     def to_dict(self) -> dict:
         """
         Returns this object as a dictionary for serialization purposes.

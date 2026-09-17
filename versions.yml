@@ -1,3 +1,10 @@
+version: 5.8.1
+time: 2026/09/17 06:35
+author: Elena Švilpė
+email: elena.svilpe@proton.ch
+description:
+- "feat: add api to refresh vpn info (account/plan)"
+---
 version: 5.8.0
 time: 2026/09/16 15:09
 author: Luke Titley

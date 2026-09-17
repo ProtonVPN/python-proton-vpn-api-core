@@ -34,7 +34,8 @@ from proton.vpn.session.dataclasses import \
     LoginResult, \
     NPSSurveyResponse, \
     VPNCertificate, \
-    VPNLocation
+    VPNLocation, \
+    VPNSettings
 from proton.session.exceptions import ProtonAPIError, ProtonAPINotReachable
 from proton.vpn.session.exceptions import VPNAccountDecodeError, ServerListDecodeError
 from proton.vpn.session.servers.logicals import ServerList
@@ -412,6 +413,18 @@ class VPNSession(Session):
         If it was not loaded yet then None is returned instead.
         """
         return self._vpn_account
+
+    async def update_and_set_vpn_info(self):
+        """Refresh VPN info and store it."""
+        self.set_vpn_info(await self._fetcher.fetch_vpn_info())
+
+    def set_vpn_info(self, vpninfo: VPNSettings):
+        """Save VPN info to keyring."""
+        self._requests_lock(no_condition_check=False)
+        try:
+            self._vpn_account.set_vpn_info(vpninfo)
+        finally:
+            self._requests_unlock()
 
     async def update_and_set_location_if_necessary(self):
         """If location data is expired, update it from API and set it."""

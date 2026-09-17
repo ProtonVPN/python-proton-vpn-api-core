@@ -282,6 +282,13 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods, too-many-instanc
 
         return result
 
+    async def refresh_vpn_info(self):
+        """
+        Re-fetches the VPN info (plan name, tier) from
+        the REST API and updates the stored account data.
+        """
+        return await self._session_holder.session.update_and_set_vpn_info()
+
     @property
     def is_fido2_lib_available(self) -> bool:
         """
