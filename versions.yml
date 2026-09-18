@@ -1,3 +1,10 @@
+version: 5.8.2
+time: 2026/09/18 09:42
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "fix: Store private key in network manager"
+---
 version: 5.8.1
 time: 2026/09/17 06:35
 author: Elena Švilpė

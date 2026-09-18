@@ -87,10 +87,8 @@ Package %{{unmangled_name}} library.
 %pyproject_save_files proton
 
 install -D -m 755 nm-protun-service $RPM_BUILD_ROOT/usr/libexec/nm-protun-service
-install -D -m 755 nm-protun-auth-dialog $RPM_BUILD_ROOT/usr/libexec/nm-protun-auth-dialog
 install -d $RPM_BUILD_ROOT/usr/lib/NetworkManager/VPN
 sed -e 's|program=.*|program=/usr/libexec/nm-protun-service|' \
-    -e 's|auth-dialog=.*|auth-dialog=/usr/libexec/nm-protun-auth-dialog|' \
     nm-protun.name > $RPM_BUILD_ROOT/usr/lib/NetworkManager/VPN/nm-protun.name
 install -D -m 644 nm-protun-service.conf $RPM_BUILD_ROOT/usr/share/dbus-1/system.d/nm-protun-service.conf
 
@@ -102,7 +100,6 @@ install -D -m 644 proton-vpn-kill-switch-boot.service $RPM_BUILD_ROOT/usr/lib/sy
 %files -f %{{pyproject_files}}
 %defattr(-,root,root)
 /usr/libexec/nm-protun-service
-/usr/libexec/nm-protun-auth-dialog
 /usr/lib/NetworkManager/VPN/nm-protun.name
 /usr/share/dbus-1/system.d/nm-protun-service.conf
 /usr/libexec/proton-vpn-kill-switch-service

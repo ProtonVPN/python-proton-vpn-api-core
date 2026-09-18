@@ -87,8 +87,6 @@ with tarfile.open(name=f"{HOME}/rpmbuild/SOURCES/{ROOT}.tar.gz",
                 arcname=f"{ROOT}/proton/vpn/platform.abi3.so")
     archive.add(f"target/{RUST_TRIPLET}/release/nm-protun-service",
                 arcname=f"{ROOT}/nm-protun-service")
-    archive.add(f"target/{RUST_TRIPLET}/release/nm-protun-auth-dialog",
-                arcname=f"{ROOT}/nm-protun-auth-dialog")
     archive.add("resources/nm-protun.name",
                 arcname=f"{ROOT}/nm-protun.name")
     archive.add("resources/nm-protun-service.conf",

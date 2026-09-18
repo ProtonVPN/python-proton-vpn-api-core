@@ -1,6 +1,6 @@
 [package]
 name = "proton-vpn-platform"
-version = "5.8.1"
+version = "5.8.2"
 edition = "2021"
 
 [features]
@@ -15,19 +15,16 @@ essentials = [
     "core",
     "kill_switch",
     "local_agent",
-    "nm_protun_auth_dialog",
     "protun",
     "telemetry"
 ]
 
 protun = ["dep:clap", "dep:zbus", "dep:zvariant",
           "dep:shlex", "dep:glob", "sdk", "dep:rtnetlink", "dep:netlink-packet-route", "dep:futures",
-          "dep:nix",
-          "nm_protun_auth_dialog"]
+          "dep:nix"]
 
 sdk = ["dep:protun", "dep:serde", "dep:serde_json", "dep:libc", "dep:base64", "dep:tokio",
        "dep:async-trait", "dep:rust-ini", "dep:serini"]
-nm_protun_auth_dialog = ["dep:clap", "dep:oo7", "dep:tokio", "dep:libc"]
 
 core = ["dep:proton-vpn-binary-status", "dep:serde", "dep:serde_json"]
 telemetry = ["dep:serde", "dep:serde_json"]
@@ -46,10 +43,6 @@ crate-type = ["cdylib", "rlib"]
 [[bin]]
 name = "nm-protun-service"
 required-features = ["protun"]
-
-[[bin]]
-name = "nm-protun-auth-dialog"
-required-features = ["nm_protun_auth_dialog"]
 
 [[bin]]
 name = "fwks"
@@ -82,7 +75,6 @@ serde_json = { version = "1.0.145", optional=true }
 libc = { version ="0.2.178", optional=true }
 base64 = { version="0.22.1", optional=true }
 clap = { version="4.5.53", features=["derive"], optional=true }
-oo7 = { version = "0.5", default-features = false, features = ["tokio", "native_crypto"], optional = true }
 zbus = { version = "5", default-features = false, features = ["tokio"], optional = true }
 zvariant = { version = "5", optional = true }
 rust-ini = { version = "0.21.3", optional = true }

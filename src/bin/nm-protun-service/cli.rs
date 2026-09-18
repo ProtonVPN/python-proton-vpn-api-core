@@ -98,9 +98,10 @@ nmcli connection add \
     ipv4.addresses '{address}/{prefix}' \
     ipv4.auto-route-ext-gw no \
     ipv4.dns '{ipv4_dns}' \
-    vpn.data 'private-key-flags=1' \
+    vpn.data 'private-key-flags=0' \
     +vpn.data '{SETTINGS_KEY} = {settings_str}' \
-    vpn.secrets 'private-key = {private_key}'
+    vpn.secrets 'private-key = {private_key}' \
+    save no
 "#
         )
     )

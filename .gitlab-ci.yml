@@ -4,5 +4,5 @@ variables:
 
 include:
  - project: 'ProtonVPN/Linux/integration/ci-libraries-rust'
-   ref:  daac6539724df7cdeeadf3821bb3c6336a91b3b9  # chore: [VPNLINUX-1900] Rust tests should only enable a subset of features
+   ref:  fc097803ecb19cb8a506446fd4e34176c4a19b48 # fix: [VPNLINUX-1899] Remove auth dialog
    file: 'develop-pipeline.yml'

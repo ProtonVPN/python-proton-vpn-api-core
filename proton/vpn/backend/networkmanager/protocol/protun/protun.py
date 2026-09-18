@@ -59,7 +59,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 SERVICE_TYPE = "org.freedesktop.NetworkManager.protun"
-STORE_PRIVATE_KEY_IN_KEYRING = "1"
+STORE_PRIVATE_KEY_IN_NM = "0"
 PRIVATE_KEY = "private-key"
 PRIVATE_KEY_FLAGS = "private-key-flags"
 
@@ -305,15 +305,14 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
         vpn_settings.add_data_item("settings", settings_str)
 
         # The WireGuard private key is stored as a VPN secret.
-        # NM passes it to the protun auth-dialog which forwards it to the plugin.
         vpn_settings.add_secret(
             PRIVATE_KEY,
             self._vpncredentials.pubkey_credentials.wg_private_key
         )
 
-        # Use the keyring to store the connection private key.
-        vpn_settings.add_data_item(PRIVATE_KEY_FLAGS,
-                                   STORE_PRIVATE_KEY_IN_KEYRING)
+        # Flag 0 = NM_SETTING_SECRET_FLAG_NONE: NM stores the key itself and
+        # hands it to nm-protun-service. Do not change to 1 (AGENT_OWNED).
+        vpn_settings.add_data_item(PRIVATE_KEY_FLAGS, STORE_PRIVATE_KEY_IN_NM)
 
         self.connection.add_setting(vpn_settings)
 

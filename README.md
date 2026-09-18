@@ -136,10 +136,10 @@ calling it.
 # Protun
 
 ## Building
-> cargo build --bin nm-protun-service --bin nm-protun-auth-dialog --lib --features 'protun, nm_protun_auth_dialog, python'
+> cargo build --bin nm-protun-service --lib --features 'protun, python'
 
 ## Testing
-> cargo test --features 'protun, nm_protun_auth_dialog, python'
+> cargo test --features 'protun, python'
 
 ## Installing
 

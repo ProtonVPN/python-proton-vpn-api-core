@@ -74,8 +74,11 @@ class SessionHolder:
         session: VPNSession = None,
         locale: Optional[str] = None
     ):
+        app_version = self._get_app_version_header_value(client_type_metadata)
+        logger.info(f"app version: {app_version}")
+
         self._proton_sso = ProtonSSO(
-            appversion=self._get_app_version_header_value(client_type_metadata),
+            appversion=app_version,
             user_agent=f"ProtonVPN/{client_type_metadata.version} "
                        f"(Linux; {DISTRIBUTION_ID}/{DISTRIBUTION_VERSION})"
         )
