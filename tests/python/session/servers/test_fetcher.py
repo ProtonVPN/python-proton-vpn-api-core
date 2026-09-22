@@ -87,3 +87,51 @@ async def test_serverlist_fetch_paths(case_id, serverlist_version, endpoint,
     else:
         v2.assert_not_awaited()
         v1.assert_awaited_once_with(expected_modified_since)
+
+def build_mock_server_list_with_loads(count: int):
+    """A server list holding `count` mock logical servers, ready for loads splicing."""
+    logicals = []
+    for index in range(count):
+        logical = Mock()
+        logical.id = str(1 + index)
+        logical.load = 0
+        logical.score = 0.0
+        logicals.append(logical)
+
+    server_list = Mock()
+    server_list.logicals = logicals
+    server_list.to_dict.return_value = {
+        "MaxTier": 2,
+        "StatusID": "token-123",
+        "LogicalServers": [{} for _ in range(count)],
+    }
+    return server_list, logicals
+
+
+def _computed_load(load: int, score: float, autoconnectable: bool = True) -> dict:
+    return {
+        "Load": load, "Score": score,
+        "IsEnabled": True, "IsVisible": True,
+        "IsAutoconnectable": autoconnectable,
+    }
+
+
+@pytest.mark.asyncio
+async def test_v2_update_loads_updates_each_server():
+    LOCATION = Mock(Lat=47.3, Long=8.5, Country="CH", IP="1.2.3.4")
+    server_list, logicals = build_mock_server_list_with_loads(2)
+    fetcher = ServerListFetcher(
+        session=Mock(), server_list=server_list, cache_file=Mock()
+    )
+    fetcher._v2_validate_location = Mock(return_value=LOCATION)
+    fetcher._request_status = AsyncMock(return_value=b"binary-status")
+    fetcher._compute_loads = Mock(return_value=[
+        _computed_load(10, 11.0), _computed_load(20, 22.0)
+    ])
+
+    await fetcher.update_loads(EndpointVersion.V2)
+
+    applied = [call.args[0] for call in logicals[0].update.call_args_list + logicals[1].update.call_args_list]
+    assert [(load.id, load.score, load.load) for load in applied] == [
+        ("1", 11.0, 10), ("2", 22.0, 20),
+    ]

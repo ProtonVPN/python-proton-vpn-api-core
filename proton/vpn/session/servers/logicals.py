@@ -377,6 +377,10 @@ class ServerList:  # pylint: disable=R0902, R0904
             )
         ]
 
+    def reset_loads_expiration(self):
+        """Adds a fresh timestamp for loads expiration."""
+        self._loads_expiration_time = ServerList.get_loads_expiration_time()
+
     @classmethod
     def _generate_random_component(cls):
         # 1 +/- 0.22*random  # nosec B311

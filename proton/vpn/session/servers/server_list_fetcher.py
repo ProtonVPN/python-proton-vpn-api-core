@@ -134,8 +134,14 @@ class MixinEndpointV2:  # pylint: disable=R0903
         )
         computed_loads = self._compute_loads(
             self._server_list.to_dict(), location, binary_status)
-        server_loads = [ServerLoad(self._convert_load(data)) for data in computed_loads]
-        self._server_list.update(server_loads)
+        logicals = self._server_list.logicals
+        # compute_loads returns no IDs, so pair loads with servers by position
+        # and take the ID from the server.
+        for logical, load in zip(logicals, computed_loads):
+            data = self._convert_load(load)
+            data["ID"] = logical.id
+            logical.update(ServerLoad(data))
+        self._server_list.reset_loads_expiration()
         self._cache_file.save(self._server_list.to_dict())
 
         return self._server_list
