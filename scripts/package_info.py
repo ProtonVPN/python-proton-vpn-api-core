@@ -26,7 +26,6 @@ PYTHON_MODULE_NAME = NAME.replace("-", "_")
 PACKAGE_NAME = f'{PROTON_VPN_NAMESPACE}-{NAME}'
 
 BUILD_DIR = MODULE_PATH / "target"
-CARGO = MODULE_PATH / "Cargo.toml"
 
 CPYTHON_MIN = f"cp{CPYTHON_MAJOR}{CPYTHON_MINOR}"     # Minimum supported version of c python
 CPYTHON_MAX = "abi3"                                  # Maximum supported version is c python 3.x
@@ -84,23 +83,4 @@ def get_changelog_time():
     return dt.strftime(r"%Y-%m-%d %H:%M:%S")
 
 
-def get_version_from_cargo():
-    """
-    Get the version from Cargo.toml
-    """
-    version = None
-    VERSION_RE = re.compile(r'^version = "(.*)"$')
-    with open(CARGO, encoding="utf-8") as cargo:
-        for line in cargo.readlines():
-            version_match = VERSION_RE.match(line)
-            if version_match:
-                version = version_match.groups()[0]
-
-    if not version:
-        raise ValueError("Cant find version in Cargo.toml file")
-
-    return version
-
-
-VERSION = get_version_from_cargo()
 TIME = get_changelog_time()

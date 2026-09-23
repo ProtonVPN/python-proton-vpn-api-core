@@ -14,11 +14,11 @@ import subprocess  # nosemgrep
 import devtools.versions
 from package_info import (get_versions, MODULE_PATH,
                           PACKAGE_NAME, PROTON_VPN_NAMESPACE,
-                          NAME, CPYTHON_VERSION, HOME,
-                          VERSION, TIME)
+                          NAME, CPYTHON_VERSION, HOME, TIME)
 import tarfile
 
 
+VERSION = devtools.versions.rebuild_version(get_versions()[0]["version"])
 ROOT = f"proton_vpn_api_core-{VERSION}"
 
 parser = argparse.ArgumentParser()
