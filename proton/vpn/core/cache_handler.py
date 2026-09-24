@@ -30,32 +30,34 @@ logger = logging.getLogger(__name__)
 
 
 class CacheHandler:
-    """Used to save, load, and remove cache files."""
+    """Used to save, load, and remove JSON cache files.
+    Filesystem access is delegated to BinaryCacheHandler,
+    this class adds JSON layer.
+    """
     def __init__(self, filepath: str):
         self._fp = Path(filepath)
+        self._binary_cache = BinaryCacheHandler(filepath)
 
     @property
     def exists(self):
         """True if the cache file exists and False otherwise."""
-        return self._fp.is_file()
+        return self._binary_cache.exists
 
     def save(self, newdata: dict):
         """Save data to cache file."""
-        self._fp.parent.mkdir(parents=True, exist_ok=True)
-        with open(self._fp, "w", encoding="utf-8") as f:  # pylint: disable=C0103
-            json.dump(newdata, f, indent=4)  # pylint: disable=C0103
+        self._binary_cache.save(json.dumps(newdata, indent=4).encode("utf-8"))
 
     def load(self):
         """
         Load data from cache file, if it exists.
         If it exists, but content is not valid json, None is returned instead.
         """
-        if not self.exists:
+        rawdata = self._binary_cache.load()
+        if rawdata is None:
             return None
 
         try:
-            with open(self._fp, "r", encoding="utf-8") as f:  # pylint: disable=C0103
-                return json.load(f)  # pylint: disable=C0103
+            return json.loads(rawdata.decode("utf-8"))
         except (json.decoder.JSONDecodeError, UnicodeDecodeError):
             filename = os.path.basename(self._fp)
             logger.warning(
@@ -66,5 +68,31 @@ class CacheHandler:
 
     def remove(self):
         """ Remove cache from disk."""
+        self._binary_cache.remove()
+
+
+class BinaryCacheHandler:
+    """Used to manage binary cache files."""
+    def __init__(self, filepath: str):
+        self._fp = Path(filepath)
+
+    @property
+    def exists(self):
+        """True if the cache file exists and False otherwise."""
+        return self._fp.is_file()
+
+    def save(self, data: bytes):
+        """Save data to cache file."""
+        self._fp.parent.mkdir(parents=True, exist_ok=True)
+        self._fp.write_bytes(data)
+
+    def load(self):
+        """Load data from cache file, if it exists."""
+        if not self.exists:
+            return None
+        return self._fp.read_bytes()
+
+    def remove(self):
+        """ Remove cache from disk."""
         if self.exists:
-            os.remove(self._fp)
+            self._fp.unlink()

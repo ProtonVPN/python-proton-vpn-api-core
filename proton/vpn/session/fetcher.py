@@ -132,6 +132,11 @@ class VPNSessionFetcher:
         """Fetches new server loads and updates the current server list with them."""
         return await self._server_list_fetcher.update_loads(endpoint_version)
 
+    def refresh_server_loads_from_cached_status(self) -> Optional[ServerList]:
+        """Recomputes server loads from cached binary status, no API request."""
+        logger.info("Refreshing loads from cached status")
+        return self._server_list_fetcher.refresh_loads_from_existing_file()
+
     def load_client_config_from_cache(self) -> ClientConfig:
         """
         Loads the previously persisted client configuration.

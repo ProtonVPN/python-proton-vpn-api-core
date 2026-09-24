@@ -25,7 +25,7 @@ from functools import partial
 
 from pathlib import Path
 import platform
-from typing import Optional
+from typing import Optional, Callable
 
 import distro
 
@@ -85,6 +85,7 @@ class SessionHolder:
         self._locale = locale
         self._timezone = get_local_timezone()
         self._session = session
+        self._server_loads_updated_callback: Optional[Callable] = None
 
     def get_session_for(self, username: str) -> VPNSession:
         """
@@ -96,6 +97,7 @@ class SessionHolder:
             account_name=username,
             override_class=partial(VPNSession, locale=self._locale, timezone=self._timezone)
         )
+        self._attach_callbacks(self._session)
         return self._session
 
     @property
@@ -105,7 +107,7 @@ class SessionHolder:
             self._session = self._proton_sso.get_default_session(
                 override_class=partial(VPNSession, locale=self._locale, timezone=self._timezone)
             )
-
+            self._attach_callbacks(self._session)
         return self._session
 
     @property
@@ -156,3 +158,14 @@ class SessionHolder:
             metas.append("beta")
 
         return ".".join(metas)
+
+    def set_server_loads_updated_callback(self, callback: Optional[Callable]):
+        """Sets the callback to be called whenever the server loads are updated."""
+        self._server_loads_updated_callback = callback
+        if self._session:
+            self._session.server_loads_updated_callback = callback
+
+    def _attach_callbacks(self, session: VPNSession) -> VPNSession:
+        """Applies the holder's callbacks to a freshly created session."""
+        session.server_loads_updated_callback = self._server_loads_updated_callback
+        return session

@@ -20,10 +20,9 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING, Dict, Tuple, List
 import re
-
 from proton.utils.environment import VPNExecutionEnvironment
 
-from proton.vpn.core.cache_handler import CacheHandler
+from proton.vpn.core.cache_handler import CacheHandler, BinaryCacheHandler
 from proton.vpn.session.exceptions import ServerListDecodeError
 from proton.vpn.session.servers.types import ServerLoad
 from proton.vpn.session.servers.logicals import ServerList, PersistenceKeys
@@ -85,7 +84,7 @@ class MixinEndpointV2:  # pylint: disable=R0903
     LOGICALS = "/vpn/v2/logicals?SecureCoreFilter=all&WithState=true"
     STATUS = "/vpn/v2/status/{token}/binary"
 
-    def _convert_load(self, load: Dict) -> Dict:
+    def _convert_load(self, logical_id: str, load: Dict) -> Dict:
 
         # Going forward we want to properly integrate, IsEnabled, IsVisible and
         # IsAutoconnectable see VPNLINUX-1502.
@@ -94,6 +93,7 @@ class MixinEndpointV2:  # pylint: disable=R0903
             "Load": load["Load"],
             "Score": score,
             "Status": load["IsEnabled"] and load["IsVisible"],
+            "ID": logical_id
         }
 
     async def _v2_fetch_logicals(
@@ -106,6 +106,7 @@ class MixinEndpointV2:  # pylint: disable=R0903
 
         binary_status = await self._request_status(
             MixinEndpointV2.STATUS.format(token=logicals["StatusID"]))
+        self._binary_status_cache_file.save(binary_status)
         loads = self._compute_loads(logicals, location, binary_status)
         # Splice the loads into the servers
         servers = logicals["LogicalServers"]
@@ -116,7 +117,7 @@ class MixinEndpointV2:  # pylint: disable=R0903
             )
 
         for server, load in zip(servers, loads):
-            server.update(self._convert_load(load))
+            server.update(self._convert_load(server["ID"], load))
 
         return logicals, last_modified_time
 
@@ -132,19 +133,10 @@ class MixinEndpointV2:  # pylint: disable=R0903
         binary_status = await self._request_status(
             MixinEndpointV2.STATUS.format(token=status)
         )
+        self._binary_status_cache_file.save(binary_status)
         computed_loads = self._compute_loads(
             self._server_list.to_dict(), location, binary_status)
-        logicals = self._server_list.logicals
-        # compute_loads returns no IDs, so pair loads with servers by position
-        # and take the ID from the server.
-        for logical, load in zip(logicals, computed_loads):
-            data = self._convert_load(load)
-            data["ID"] = logical.id
-            logical.update(ServerLoad(data))
-        self._server_list.reset_loads_expiration()
-        self._cache_file.save(self._server_list.to_dict())
-
-        return self._server_list
+        return self._apply_loads(computed_loads)
 
     def _compute_loads(
         self,
@@ -164,27 +156,48 @@ class MixinEndpointV2:  # pylint: disable=R0903
         loads = server_status.compute_loads(binary_status)
         return loads
 
+    def _apply_loads(self, computed_loads: List) -> ServerList:
+        """Applies computed loads to the server list."""
+        logicals = self._server_list.logicals
+        if len(computed_loads) != len(logicals):
+            raise RuntimeError(
+                "Loads computation produced a different number of servers "
+                "than the logicals list. This is unexpected."
+            )
+
+        for logical, load in zip(logicals, computed_loads):
+            data = self._convert_load(logical.id, load)
+            logical.update(ServerLoad(data))
+
+        self._cache_file.save(self._server_list.to_dict())
+        return self._server_list
+
 
 class ServerListFetcher(MixinEndpointV1, MixinEndpointV2):
     """Fetches the server list either from disk or from the REST API."""
 
     CACHE_PATH = Path(VPNExecutionEnvironment().path_cache) / "serverlist.json"
+    BINARY_STATUS_CACHE_PATH = Path(VPNExecutionEnvironment().path_cache) / "binary_status"
 
     """Fetches and caches the list of VPN servers from the REST API."""
     def __init__(
             self,
             session: "VPNSession",
             server_list: Optional[ServerList] = None,
-            cache_file: Optional[CacheHandler] = None
+            cache_file: Optional[CacheHandler] = None,
+            binary_status_cache_file: Optional[BinaryCacheHandler] = None
     ):
         self._session = session
         self._server_list = server_list
         self._cache_file = cache_file or CacheHandler(self.CACHE_PATH)
+        self._binary_status_cache_file = binary_status_cache_file or \
+            BinaryCacheHandler(self.BINARY_STATUS_CACHE_PATH)
 
     def clear_cache(self):
         """Discards the cache, if existing."""
         self._server_list = None
         self._cache_file.remove()
+        self._binary_status_cache_file.remove()
 
     async def _request_logicals(self,
                                 endpoint: str,
@@ -294,6 +307,28 @@ class ServerListFetcher(MixinEndpointV1, MixinEndpointV2):
 
         self._server_list = ServerList.from_dict(cache)
         return self._server_list
+
+    def refresh_loads_from_existing_file(self) -> Optional[ServerList]:
+        """
+        Recomputes server loads from the cached binary status, using the
+        user's current location, without any API request.
+        Returns None if recompute is not possible (no server list, v1 list,
+        no cached binary status, or unusable location).
+        """
+        if not self._server_list or self._server_list.version != 2:
+            return None
+
+        binary_status = self._binary_status_cache_file.load()
+        if not binary_status:
+            return None
+
+        location = self._v2_validate_location()
+        if location is None:
+            return None
+
+        computed_loads = self._compute_loads(
+            self._server_list.to_dict(), location, binary_status)
+        return self._apply_loads(computed_loads)
 
     def _build_additional_headers(self, modified_since=None) -> Dict[str, str]:
         headers = {}

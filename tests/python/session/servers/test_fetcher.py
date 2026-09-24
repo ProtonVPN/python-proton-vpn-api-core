@@ -135,3 +135,78 @@ async def test_v2_update_loads_updates_each_server():
     assert [(load.id, load.score, load.load) for load in applied] == [
         ("1", 11.0, 10), ("2", 22.0, 20),
     ]
+
+def test_refresh_loads_recomputes_from_cached_binary_file():
+    server_list, logicals = build_mock_server_list_with_loads(2)
+    server_list.version = 2
+
+    binary_cache = Mock(load=Mock(return_value=b"cached-blob"))
+    fetcher = ServerListFetcher(
+        session=Mock(),
+        server_list=server_list,
+        cache_file=Mock(),
+        binary_status_cache_file=binary_cache
+    )
+    fetcher._compute_loads = Mock(return_value=[
+        _computed_load(30, 31.0), _computed_load(40, 41.0),
+    ])
+    fetcher._request_status = AsyncMock()
+
+    result = fetcher.refresh_loads_from_existing_file()
+
+    applied = [call.args[0] for call in logicals[0].update.call_args_list + logicals[1].update.call_args_list]
+    assert result is server_list
+    assert [(load.id, load.score, load.load) for load in applied] == [
+        ("1", 31.0, 30), ("2", 41.0, 40)]
+    fetcher._request_status.assert_not_awaited() # no api call
+    fetcher._cache_file.save.assert_called_once() # updated logicals saved
+
+@pytest.mark.asyncio
+async def test_v2_fetch_logicals_adds_loads_into_logical_servers():
+    LOCATION = Mock(Lat=47.3, Long=8.5, Country="CH", IP="1.2.3.4")
+
+    fetcher = ServerListFetcher(
+        session=Mock(),
+        server_list=None,
+        cache_file=Mock(),
+        binary_status_cache_file=Mock(),
+    )
+    assert fetcher._server_list is None
+
+    logicals_payload = {
+        "StatusID": "status-token-123",
+        "LogicalServers": [
+            {"ID": 1, "Name": "CH#1", "EntryCountry": "CH"},
+            {"ID": 2, "Name": "CH#2", "EntryCountry": "SE"},
+        ],
+    }
+    fetcher._v2_validate_location = Mock(return_value=LOCATION)
+    fetcher._request_logicals = AsyncMock(
+        return_value=(logicals_payload, "test last modified time")
+    )
+    fetcher._request_status = AsyncMock(return_value=b"binary-status")
+    fetcher._compute_loads = Mock(return_value=[
+        _computed_load(10, 11.0),
+        _computed_load(20, 22.0),
+    ])
+    captured = {}
+
+    def fake_cache_and_load(response, last_modified_time):
+        captured["response"] = response
+        captured["last_modified_time"] = last_modified_time
+        return "server-list"
+
+    fetcher._cache_and_load_server_list = Mock(side_effect=fake_cache_and_load)
+
+    result = await fetcher.fetch(EndpointVersion.V2)
+
+    assert result == "server-list"
+    fetcher._request_logicals.assert_awaited_once_with(
+        "/vpn/v2/logicals?SecureCoreFilter=all&WithState=true", modified_since=None
+    )
+    fetcher._request_status.assert_awaited_once_with("/vpn/v2/status/status-token-123/binary")
+    servers = captured["response"]["LogicalServers"]
+    assert [(s["ID"], s["Load"], s["Score"]) for s in servers] == [
+        (1, 10, 11.0),
+        (2, 20, 22.0),
+    ]

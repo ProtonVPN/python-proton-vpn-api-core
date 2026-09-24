@@ -35,11 +35,12 @@ MOCK_COUNTRY = "Middle Earth"
 MOCK_TIMEZONE = "Europe/Zurich"
 
 
-def create_mock_vpn_account():
+def create_mock_vpn_account(is_location_expired: bool = False):
     vpn_account = Mock
     vpn_account.location = Mock()
     vpn_account.location.ISP = MOCK_ISP
     vpn_account.location.Country = MOCK_COUNTRY
+    vpn_account.location.is_expired = is_location_expired
     return vpn_account
 
 
@@ -407,3 +408,32 @@ async def test_provide_2fa_fido2_sends_the_client_headers(auth_session):
     await auth_session.provide_2fa_fido2(Mock())
 
     assert auth_session.received_headers == EXPECTED_AUTH_HEADERS
+
+@pytest.mark.asyncio
+async def test_loads_are_not_recalculated_when_location_is_still_valid(build_session):
+    session = build_session()
+    session._vpn_account = create_mock_vpn_account(is_location_expired=False)
+    session._fetcher = Mock()
+    session._fetcher.fetch_location = AsyncMock()
+
+    await session.update_and_set_location_if_necessary()
+
+    session._fetcher.fetch_location.assert_not_awaited()
+
+@pytest.mark.asyncio
+async def test_on_location_change_loads_are_recalculated_and_the_callback_is_notified(build_session):
+    session = build_session()
+    session._vpn_account = create_mock_vpn_account(is_location_expired=True)
+    fresh_list = Mock()
+    session.server_loads_updated_callback = Mock()
+
+    session._fetcher = Mock()
+    new_location = Mock(name="new-location")
+    session._fetcher.fetch_location = AsyncMock(return_value=new_location)
+    session._fetcher.refresh_server_loads_from_cached_status = Mock(return_value=fresh_list)
+
+    await session.update_and_set_location_if_necessary()
+
+    assert session._vpn_account.location is new_location
+    assert session._server_list is fresh_list
+    session.server_loads_updated_callback.assert_called_once()

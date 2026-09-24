@@ -110,6 +110,7 @@ class VPNDataRefresher:  # pylint: disable=too-many-instance-attributes
     def set_server_loads_updated_callback(self, callback: Optional[Callable]):
         """Sets the callback to be called whenever the server loads are updated."""
         self._server_list_refresher.server_loads_updated_callback = callback
+        self._session_holder.set_server_loads_updated_callback(callback)
 
     def set_certificate_updated_callback(self, callback: Optional[Callable]):
         """Sets the callback to be called whenever the certificate is updated."""

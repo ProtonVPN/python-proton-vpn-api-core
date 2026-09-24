@@ -19,7 +19,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 import asyncio
 from os.path import basename
 from threading import Event
-from typing import Optional
+from typing import Optional, Callable
 
 from proton.session import Session, FormData, FormField
 from proton.session.api import Fido2Assertion, Fido2AssertionParameters
@@ -125,6 +125,7 @@ class VPNSession(Session):
         self._location_names = location_names
         self._locale = locale
         self._client_headers = _client_headers(locale, timezone)
+        self.server_loads_updated_callback: Optional[Callable] = None
         super().__init__(*args, **kwargs)
 
         # Logged here rather than per request, auth requests never reach async_api_request.
@@ -427,7 +428,7 @@ class VPNSession(Session):
             self._requests_unlock()
 
     async def update_and_set_location_if_necessary(self):
-        """If location data is expired, update it from API and set it."""
+        """If location data is expired, update it from API and recalculate loads if successful."""
         if self.vpn_account is None:
             # logged out
             return
@@ -439,6 +440,14 @@ class VPNSession(Session):
                 logger.warning("Location could not be refreshed")
                 return
             self.set_location(new_location)
+            # update server list with new location
+            refreshed_serverlist = self._fetcher.refresh_server_loads_from_cached_status()
+            if not refreshed_serverlist:
+                return
+
+            self._server_list = refreshed_serverlist
+            if callable(self.server_loads_updated_callback):
+                self.server_loads_updated_callback()
 
     def set_location(self, location: VPNLocation):
         """Set new location data and store it."""
