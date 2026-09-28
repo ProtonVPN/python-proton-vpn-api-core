@@ -135,6 +135,7 @@ async def test_v2_update_loads_updates_each_server():
     assert [(load.id, load.score, load.load) for load in applied] == [
         ("1", 11.0, 10), ("2", 22.0, 20),
     ]
+    server_list.reset_loads_expiration.assert_called_once()
 
 def test_refresh_loads_recomputes_from_cached_binary_file():
     server_list, logicals = build_mock_server_list_with_loads(2)

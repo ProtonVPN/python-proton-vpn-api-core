@@ -169,6 +169,7 @@ class MixinEndpointV2:  # pylint: disable=R0903
             data = self._convert_load(logical.id, load)
             logical.update(ServerLoad(data))
 
+        self._server_list.reset_loads_expiration()
         self._cache_file.save(self._server_list.to_dict())
         return self._server_list
 
