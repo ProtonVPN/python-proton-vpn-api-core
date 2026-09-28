@@ -26,7 +26,9 @@ from proton.utils.environment import VPNExecutionEnvironment
 from proton.vpn.core.cache_handler import CacheHandler
 from proton.vpn.session.exceptions import ServerListDecodeError
 from proton.vpn.session.servers.types import ServerLoad
-from proton.vpn.session.servers.logicals import ServerList, PersistenceKeys
+from proton.vpn.session.servers.logicals import (
+    ServerList, PersistenceKeys, _server_string_object_hook
+)
 from proton.vpn.session.dataclasses import VPNLocation
 from proton.vpn.session.utils import rest_api_request
 from proton.vpn.platform.core import ServerStatus  # pylint: disable=E0401, E0611
@@ -179,7 +181,10 @@ class ServerListFetcher(MixinEndpointV1, MixinEndpointV2):
     ):
         self._session = session
         self._server_list = server_list
-        self._cache_file = cache_file or CacheHandler(self.CACHE_PATH)
+        self._cache_file = cache_file or CacheHandler(
+            self.CACHE_PATH,
+            object_hook_factory=_server_string_object_hook,
+        )
 
     def clear_cache(self):
         """Discards the cache, if existing."""
