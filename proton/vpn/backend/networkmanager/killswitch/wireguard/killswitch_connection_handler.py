@@ -21,11 +21,6 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 # pylint: disable=duplicate-code
 # pylint: disable=duplicate-code
-import re
-import os
-import shutil
-import functools
-import subprocess  # nosec blacklist # nosemgrep: gitlab.bandit.B404
 import asyncio
 import concurrent.futures
 
@@ -39,27 +34,10 @@ from proton.vpn.backend.networkmanager.killswitch.wireguard.killswitch_connectio
 
 logger = logging.getLogger(__name__)
 
-IP_BINARY_SEARCH_PATH = os.pathsep.join(["/usr/bin", "/usr/sbin", "/sbin", "/bin"])
-
-
-@functools.lru_cache(maxsize=1)
-def _find_ip_binary() -> str:
-    """Returns the path to the ip binary (iproute2).
-
-    The result is cached, since the binary is not expected to move while the
-    app is running.
-
-    :raises FileNotFoundError: if the ip binary was not found.
-    """
-    ip_binary = shutil.which("ip", path=IP_BINARY_SEARCH_PATH)
-
-    if not ip_binary:
-        raise FileNotFoundError(
-            f"The ip binary (iproute2) was not found in {IP_BINARY_SEARCH_PATH}."
-        )
-
-    logger.debug(f"Using ip binary at {ip_binary}.")
-    return ip_binary
+# How often NetworkManager is asked whether VPN server route is in place, and how
+# long to keep asking before giving up. Check is cheap, only reads NMs in-memory config.
+ROUTE_POLL_INTERVAL_IN_SECS = 0.1
+ROUTE_TIMEOUT_IN_SECS = 5
 
 
 def _get_connection_id(permanent: bool, ipv6: bool = False):
@@ -189,10 +167,8 @@ class KillSwitchConnectionHandler:
                 continue
 
             # The new route doesn't seem to be available straight away.
-            # For this reason, the routing table is polled until the route has been added.
-            await self._wait_for_vpn_server_route(
-                server_ip, device.get_iface(), found=True
-            )
+            # For this reason, NetworkManager is polled until the route has been added.
+            await self._wait_for_vpn_server_route(device, server_ip, found=True)
 
         self._server_ip = server_ip
 
@@ -213,38 +189,24 @@ class KillSwitchConnectionHandler:
                 self.nm_client.remove_route_from_device(device, self._server_ip)
             )
             # The route doesn't seem to be removed straight away.
-            # For this reason, the routing table is polled until the route has been removed.
-            await self._wait_for_vpn_server_route(self._server_ip, device.get_iface(), found=False)
+            # For this reason, NetworkManager is polled until the route has been removed.
+            await self._wait_for_vpn_server_route(device, self._server_ip, found=False)
 
         self._server_ip = None
 
-    @staticmethod
-    async def _run_ip_route_command():
-        ip_binary = _find_ip_binary()
-
-        def run():
-            # ip_binary comes from shutil.which over a hardcoded directory
-            # list, and the arguments are a list, so nothing external can
-            # influence what runs.
-            return subprocess.run(  # nosec subprocess_without_shell_equals_true  # noqa: E501 # pylint: disable=line-too-long # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
-                [ip_binary, "route"], capture_output=True, encoding="utf-8", check=True
-            )
-
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, run)
-
-    @classmethod
-    async def _wait_for_vpn_server_route(
-            cls, server_ip: str, interface_name: str, found: bool = True
+    async def _wait_for_vpn_server_route(  # pylint: disable=too-many-arguments
+            self, device, server_ip: str, found: bool = True,
+            timeout: float = ROUTE_TIMEOUT_IN_SECS,
+            interval: float = ROUTE_POLL_INTERVAL_IN_SECS
     ):
-        server_route = f"{server_ip} via .* dev {interface_name} .*"
-        for delay in [0.5, 0.5, 1, 1, 2]:
-            result = await cls._run_ip_route_command()
-
-            if bool(re.search(server_route, result.stdout)) is found:
+        for _ in range(int(timeout / interval)):
+            has_route = await _wrap_future(
+                self.nm_client.has_ipv4_route(device, server_ip), timeout=timeout
+            )
+            if has_route is found:
                 return
 
-            await asyncio.sleep(delay)
+            await asyncio.sleep(interval)
 
         raise TimeoutError(
             f"Error waiting for server route to be {'added' if found else 'removed'}"

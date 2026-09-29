@@ -374,7 +374,8 @@ class NMClient:
                 # Remove any existing routes to the new server that may have been left over.
                 cls._remove_ipv4_routes(active_connection, new_server_ip)
 
-                gateway = active_connection.get_ip4_config().get_gateway()
+                ip4_config = active_connection.get_ip4_config()
+                gateway = ip4_config.get_gateway() if ip4_config else None
                 if not gateway:
                     raise GatewayNotFoundError(
                         "Gateway not found on interface "
@@ -390,6 +391,19 @@ class NMClient:
         cls._run_on_glib_loop_thread(_add_ipv4_route)
 
         return route_added_future
+
+    @classmethod
+    def has_ipv4_route(cls, device: NM.Device, server_ip: str) -> Future:
+        """Returns a future resolving to whether the device's IPv4
+        configuration has a route to the specified server IP."""
+        def _has_ipv4_route():
+            ip4_config = device.get_ip4_config()
+            return bool(ip4_config) and any(
+                route.get_dest() == server_ip and route.get_prefix() == 32
+                for route in ip4_config.get_routes()
+            )
+
+        return cls._run_on_glib_loop_thread(_has_ipv4_route)
 
     @classmethod
     def remove_route_from_device(cls, device: NM.Device, server_ip: str) -> Future:

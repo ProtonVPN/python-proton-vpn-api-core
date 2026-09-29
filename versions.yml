@@ -1,3 +1,10 @@
+version: 5.8.7
+time: 2026/09/29 15:20
+author: Axel Langenskiold
+email: axel.langenskiold@proton.ch
+description:
+- "fix: Track the server route with NetworkManager"
+---
 version: 5.8.6
 time: 2026/09/28 09:35
 author: Elena Švilpė
