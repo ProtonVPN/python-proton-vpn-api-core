@@ -151,13 +151,15 @@ class KillSwitchConnectionHandler:
         if not self.nm_client.is_monitoring_network_config_changes():
             self._start_monitoring_network_config_changes()
 
-        devices = self.nm_client.get_physical_devices()
+        devices = self.nm_client.get_routable_devices()
+        # Set first: wait below can throw, and teardown needs this IP to clean up.
+        old_server_ip, self._server_ip = self._server_ip, server_ip
         for device in devices:
             try:
                 await _wrap_future(
                     self.nm_client.add_route_to_device(
                         device, new_server_ip=server_ip,
-                        old_server_ip=self._server_ip
+                        old_server_ip=old_server_ip
                     )
                 )
             except GatewayNotFoundError as error:
@@ -170,8 +172,6 @@ class KillSwitchConnectionHandler:
             # For this reason, NetworkManager is polled until the route has been added.
             await self._wait_for_vpn_server_route(device, server_ip, found=True)
 
-        self._server_ip = server_ip
-
     async def remove_vpn_server_route(self):
         """
         Remove a previously added VPN server route.
@@ -183,7 +183,9 @@ class KillSwitchConnectionHandler:
         if not self._server_ip:
             return
 
-        devices = self.nm_client.get_physical_devices()
+        # Every active device is checked, and not just the routable ones, so that
+        # a device that lost its gateway while connected is cleaned up as well.
+        devices = self.nm_client.get_active_devices()
         for device in devices:
             await _wrap_future(
                 self.nm_client.remove_route_from_device(device, self._server_ip)
@@ -219,7 +221,7 @@ class KillSwitchConnectionHandler:
             device = active_connection.get_devices()[0]
             gateway = active_connection.get_ip4_config().get_gateway()
             logger.info(f"Interface {device.get_iface()} switched to gateway {gateway}")
-            future = self.nm_client.add_route_to_device(device, self._server_ip, gateway)
+            future = self.nm_client.add_route_to_device(device, self._server_ip)
             future.add_done_callback(lambda f: loop.call_soon_threadsafe(f.result))
 
         self.nm_client.start_monitoring_network_config_changes(on_active_connection_changed)

@@ -50,7 +50,8 @@ class FakeNMClient:
 
     route_answers is consumed one entry per has_ipv4_route call, so a test can
     describe a route that only becomes visible after a few polls. The last
-    entry repeats, so a single-entry sequence means a constant answer.
+    entry repeats, so a single-entry sequence means a constant answer. An
+    exception entry makes that poll fail with it.
     """
 
     def __init__(self, devices, route_answers, devices_without_gateway=()):
@@ -70,7 +71,10 @@ class FakeNMClient:
     def stop_monitoring_network_config_changes(self):
         pass
 
-    def get_physical_devices(self):
+    def get_routable_devices(self):
+        return self.devices
+
+    def get_active_devices(self):
         return self.devices
 
     def add_route_to_device(self, device, new_server_ip, old_server_ip=None) -> Future:
@@ -89,7 +93,12 @@ class FakeNMClient:
     def has_ipv4_route(self, device, server_ip) -> Future:
         self.polled_devices.append(device.get_iface())
         index = min(len(self.polled_devices) - 1, len(self.route_answers) - 1)
-        return _resolved(self.route_answers[index])
+        answer = self.route_answers[index]
+        if isinstance(answer, Exception):
+            future = Future()
+            future.set_exception(answer)
+            return future
+        return _resolved(answer)
 
 
 @pytest.mark.asyncio
@@ -160,3 +169,22 @@ async def test_remove_vpn_server_route_removes_the_route_from_every_device():
     await handler.remove_vpn_server_route()
 
     assert nm_client.routes_removed == [("enp2s0", SERVER_IP)]
+
+
+@pytest.mark.asyncio
+async def test_server_ip_is_stored_even_when_waiting_for_a_route_times_out():
+    """The server IP has to be stored even when adding the routes fails halfway.
+
+    Otherwise the routes that were already applied are never removed, since
+    remove_vpn_server_route returns early when there is no server IP.
+    """
+    nm_client = FakeNMClient(
+        devices=[FakeDevice("eth0"), FakeDevice("eth1")],
+        route_answers=[True, TimeoutError("Error waiting for server route to be added")]
+    )
+    handler = KillSwitchConnectionHandler(nm_client=nm_client)
+
+    with pytest.raises(TimeoutError):
+        await handler.add_vpn_server_route(SERVER_IP)
+
+    assert handler._server_ip == SERVER_IP

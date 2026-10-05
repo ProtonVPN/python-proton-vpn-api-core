@@ -41,6 +41,43 @@ class GatewayNotFoundError(Exception):
     doesn't have one set."""
 
 
+# Device types that can hold the IPv4 gateway used to reach the VPN server.
+# When a physical port is enslaved to a bridge or a bond, the IPv4 configuration
+# (and therefore the gateway) lives on the bond or bridge instead of on the port.
+ROUTABLE_DEVICE_TYPES = (
+    NM.DeviceType.ETHERNET,
+    NM.DeviceType.WIFI,
+    NM.DeviceType.BOND,
+    NM.DeviceType.BRIDGE,
+)
+
+
+def _get_ipv4_gateway(active_connection: Optional[NM.ActiveConnection]) -> Optional[str]:
+    """Returns IPv4 gateway of active connection, if it has one."""
+    ip4_config = active_connection.get_ip4_config() if active_connection else None
+    return ip4_config.get_gateway() if ip4_config else None
+
+
+def _is_active_device(device: NM.Device) -> bool:
+    """Returns whether the device is active and of a type that may hold a VPN server route."""
+    return (
+        device.get_device_type() in ROUTABLE_DEVICE_TYPES
+        and device.get_state() is NM.DeviceState.ACTIVATED
+    )
+
+
+def _is_routable_device(device: NM.Device) -> bool:
+    """Returns whether the VPN server route can be applied to the device.
+
+    Enslaved ports and gateway-less bridges are left out, since they don't hold the
+    IPv4 configuration used to reach the VPN server.
+    """
+    return (
+        _is_active_device(device)
+        and bool(_get_ipv4_gateway(device.get_active_connection()))
+    )
+
+
 def _create_future():
     """Creates a future and sets its internal state as running."""
     future = Future()
@@ -214,27 +251,17 @@ class NMClient:
 
         return future_conn_activated
 
-    def get_physical_devices(self) -> List[NM.Device]:
-        """Returns all the active ethernet/wifi devices."""
-        return [
-            device for device in self._nm_client.get_devices() if (
-                device.get_device_type() in (NM.DeviceType.ETHERNET, NM.DeviceType.WIFI)
-                and device.get_state() is NM.DeviceState.ACTIVATED
-                and device.get_active_connection()  # Maybe this is redundant.
-            )
-        ]
+    def get_routable_devices(self) -> List[NM.Device]:
+        """Returns active devices that can route traffic to the VPN server."""
+        return list(filter(_is_routable_device, self._nm_client.get_devices()))
 
-    def _is_ethernet_or_wifi_connection(self, active_connection: NM.ActiveConnection):
-        return active_connection.props.type in (
-            NM.SETTING_WIRED_SETTING_NAME, NM.SETTING_WIRELESS_SETTING_NAME
-        )
+    def get_active_devices(self) -> List[NM.Device]:
+        """Returns all the active devices that may hold a VPN server route.
 
-    def get_ethernet_and_wifi_connections(self) -> List[NM.ActiveConnection]:
-        """Returns the list of ethernet and wifi connections."""
-        return [
-            ac for ac in self._nm_client.get_active_connections()
-            if self._is_ethernet_or_wifi_connection(ac)
-        ]
+        Unlike `get_routable_devices`, a gateway is not required: a device that
+        lost its gateway after the route was applied still has to be cleaned up.
+        """
+        return list(filter(_is_active_device, self._nm_client.get_devices()))
 
     def is_monitoring_network_config_changes(self) -> bool:
         """
@@ -249,28 +276,24 @@ class NMClient:
             raise RuntimeError("Network config changes are already being monitored.")
 
         def on_active_connection_changed(active_connection, changed_field):
-            if (
-                    changed_field.name == NM.DEVICE_IP4_CONFIG
-                    and active_connection.get_ip4_config()
-                    and active_connection.get_ip4_config().get_gateway()
+            if changed_field.name == NM.DEVICE_IP4_CONFIG and any(
+                    map(_is_routable_device, active_connection.get_devices())
             ):
                 callback(active_connection)
 
-        # Monitor current active (wifi/ethernet) connection changes.
-        connections = self.get_ethernet_and_wifi_connections()
-        for con in connections:
-            handler_id = con.connect("notify", on_active_connection_changed)
-            self._signal_handlers.append((con, handler_id))
+        # The signature matches the "active-connection-added" signal below, which
+        # this is also connected to.
+        def monitor(_nm_client, active_connection):
+            handler_id = active_connection.connect("notify", on_active_connection_changed)
+            self._signal_handlers.append((active_connection, handler_id))
 
-        def on_active_connection_added(_nm_client, active_connection):
-            if self._is_ethernet_or_wifi_connection(active_connection):
-                # If the new active connection is a wifi/ethernet connection then
-                # start monitoring its config changes.
-                handler_id = active_connection.connect("notify", on_active_connection_changed)
-                self._signal_handlers.append((active_connection, handler_id))
+        # Active connections are monitored. Whether a config change is relevant is
+        # decided when the change happens, at which point the connection's devices
+        # are known.
+        for active_connection in self._nm_client.get_active_connections():
+            monitor(self._nm_client, active_connection)
 
-        # Monitor new active connections.
-        handler_id = self._nm_client.connect("active-connection-added", on_active_connection_added)
+        handler_id = self._nm_client.connect("active-connection-added", monitor)
         self._signal_handlers.append((self._nm_client, handler_id))
 
     def stop_monitoring_network_config_changes(self):
@@ -304,11 +327,16 @@ class NMClient:
     def _remove_ipv4_routes(
             cls, active_connection: NM.ActiveConnection,
             server_ip: str
-    ):
+    ) -> bool:
+        """Removes the routes to the server IP, returning whether any was removed."""
         cls._assert_running_on_glib_loop_thread()
 
         connection = active_connection.get_connection()
-        config = connection.get_setting_ip4_config()
+        config = connection.get_setting_ip4_config() if connection else None
+        if not config:
+            # Devices that don't hold an IPv4 configuration (e.g. the enslaved
+            # ports of a bond or bridge) don't hold any route either.
+            return False
 
         routes_to_remove = []
         for i in range(config.get_num_routes()):
@@ -318,6 +346,8 @@ class NMClient:
 
         for route in routes_to_remove:
             config.remove_route_by_value(route)
+
+        return bool(routes_to_remove)
 
     @classmethod
     def _apply_connection_async(
@@ -364,23 +394,21 @@ class NMClient:
           adding the new one.
         """
         route_added_future = _create_future()
-        active_connection = device.get_active_connection()
 
         def _add_ipv4_route():
             try:
+                active_connection = device.get_active_connection()
+                gateway = _get_ipv4_gateway(active_connection)
+                if not gateway or not active_connection.get_connection():
+                    raise GatewayNotFoundError(
+                        f"Gateway not found on interface '{device.get_iface()}'"
+                    )
+
                 if old_server_ip:
                     cls._remove_ipv4_routes(active_connection, old_server_ip)
 
                 # Remove any existing routes to the new server that may have been left over.
                 cls._remove_ipv4_routes(active_connection, new_server_ip)
-
-                ip4_config = active_connection.get_ip4_config()
-                gateway = ip4_config.get_gateway() if ip4_config else None
-                if not gateway:
-                    raise GatewayNotFoundError(
-                        "Gateway not found on interface "
-                        f"'{device.get_iface()}'"
-                    )
 
                 cls._add_ipv4_route(active_connection, new_server_ip, gateway)
 
@@ -412,11 +440,17 @@ class NMClient:
         for the specified device.
         """
         route_removed_future = _create_future()
-        active_connection = device.get_active_connection()
 
         def _remove_ipv4_routes():
             try:
-                cls._remove_ipv4_routes(active_connection, server_ip)
+                active_connection = device.get_active_connection()
+                if not active_connection or not cls._remove_ipv4_routes(
+                        active_connection, server_ip
+                ):
+                    # Nothing to apply, so the device is left untouched.
+                    route_removed_future.set_result(None)
+                    return
+
                 cls._apply_connection_async(active_connection, route_removed_future)
             except Exception as exc:  # pylint: disable=broad-except
                 route_removed_future.set_exception(exc)
