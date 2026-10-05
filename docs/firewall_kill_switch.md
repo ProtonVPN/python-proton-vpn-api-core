@@ -192,6 +192,20 @@ Unit tests cannot replace it: `Rule::add_expr` is write-only, the only readable
 artefact is raw netlink, and `mnl::Socket` is concrete, so there is nothing to
 mock.
 
+## Smoke testing the DHCP server rules
+
+```shell
+sudo ./scripts/probe_dhcp_server.sh
+```
+
+Checks that a NAT'd VM can still get a lease from a DHCP server on this host
+(as with libvirt's default network) while the kill switch is on. Two network
+namespaces stand in for the host, running `fwks up` and dnsmasq, and the VM,
+running busybox `udhcpc`. It asks for a lease with both a unicast and a
+broadcast reply, and checks that DHCP-shaped traffic that isn't a broadcast is
+still blocked to and from non-LAN addresses. Like the IPv6 probe, it runs a
+baseline first. Needs dnsmasq, busybox and python3.
+
 ## Debugging
 
 The service logs through the `log` facade. D-Bus activation starts it as a

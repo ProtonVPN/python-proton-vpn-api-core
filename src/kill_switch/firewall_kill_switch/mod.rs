@@ -31,7 +31,8 @@
 //! - established/related return traffic
 //! - the WireGuard tunnel interface, and packets tagged with the fwmark
 //! - LAN, link-local and multicast subnets
-//! - NDP (IPv6 neighbor/router discovery) and DHCPv4
+//! - NDP (IPv6 neighbor/router discovery) and DHCPv4, both as a client and as
+//!   the server for NAT'd VMs/containers
 //! - the VPN server IP during the connecting phase, when
 //!   [`FirewallConfig::server_ip`] is set
 //!
@@ -186,7 +187,12 @@ impl FirewallKillSwitch
         rules::add_ndp_rules(&mut batch, &out_chain, &in_chain);
 
         // Allow DHCP so the machine can renew its IP lease while the KS is active.
-        rules::add_dhcp_rules(&mut batch, &out_chain, &in_chain);
+        rules::add_dhcp_client_rules(&mut batch, &out_chain, &in_chain);
+
+        // Allow DHCP server broadcasts so NAT'd VMs/containers (e.g. libvirt's
+        // default network) can get a lease from this host. Their unicast DHCP
+        // traffic is already covered by the LAN rules below.
+        rules::add_dhcp_server_rules(&mut batch, &out_chain, &in_chain);
 
         // Note: NDP and DHCP rules go on the input/output chains (traffic to/from
         // this host) but NOT the forward chain (traffic this host routes between
@@ -194,7 +200,8 @@ impl FirewallKillSwitch
         // fine here: with a NAT'd VM/container, this host is itself the thing
         // handing out IP addresses (DHCP) and answering IPv6 "who is at this
         // address?" (NDP) on the virtual network, so that traffic is to/from this
-        // host and the input/output rules cover it.
+        // host and the input/output rules — including the DHCP server rules
+        // above — cover it.
         // TODO: the one case not covered is if this host ever *passes along* DHCP
         // requests for another network it routes (acting as a "DHCP relay"). Those
         // forwarded DHCPv4 requests are sent to the broadcast address

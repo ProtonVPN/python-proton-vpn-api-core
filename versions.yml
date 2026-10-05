@@ -1,3 +1,10 @@
+version: 5.8.8
+time: 2026/09/30 15:17
+author: Pep Llaneras
+email: josep.llaneras@proton.ch
+description:
+- "fix: Allow DHCP server traffic"
+---
 version: 5.8.7
 time: 2026/09/29 15:20
 author: Axel Langenskiold

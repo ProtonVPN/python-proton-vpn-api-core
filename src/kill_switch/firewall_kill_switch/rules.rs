@@ -65,6 +65,10 @@ pub(super) const LAN_NETS_V6: &[&str] = &[
     "ff00::/8",
 ];
 
+// DHCPv4 — RFC 2131. Client port 68, server port 67.
+const DHCPV4_CLIENT_PORT: u16 = 68;
+const DHCPV4_SERVER_PORT: u16 = 67;
+
 // DHCPv6 — RFC 8415. Client port 546, server port 547. Requests go to one of
 // two well-known multicast addresses rather than a broadcast as in DHCPv4.
 const DHCPV6_CLIENT_PORT: u16 = 546;
@@ -226,23 +230,9 @@ pub(super) fn add_ndp_rules(
 /// Allow DHCPv4 lease request/renewal traffic in both directions.
 ///
 /// These are DHCP *client* rules: this machine asking for, and renewing, its
-/// own IP lease.
-///
-/// TODO: add DHCPv6 — the IPv6 equivalent of the rules below. DHCPv6 uses UDP
-/// port 546 on the client and 547 on the server:
-///   - outgoing request:  src port 546 → dst port 547, sent to ff02::1:2 (the
-///     IPv6 multicast address meaning "all DHCP servers on this link")
-///   - incoming response: src port 547 → dst port 546
-///
-/// TODO: add DHCP *server* rules, for when this host hands out leases itself
-/// instead of asking for one — e.g. it runs the DHCP server for a NAT'd
-/// VM/container network. This is the mirror image of the client rules (the
-/// ports swap roles):
-///   - outgoing response: src port 67 → dst port 68 (this host replying to a
-///     client)
-///   - incoming request:  src port 68 → dst port 67, sent to the broadcast
-///     address 255.255.255.255
-pub(super) fn add_dhcp_rules(
+/// own IP lease. See [`add_dhcpv6_rules`] for the IPv6 equivalent, and
+/// [`add_dhcp_server_rules`] for when this machine hands out leases instead.
+pub(super) fn add_dhcp_client_rules(
     batch: &mut Batch,
     out_chain: &Chain,
     in_chain: &Chain,
@@ -252,16 +242,7 @@ pub(super) fn add_dhcp_rules(
     // know the server.
     {
         let mut rule = Rule::new(out_chain);
-        rule.add_expr(&nft_expr!(meta nfproto));
-        rule.add_expr(&nft_expr!(cmp == NFPROTO_IPV4));
-        rule.add_expr(&nft_expr!(meta l4proto));
-        rule.add_expr(&nft_expr!(cmp == IPPROTO_UDP));
-        // DHCP client port: always 68 per RFC 2131
-        rule.add_expr(&nft_expr!(payload udp sport));
-        rule.add_expr(&nft_expr!(cmp == 68u16.to_be()));
-        // DHCP server port: always 67 per RFC 2131
-        rule.add_expr(&nft_expr!(payload udp dport));
-        rule.add_expr(&nft_expr!(cmp == 67u16.to_be()));
+        check_dhcpv4(&mut rule, DHCPV4_CLIENT_PORT, DHCPV4_SERVER_PORT);
         rule.add_expr(&nft_expr!(payload ipv4 daddr));
         rule.add_expr(&nft_expr!(cmp == Ipv4Addr::BROADCAST));
         rule.add_expr(&Verdict::Accept);
@@ -270,24 +251,67 @@ pub(super) fn add_dhcp_rules(
     // Incoming DHCPv4 response (sport 67 -> dport 68).
     {
         let mut rule = Rule::new(in_chain);
-        rule.add_expr(&nft_expr!(meta nfproto));
-        rule.add_expr(&nft_expr!(cmp == NFPROTO_IPV4));
-        rule.add_expr(&nft_expr!(meta l4proto));
-        rule.add_expr(&nft_expr!(cmp == IPPROTO_UDP));
-        // DHCP server port (source): always 67 per RFC 2131
-        rule.add_expr(&nft_expr!(payload udp sport));
-        rule.add_expr(&nft_expr!(cmp == 67u16.to_be()));
-        // DHCP client port (destination): always 68 per RFC 2131
-        rule.add_expr(&nft_expr!(payload udp dport));
-        rule.add_expr(&nft_expr!(cmp == 68u16.to_be()));
+        check_dhcpv4(&mut rule, DHCPV4_SERVER_PORT, DHCPV4_CLIENT_PORT);
         rule.add_expr(&Verdict::Accept);
         batch.add(&rule, MsgType::Add);
     }
 }
 
+/// Allow the broadcast half of DHCPv4 *server* traffic, for when this machine
+/// hands out leases itself — e.g. it runs the DHCP server (typically dnsmasq)
+/// for a NAT'd VM/container network, as libvirt's default network does.
+///
+/// The mirror image of [`add_dhcp_client_rules`], with the ports swapped. A
+/// client with no address yet broadcasts its request, and the server may
+/// broadcast its reply for the same reason. Once the client holds a lease the
+/// two talk unicast, which the LAN rules already allow.
+///
+/// Both directions only match the broadcast address. Broadcasts never leave the
+/// local link, so these rules can't carry traffic past the kill switch: without
+/// the address check, anything able to bind port 67 could reach any host on
+/// port 68 outside the tunnel. The cost is that a VM network on public
+/// (non-LAN) addresses would still have the server's unicast replies rejected;
+/// the usual private ranges are unaffected.
+pub(super) fn add_dhcp_server_rules(
+    batch: &mut Batch,
+    out_chain: &Chain,
+    in_chain: &Chain,
+) {
+    // Incoming DHCPv4 request (sport 68 → dport 67 → 255.255.255.255).
+    {
+        let mut rule = Rule::new(in_chain);
+        check_dhcpv4(&mut rule, DHCPV4_CLIENT_PORT, DHCPV4_SERVER_PORT);
+        rule.add_expr(&nft_expr!(payload ipv4 daddr));
+        rule.add_expr(&nft_expr!(cmp == Ipv4Addr::BROADCAST));
+        rule.add_expr(&Verdict::Accept);
+        batch.add(&rule, MsgType::Add);
+    }
+    // Outgoing DHCPv4 response (sport 67 → dport 68 → 255.255.255.255).
+    {
+        let mut rule = Rule::new(out_chain);
+        check_dhcpv4(&mut rule, DHCPV4_SERVER_PORT, DHCPV4_CLIENT_PORT);
+        rule.add_expr(&nft_expr!(payload ipv4 daddr));
+        rule.add_expr(&nft_expr!(cmp == Ipv4Addr::BROADCAST));
+        rule.add_expr(&Verdict::Accept);
+        batch.add(&rule, MsgType::Add);
+    }
+}
+
+/// Match IPv4 UDP from port `sport` to port `dport`.
+fn check_dhcpv4(rule: &mut Rule, sport: u16, dport: u16) {
+    rule.add_expr(&nft_expr!(meta nfproto));
+    rule.add_expr(&nft_expr!(cmp == NFPROTO_IPV4));
+    rule.add_expr(&nft_expr!(meta l4proto));
+    rule.add_expr(&nft_expr!(cmp == IPPROTO_UDP));
+    rule.add_expr(&nft_expr!(payload udp sport));
+    rule.add_expr(&nft_expr!(cmp == sport.to_be()));
+    rule.add_expr(&nft_expr!(payload udp dport));
+    rule.add_expr(&nft_expr!(cmp == dport.to_be()));
+}
+
 /// Allow DHCPv6 lease request/renewal traffic in both directions.
 ///
-/// Client rules, like [`add_dhcp_rules`]. Only needed by a table that blocks
+/// Client rules, like [`add_dhcp_client_rules`]. Only needed by a table that blocks
 /// IPv6 more narrowly than the LAN rules do: in the main table the LAN accepts
 /// already cover this traffic, since both server addresses are inside
 /// `ff00::/8` and the response comes from a link-local address.
