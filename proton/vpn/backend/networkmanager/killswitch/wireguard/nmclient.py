@@ -214,13 +214,27 @@ class NMClient:
 
         return future_conn_activated
 
+    @staticmethod
+    def _device_is_enslaved(device: "NM.Device") -> bool:
+        ac = device.get_active_connection()
+        rc = ac.get_connection() if ac else None
+        sc = rc.get_setting_connection() if rc else None
+        if sc is None:
+            return False
+        getter = getattr(sc, "get_controller", None) or sc.get_master
+        return bool(getter())
+
     def get_physical_devices(self) -> List[NM.Device]:
-        """Returns all the active ethernet/wifi devices."""
+        """Returns active ethernet/wifi/bridge devices that own their IP config
+        (excludes enslaved devices whose IP config lives on the master)."""
         return [
             device for device in self._nm_client.get_devices() if (
-                device.get_device_type() in (NM.DeviceType.ETHERNET, NM.DeviceType.WIFI)
+                device.get_device_type() in (
+                    NM.DeviceType.ETHERNET, NM.DeviceType.WIFI, NM.DeviceType.BRIDGE
+                )
                 and device.get_state() is NM.DeviceState.ACTIVATED
-                and device.get_active_connection()  # Maybe this is redundant.
+                and device.get_active_connection()
+                and not self._device_is_enslaved(device)
             )
         ]
 
@@ -289,6 +303,11 @@ class NMClient:
 
         connection = active_connection.get_connection()
         config = connection.get_setting_ip4_config()
+        if config is None:
+            raise GatewayNotFoundError(
+                f"Connection {connection.get_id()!r} has no IPv4 setting "
+                "(likely a bridge slave or unconfigured device)."
+            )
 
         config.add_route(
             NM.IPRoute.new(
@@ -309,6 +328,11 @@ class NMClient:
 
         connection = active_connection.get_connection()
         config = connection.get_setting_ip4_config()
+        if config is None:
+            raise GatewayNotFoundError(
+                f"Connection {connection.get_id()!r} has no IPv4 setting "
+                "(likely a bridge slave or unconfigured device)."
+            )
 
         routes_to_remove = []
         for i in range(config.get_num_routes()):
