@@ -4,5 +4,5 @@ variables:
 
 include:
  - project: 'ProtonVPN/Linux/integration/ci-libraries-rust'
-   ref:  fc097803ecb19cb8a506446fd4e34176c4a19b48 # fix: [VPNLINUX-1899] Remove auth dialog
+   ref:  732922ea978780c25c3654ffeaec13966705bcf6 # chore: update Fedora release package version
    file: 'develop-pipeline.yml'
