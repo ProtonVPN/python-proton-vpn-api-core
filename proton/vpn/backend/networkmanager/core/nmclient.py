@@ -303,7 +303,8 @@ class NMClient:
                 NM.SETTING_WIRELESS_SETTING_NAME,  # Wifi
                 NM.SETTING_GSM_SETTING_NAME,       # USB+Dongle
                 NM.SETTING_CDMA_SETTING_NAME,      # USB+Dongle
-                NM.SETTING_BRIDGE_SETTING_NAME     # Bridge
+                NM.SETTING_BRIDGE_SETTING_NAME,    # Bridge
+                NM.SETTING_VLAN_SETTING_NAME       # VLAN
             )
 
         for active_connection in self._nm_client.get_active_connections():
