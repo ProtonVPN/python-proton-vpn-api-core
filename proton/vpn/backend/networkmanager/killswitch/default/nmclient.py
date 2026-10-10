@@ -28,6 +28,7 @@ from typing import Optional
 from packaging.version import Version
 
 import gi
+
 gi.require_version("NM", "1.0")
 from gi.repository import NM, GLib, Gio, GObject  # pylint: disable=C0413 # noqa: E402
 
@@ -130,7 +131,7 @@ class NMClient:
         self.initialize_nm_client_singleton()
 
     def add_connection_async(
-        self, connection: NM.Connection, save_to_disk: bool = False
+            self, connection: NM.Connection, save_to_disk: bool = False
     ) -> Future:
         """
         Adds a new connection asynchronously.
@@ -228,11 +229,21 @@ class NMClient:
                         f"Error removing KS connection: {connection=}, {result=}"
                     ).with_traceback(exc.__traceback__)
                 )
+            #  If the connection to remove has no live device bound to it will not emit a
+            #  "device-removed" signal. Removal is completed as the connection is deleted, thus we
+            #  set the result here to avoid hanging.
+            else:
+                interface_name: str = connection.get_interface_name()
+                if self._has_named_device(interface_name) or future_interface_removed.done():
+                    return
+                future_interface_removed.set_result(None)
 
         def _on_interface_removed(_nm_client, device):
             logger.debug(
                 f"{device.get_iface()} was removed."
             )
+            if future_interface_removed.done():
+                return
             if device.get_iface() == connection.get_interface_name():
                 future_interface_removed.set_result(None)
 
@@ -254,12 +265,28 @@ class NMClient:
 
         return future_interface_removed
 
+    def _has_named_device(self, interface_name: str) -> bool:
+        """
+        Returns whether NetworkManager currently has a device for the given
+        interface name.
+
+        This must be called from the GLib main loop thread (e.g. from within a
+        NetworkManager async callback).
+        """
+        for device in self._nm_client.get_devices():
+            if device.get_iface() == interface_name:
+                break
+        else:
+            return False
+        return True
+
     def get_active_connection(self, conn_id: str) -> Optional[NM.ActiveConnection]:
         """
         Returns the specified active connection, if existing.
         :param conn_id: ID of the active connection.
         :return: the active connection if it was found. Otherwise, None.
         """
+
         def _get_active_connection():
             active_connections = self._nm_client.get_active_connections()
 
