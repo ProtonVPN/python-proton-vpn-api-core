@@ -1,3 +1,10 @@
+version: 5.8.11
+time: 2026/10/12 11:43
+author: Elena Švilpė
+email: elena.svilpe@proton.ch
+description:
+- "chore: update CI commit reference"
+---
 version: 5.8.10
 time: 2026/10/07 07:30
 author: Elena Švilpė
