@@ -1,3 +1,10 @@
+version: 5.8.12
+time: 2026/10/15 12:20
+author: Pep Llaneras
+email: josep.llaneras@proton.ch
+description:
+- "fix: Only the user who enabled the firewall kill switch, or root, may change it"
+---
 version: 5.8.11
 time: 2026/10/12 11:43
 author: Elena Švilpė

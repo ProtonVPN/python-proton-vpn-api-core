@@ -1,0 +1,4 @@
+#!/bin/sh
+# Run via pkexec by the app when another user owns the kill switch.
+# -I: runs as root, so never import from the caller's directory or environment.
+exec /usr/bin/python3 -I -m proton.vpn.killswitch.disable

@@ -60,6 +60,16 @@
 //! Everything here requires `CAP_NET_ADMIN` (netlink/netfilter access),
 //! including [`FirewallKillSwitch::list_installed_tables`], which only reads.
 //!
+//! # Ownership
+//!
+//! The tables are machine-wide, so the methods that change them take the
+//! caller's uid: only the user who installed the kill switch, or root, may
+//! change it while a table is in place. One owner covers both tables. See
+//! [`ownership`] for the rule and why it is tied to the tables.
+//!
+//! [`FirewallKillSwitch::apply_rules`] is the exception: it is the boot
+//! one-shot's rules-only path and never looks at or records an owner.
+//!
 //! # Known limitations
 //!
 //! - **LAN blocking not supported.** Local-network traffic is always allowed;
@@ -67,59 +77,52 @@
 //! - **Port forwarding not supported.** Inbound connections initiated from the
 //!   VPN side (e.g. ProtonVPN NAT-PMP) are dropped for now; only return
 //!   traffic for connections this host started is allowed in.
-//! - **No permanent mode.** The rules do not survive a reboot and nothing
-//!   re-applies them at boot.
 
 mod expr;
 mod netlink;
+pub mod ownership;
 mod rules;
-
-use std::ffi::{CStr, CString};
-
-use nftnl::{Batch, Chain, Hook, MsgType, Policy, ProtoFamily, Table};
+mod tables;
 
 use super::config::FirewallConfig;
-use super::error::{ConfigError, Result};
+use super::error::{Error, Result};
 use super::systemd;
-use expr::End;
-use netlink::send_and_process;
-
-const TABLE_NAME: &CStr = c"proton_vpn_ks";
-// Separate table so IPv6 leak protection can be enabled and removed without
-// touching the full kill switch, and vice versa.
-const IPV6_TABLE_NAME: &CStr = c"proton_vpn_ks_ipv6";
-
-// Family names as nft spells them, for reporting.
-const TABLE_FAMILY: &str = "inet";
-const IPV6_TABLE_FAMILY: &str = "ip6";
-const IN_CHAIN_NAME: &CStr = c"input";
-const OUT_CHAIN_NAME: &CStr = c"output";
-const FWD_CHAIN_NAME: &CStr = c"forward";
-const LOOPBACK_IFACE: &CStr = c"lo";
-
-// nftables filter priority — 0 runs before positive values, after negative
-// ones. This is the standard priority for filtering rules (NF_IP_PRI_FILTER).
-const FILTER_PRIORITY: i32 = 0;
+use ownership::{State, StateStore};
+use tables::Tables;
 
 pub struct FirewallKillSwitch {
+    tables: Box<dyn Tables>,
     boot_unit: Box<dyn systemd::BootUnit>,
+    // The owner: any local user can reach the service, but only the one who
+    // turned the kill switch on may turn it off.
+    state: StateStore,
 }
 
 impl Default for FirewallKillSwitch {
     fn default() -> Self {
         Self {
+            tables: Box::new(tables::NftTables),
             boot_unit: Box::new(systemd::SystemdBootUnit),
+            state: StateStore::default(),
         }
     }
 }
 
 impl FirewallKillSwitch
 {
-    /// Substitute the boot-persistence backend. Tests only; production goes
-    /// through [`Default`].
+    /// Substitute the netfilter, boot-persistence and state backends. Tests
+    /// only; production goes through [`Default`].
     #[cfg(test)]
-    fn with_boot_unit(boot_unit: Box<dyn systemd::BootUnit>) -> Self {
-        Self { boot_unit }
+    fn with_backends(
+        tables: Box<dyn Tables>,
+        boot_unit: Box<dyn systemd::BootUnit>,
+        state: StateStore,
+    ) -> Self {
+        Self {
+            tables,
+            boot_unit,
+            state,
+        }
     }
 
     /// Apply the kill switch rules, replacing any a previous call installed.
@@ -127,187 +130,35 @@ impl FirewallKillSwitch
     /// Rules only, so it is safe for the boot one-shot, which runs before
     /// `dbus.service` exists. Ignores [`FirewallConfig::permanent`].
     ///
+    /// Not owner-aware: it neither checks nor records an owner. At boot the
+    /// owner recorded when permanent mode was turned on still applies.
+    ///
     /// Idempotent: calling it twice leaves the same rule set in place.
     pub async fn apply_rules(&mut self, config: &FirewallConfig) -> Result<()> {
-        let tunnel_iface = iface_name(&config.tunnel_iface)?;
-
-        let table = Table::new(TABLE_NAME, ProtoFamily::Inet);
-        let mut batch = Batch::new();
-
-        // Wipe any existing rules, then recreate. Both happen in the same
-        // batch, so the table is never left absent.
-        remove_table(&mut batch, &table);
-        batch.add(&table, MsgType::Add);
-
-        // Output chain: drop by default — only explicitly allowed traffic passes
-        // through.
-        let out_chain = add_chain(&mut batch, &table, OUT_CHAIN_NAME, Hook::Out);
-        // Input chain: drop by default — blocks unsolicited incoming connections.
-        let in_chain = add_chain(&mut batch, &table, IN_CHAIN_NAME, Hook::In);
-        // Forward chain: drop by default — blocks VMs and containers from
-        // bypassing the VPN.
-        let fwd_chain =
-            add_chain(&mut batch, &table, FWD_CHAIN_NAME, Hook::Forward);
-
-        // Allow loopback traffic in both directions.
-        rules::add_loopback_rules(
-            &mut batch,
-            &out_chain,
-            &in_chain,
-            LOOPBACK_IFACE,
-        );
-
-        // Allow inbound established/related connections. No interface restriction
-        // on the input chain: the encrypted WireGuard return traffic from the
-        // server arrives on the physical interface (not on the tunnel), so it
-        // can't be matched by tunnel interface here. This is safe because
-        // conntrack only marks a connection established if we already permitted it
-        // outbound. On the forward chain we keep the tunnel-interface restriction,
-        // since forwarded return traffic for VMs arrives decrypted on the tunnel.
-        //
-        // TODO: allow VPN port forwarding. ProtonVPN's NAT-PMP hands us a port on
-        // the VPN gateway; remote peers then open *new* inbound connections to us
-        // through the tunnel. Right now we only accept established/related
-        // inbound, so those fresh connections hit the default drop. To support it,
-        // add an input-chain rule accepting new inbound on the tunnel interface
-        // (iif == tunnel) to the forwarded port, for TCP and UDP. The forwarded
-        // port is assigned at runtime by NAT-PMP and can change, so it must be
-        // passed in (new `FirewallConfig` field) and the rule rebuilt when
-        // it's
-        // renewed — scope the rule to that specific port rather than opening all
-        // inbound on the tunnel.
-        rules::add_allow_established_connections_rule(&mut batch, &in_chain, None);
-        rules::add_allow_established_connections_rule(
-            &mut batch,
-            &fwd_chain,
-            Some(&tunnel_iface),
-        );
-
-        // Allow NDP so IPv6 neighbor/router discovery works on the local network.
-        rules::add_ndp_rules(&mut batch, &out_chain, &in_chain);
-
-        // Allow DHCP so the machine can renew its IP lease while the KS is active.
-        rules::add_dhcp_client_rules(&mut batch, &out_chain, &in_chain);
-
-        // Allow DHCP server broadcasts so NAT'd VMs/containers (e.g. libvirt's
-        // default network) can get a lease from this host. Their unicast DHCP
-        // traffic is already covered by the LAN rules below.
-        rules::add_dhcp_server_rules(&mut batch, &out_chain, &in_chain);
-
-        // Note: NDP and DHCP rules go on the input/output chains (traffic to/from
-        // this host) but NOT the forward chain (traffic this host routes between
-        // two other machines, e.g. a VM reaching the internet through us). That's
-        // fine here: with a NAT'd VM/container, this host is itself the thing
-        // handing out IP addresses (DHCP) and answering IPv6 "who is at this
-        // address?" (NDP) on the virtual network, so that traffic is to/from this
-        // host and the input/output rules — including the DHCP server rules
-        // above — cover it.
-        // TODO: the one case not covered is if this host ever *passes along* DHCP
-        // requests for another network it routes (acting as a "DHCP relay"). Those
-        // forwarded DHCPv4 requests are sent to the broadcast address
-        // 255.255.255.255, which isn't in LAN_NETS, so they'd hit the default
-        // drop. If we ever support that setup, add a forwarded-DHCPv4 rule on the
-        // forward chain.
-
-        // TODO: prevent DNS leaks. Drop-by-default stops arbitrary traffic, but
-        // the LAN rules below allow plaintext DNS (port 53) to a LAN resolver,
-        // bypassing the tunnel. Fix: reject all outgoing port-53 TCP/UDP and then
-        // re-allow only tunnel DNS (plus any explicitly configured local
-        // resolvers). The DNS drop must be added BEFORE these LAN/tunnel allow
-        // rules so queries can't leak to the LAN or to the wrong in-tunnel IP.
-
-        // Allow traffic to/from LAN subnets (local network access). The two
-        // families are passed separately so each can be narrowed on its own.
-        for nets in [rules::LAN_NETS_V4, rules::LAN_NETS_V6] {
-            rules::add_lan_rules(&mut batch, &out_chain, End::Dst, nets);
-            rules::add_lan_rules(&mut batch, &in_chain, End::Src, nets);
-            rules::add_lan_rules(&mut batch, &fwd_chain, End::Dst, nets);
-        }
-
-        // TODO: mitigate CVE-2019-14899. Allowing LAN access lets an attacker on
-        // the same LAN infer the in-tunnel IP by sending crafted packets to it
-        // when reverse-path filtering is loose. Fix: on the input chain, drop
-        // inbound packets whose destination is the tunnel's own IP — added AFTER
-        // the tunnel-allow rule so the tunnel itself can still reach that IP.
-        // Requires passing the tunnel IP(s) in as an argument; we currently only
-        // take the tunnel interface name.
-
-        // Allow traffic on the VPN tunnel interface.
-        // Inner packets routed to the wireguard interface carry no fwmark —
-        // WireGuard sets the fwmark only on the outer UDP packets it sends to the
-        // peer. Without this rule, inner packets are dropped before reaching
-        // WireGuard for encapsulation.
-        rules::add_tunnel_iface_rule(&mut batch, &out_chain, &tunnel_iface);
-        rules::add_tunnel_iface_rule(&mut batch, &fwd_chain, &tunnel_iface);
-
-        // Allow traffic to the VPN server IP — needed during the connecting phase
-        // before the tunnel is up and WireGuard starts marking packets with the
-        // fwmark.
-        if let Some(ip) = config.server_ip {
-            // TODO: security gap here: currently we probe the server before
-            // bringing the VPN tunnel up. If it wasn't for that, this shouldn't be
-            // needed.
-            rules::add_server_ip_rule(&mut batch, &out_chain, ip);
-        }
-
-        // Allow VPN tunnel traffic — WireGuard marks its own outgoing packets with
-        // the fwmark. Everything else is dropped by the default policy above.
-        rules::add_fwmark_rule(&mut batch, &out_chain, config.fwmark);
-        // TODO: I don't think we need this, since we already have the rule to
-        // allow established connections
-        rules::add_fwmark_rule(&mut batch, &fwd_chain, config.fwmark);
-
-        // Fail fast on blocked traffic, so apps (and forwarded VMs) get an error
-        // rather than hanging until they time out. Added last, since these match
-        // unconditionally. The input chain is left to drop silently, so we don't
-        // advertise the host to unsolicited inbound. The Drop policies remain the
-        // fail-closed backstop: chain policy can only be Accept or Drop, so
-        // reject has to be a rule.
-        rules::add_reject_rules(&mut batch, &out_chain);
-        rules::add_reject_rules(&mut batch, &fwd_chain);
-
-        // TODO: after applying, verify the table was actually installed by
-        // querying it back via netlink. A successful send doesn't guarantee the
-        // host supports nftables properly; without this check a silent failure
-        // would leave the machine unprotected.
-        send_and_process(batch.finalize()).await?;
-
-        // TODO: harden kernel sysctls, which the firewall rules can't cover:
-        //   - net.ipv4.conf.all.src_valid_mark = 1: make reverse-path filtering
-        //     account for the fwmark, so WireGuard's own marked outer packets
-        //     aren't dropped by rp_filter (needed to bring the tunnel up on
-        //     systems with strict rp_filter). This also covers the *inbound*
-        //     server traffic: with strict rp_filter, the encrypted reply from the
-        //     VPN server arrives unmarked on the physical interface, and the
-        //     reverse-path lookup for an unmarked packet resolves to the tunnel
-        //     table — so rpf thinks the reply "should" come from the tunnel and
-        //     drops it before our firewall rules even run. We currently rely on
-        //     conntrack (established/related on the input chain) to admit that
-        //     return traffic, which works only because typical hosts run loose
-        //     rp_filter (0 or 2). On a host with strict rp_filter (1) we'd need
-        //     this sysctl — or a prerouting rule that stamps the fwmark on inbound
-        //     packets from the server IP. The sysctl is the lighter fix since we
-        //     have no prerouting chain.
-        //   - net.ipv4.conf.all.arp_ignore = 2: only answer ARP requests for an IP
-        //     on the interface the request arrived on, from a same-subnet sender.
-        //     Stops a LAN attacker from learning the in-tunnel IP by ARP-probing a
-        //     physical interface.
-        // Decide whether `disable` should restore the originals or leave the
-        // hardened values in place.
-
-        log::info!(
-            "Kill switch rules applied (fwmark={:#x}, tunnel-iface={}, server-ip={})",
-            config.fwmark,
-            config.tunnel_iface,
-            config
-                .server_ip
-                .map_or_else(|| "none".to_owned(), |ip| ip.to_string()),
-        );
-
-        Ok(())
+        self.tables.apply_kill_switch(config).await
     }
 
-    /// Apply the rules, then line up boot persistence with
+    /// Apply the rules on behalf of `caller`, recording them as its owner,
+    /// without touching boot persistence.
+    ///
+    /// Fails with [`Error::NotOwner`], changing nothing, when another user
+    /// owns the kill switch — see [`ownership`].
+    ///
+    /// Idempotent.
+    pub async fn install(
+        &mut self,
+        caller: u32,
+        config: &FirewallConfig,
+    ) -> Result<()> {
+        let previous = self.authorize(caller).await?;
+        self.claim(caller)?;
+
+        self.apply_rules(config)
+            .await
+            .inspect_err(|e| self.unclaim(previous.as_ref(), e))
+    }
+
+    /// [`install`](Self::install), then line up boot persistence with
     /// [`FirewallConfig::permanent`].
     ///
     /// Needs the system bus, so not usable at early boot — see
@@ -315,8 +166,14 @@ impl FirewallKillSwitch
     /// boot unit promising protection that was not applied.
     ///
     /// Idempotent.
-    pub async fn enable(&mut self, config: &FirewallConfig) -> Result<()> {
-        self.apply_rules(config).await?;
+    pub async fn enable(
+        &mut self,
+        caller: u32,
+        config: &FirewallConfig,
+    ) -> Result<()> {
+        self.install(caller, config).await?;
+        // A failure here keeps `caller` as the owner: the rules are up, and
+        // they are its to remove.
         self.persist(config.permanent).await
     }
 
@@ -329,39 +186,53 @@ impl FirewallKillSwitch
         }
     }
 
-    /// Disable the kill switch by removing the nftables table.
+    /// Remove the kill switch table on behalf of `caller`, leaving boot
+    /// persistence alone.
     ///
     /// Idempotent: succeeds even when the kill switch was never enabled.
-    pub async fn disable(&mut self) -> Result<()> {
+    pub async fn uninstall(&mut self, caller: u32) -> Result<()> {
+        self.authorize(caller).await?;
+        self.remove_rules().await
+    }
+
+    /// Disable the kill switch on behalf of `caller`, removing the nftables
+    /// table and turning boot persistence off.
+    ///
+    /// Idempotent: succeeds even when the kill switch was never enabled.
+    pub async fn disable(&mut self, caller: u32) -> Result<()> {
+        // Before anything else, or a non-owner could switch off the owner's
+        // boot unit.
+        let state = self.authorize(caller).await?;
+        let owner = state.map(|state| state.owner_uid);
+
         // Both run unconditionally: a boot unit that cannot be updated must
         // not leave the user stuck behind a firewall they asked to remove.
-        let persisted = self.persist(false).await;
+        let persisted = if ownership::may_change_boot_unit(caller, owner) {
+            self.persist(false).await
+        } else {
+            log::warn!("Leaving the boot unit of uid {owner:?} to its owner");
+            Ok(())
+        };
         let removed = self.remove_rules().await;
 
         removed.and(persisted)
     }
 
-    /// Remove the kill switch table, leaving boot persistence alone.
+    /// Remove the kill switch table, leaving boot persistence and the owner
+    /// alone.
     ///
     /// Idempotent: succeeds even when the kill switch was never enabled.
-    pub async fn remove_rules(&mut self) -> Result<()> {
-        let table = Table::new(TABLE_NAME, ProtoFamily::Inet);
-        let mut batch = Batch::new();
-
-        remove_table(&mut batch, &table);
-        send_and_process(batch.finalize()).await?;
-
-        log::info!("Kill switch rules removed");
-
-        Ok(())
+    async fn remove_rules(&mut self) -> Result<()> {
+        self.tables.remove_kill_switch().await
     }
 
-    /// Enable IPv6 leak protection: block IPv6 that is not going through the
-    /// tunnel, leaving IPv4 untouched.
+    /// Enable IPv6 leak protection on behalf of `caller`: block IPv6 that is
+    /// not going through the tunnel, leaving IPv4 untouched.
     ///
     /// This lives in its own table because it has a lifetime independent of the
     /// full kill switch — the client asks for it precisely when the kill switch
-    /// is *off*, so it has to survive [`disable`](Self::disable).
+    /// is *off*, so it has to survive [`disable`](Self::disable). It shares the
+    /// kill switch's owner, though.
     ///
     /// Reads `tunnel_iface` and `fwmark` from `config`. The server IP does not
     /// apply: it admits the encrypted outer packets during connection setup, and
@@ -373,73 +244,16 @@ impl FirewallKillSwitch
     /// subset of the full kill switch's.
     pub async fn enable_ipv6_leak_protection(
         &mut self,
+        caller: u32,
         config: &FirewallConfig,
     ) -> Result<()> {
-        let tunnel_iface = iface_name(&config.tunnel_iface)?;
+        let previous = self.authorize(caller).await?;
+        self.claim(caller)?;
 
-        let table = Table::new(IPV6_TABLE_NAME, ProtoFamily::Ipv6);
-        let mut batch = Batch::new();
-
-        remove_table(&mut batch, &table);
-        batch.add(&table, MsgType::Add);
-
-        let out_chain =
-            add_chain(&mut batch, &table, OUT_CHAIN_NAME, Hook::Out);
-        let in_chain = add_chain(&mut batch, &table, IN_CHAIN_NAME, Hook::In);
-        let fwd_chain =
-            add_chain(&mut batch, &table, FWD_CHAIN_NAME, Hook::Forward);
-
-        // Order is deliberate: the precise rules come before the broad LAN
-        // accepts, so narrowing the latter later stays a local change and cannot
-        // silently take neighbour discovery or lease renewal with it.
-        rules::add_loopback_rules(
-            &mut batch,
-            &out_chain,
-            &in_chain,
-            LOOPBACK_IFACE,
-        );
-
-        rules::add_allow_established_connections_rule(
-            &mut batch, &in_chain, None,
-        );
-        rules::add_allow_established_connections_rule(
-            &mut batch,
-            &fwd_chain,
-            Some(&tunnel_iface),
-        );
-
-        // Neighbour discovery and DHCPv6: without these, blocking IPv6 breaks
-        // address resolution and lease renewal on the local network.
-        rules::add_ndp_rules(&mut batch, &out_chain, &in_chain);
-        rules::add_dhcpv6_rules(&mut batch, &out_chain, &in_chain);
-
-        let nets = rules::LAN_NETS_V6;
-        rules::add_lan_rules(&mut batch, &out_chain, End::Dst, nets);
-        rules::add_lan_rules(&mut batch, &in_chain, End::Src, nets);
-        rules::add_lan_rules(&mut batch, &fwd_chain, End::Dst, nets);
-
-        // IPv6 reaches the VPN inside the IPv4 tunnel, so tunneled IPv6 has to
-        // keep working.
-        rules::add_tunnel_iface_rule(&mut batch, &out_chain, &tunnel_iface);
-        rules::add_tunnel_iface_rule(&mut batch, &fwd_chain, &tunnel_iface);
-
-        // Split tunneling marks the traffic it excludes from the VPN, so that
-        // WireGuard leaves it alone and it goes out the physical interface. That
-        // traffic can be IPv6, and blocking it here would break the feature.
-        rules::add_fwmark_rule(&mut batch, &out_chain, config.fwmark);
-        rules::add_fwmark_rule(&mut batch, &fwd_chain, config.fwmark);
-
-        rules::add_reject_rules(&mut batch, &out_chain);
-        rules::add_reject_rules(&mut batch, &fwd_chain);
-
-        log::info!(
-            "Enabling IPv6 leak protection (tunnel-iface={})",
-            config.tunnel_iface
-        );
-
-        send_and_process(batch.finalize()).await?;
-
-        Ok(())
+        self.tables
+            .apply_ipv6_leak_protection(config)
+            .await
+            .inspect_err(|e| self.unclaim(previous.as_ref(), e))
     }
 
     /// The kill switch tables currently installed, in a stable order, each as
@@ -452,110 +266,296 @@ impl FirewallKillSwitch
     /// Takes `&self` rather than `&mut self` since it changes nothing, but it
     /// still requires `CAP_NET_ADMIN`: netfilter demands it even to read.
     pub async fn list_installed_tables(&self) -> Result<Vec<String>> {
-        let installed = netlink::list_tables().await?;
-
-        // A table dump reports names without families, so the family is paired
-        // back on here. Our two names are distinctive enough that a same-named
-        // table in another family is not a real concern.
-        Ok([
-            (TABLE_FAMILY, TABLE_NAME),
-            (IPV6_TABLE_FAMILY, IPV6_TABLE_NAME),
-        ]
-        .into_iter()
-        .filter(|(_, name)| installed.contains(*name))
-        .map(|(family, name)| format!("{family} {}", name.to_string_lossy()))
-        .collect())
+        self.tables.installed().await
     }
 
-    /// Disable IPv6 leak protection by removing its nftables table.
+    /// Disable IPv6 leak protection on behalf of `caller` by removing its
+    /// nftables table.
     ///
     /// Idempotent: succeeds even when it was never enabled. Leaves the full kill
     /// switch table alone.
-    pub async fn disable_ipv6_leak_protection(&mut self) -> Result<()> {
-        let table = Table::new(IPV6_TABLE_NAME, ProtoFamily::Ipv6);
-        let mut batch = Batch::new();
-
-        remove_table(&mut batch, &table);
-        send_and_process(batch.finalize()).await?;
-
-        log::info!("IPv6 leak protection disabled");
-
-        Ok(())
+    pub async fn disable_ipv6_leak_protection(
+        &mut self,
+        caller: u32,
+    ) -> Result<()> {
+        self.authorize(caller).await?;
+        self.tables.remove_ipv6_leak_protection().await
     }
-}
 
-/// Queue an idempotent removal of the table.
-///
-/// The Add before the Del is what makes it idempotent: deleting a table that is
-/// not there would error.
-fn remove_table(batch: &mut Batch, table: &Table) {
-    batch.add(table, MsgType::Add);
-    batch.add(table, MsgType::Del);
-}
+    /// The recorded owner's uid, `None` when there is none or it cannot be
+    /// read. Only meaningful while a table is installed — see [`ownership`].
+    pub fn owner(&self) -> Option<u32> {
+        self.state.owner()
+    }
 
-/// Add a chain that drops everything the subsequent rules don't accept.
-fn add_chain<'a>(
-    batch: &mut Batch,
-    table: &'a Table,
-    name: &CStr,
-    hook: Hook,
-) -> Chain<'a> {
-    let mut chain = Chain::new(name, table);
-    chain.set_hook(hook, FILTER_PRIORITY);
-    chain.set_policy(Policy::Drop);
-    batch.add(&chain, MsgType::Add);
-    chain
-}
+    /// Refuse `caller` unless [`ownership::authorize`] lets it through,
+    /// returning the record it checked against.
+    async fn authorize(&self, caller: u32) -> Result<Option<State>> {
+        let installed = !self.list_installed_tables().await?.is_empty();
+        let state = self.state.load();
+        let owner = state.as_ref().map(|state| state.owner_uid);
 
-/// Convert an interface name into the NUL-terminated form netlink expects.
-fn iface_name(iface: &str) -> Result<CString> {
-    Ok(CString::new(iface)
-        .map_err(|_| ConfigError::InterfaceName(iface.to_owned()))?)
+        ownership::authorize(caller, owner, installed)
+            .inspect_err(|e| log::warn!("Refusing uid {caller}: {e}"))?;
+
+        Ok(state)
+    }
+
+    /// Record `caller` as the owner.
+    ///
+    /// Done *before* installing, so a crash in between leaves a table its
+    /// owner can still remove. If the record cannot be written, nothing is
+    /// installed: a table nobody but root could remove is worse than none.
+    fn claim(&self, caller: u32) -> Result<()> {
+        self.state.save(&State { owner_uid: caller })
+    }
+
+    /// Undo [`claim`](Self::claim) after the change it guarded failed.
+    ///
+    /// Not for [`Error::Persistence`]: the rules are up then, and they belong
+    /// to the new owner.
+    fn unclaim(&self, previous: Option<&State>, err: &Error) {
+        if matches!(err, Error::Persistence(_)) {
+            return;
+        }
+
+        // Logged rather than returned: the caller wants to know why the
+        // change failed, not that tidying up after it did too.
+        if let Err(e) = self.state.restore(previous) {
+            log::error!("Could not restore the kill switch owner: {e}");
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeSet;
     use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
+    use std::sync::{Arc, Mutex, MutexGuard};
 
-    use super::super::error::Error;
+    use super::super::error::{PersistenceError, RulesetError};
+    use super::ownership::{NotOwner, TempDir, ROOT_UID};
     use super::*;
+
+    const A: u32 = 1000;
+    const B: u32 = 1001;
+
+    const KS_TABLE: &str = "inet proton_vpn_ks";
+    const IPV6_TABLE: &str = "ip6 proton_vpn_ks_ipv6";
 
     /// Records what `persist` asked for. Cloneable so the test keeps a handle
     /// after the kill switch takes ownership of one.
-    ///
-    /// Only `persist` is covered: `enable`/`disable` apply real rules, which
-    /// needs `CAP_NET_ADMIN`.
     #[derive(Clone, Default)]
     struct SpyBootUnit {
         enabled: Arc<AtomicUsize>,
         disabled: Arc<AtomicUsize>,
+        /// Make `enable` fail, as when systemd cannot be reached.
+        fail_enable: bool,
+        /// Same, for `disable`.
+        fail_disable: bool,
+    }
+
+    impl SpyBootUnit {
+        fn calls(&self) -> usize {
+            self.enabled.load(Ordering::SeqCst)
+                + self.disabled.load(Ordering::SeqCst)
+        }
     }
 
     #[async_trait::async_trait]
     impl systemd::BootUnit for SpyBootUnit {
         async fn enable(&self) -> Result<()> {
             self.enabled.fetch_add(1, Ordering::SeqCst);
+            if self.fail_enable {
+                return Err(PersistenceError::NotApplied(
+                    systemd::BOOT_UNIT,
+                    "enabled",
+                )
+                .into());
+            }
             Ok(())
         }
         async fn disable(&self) -> Result<()> {
             self.disabled.fetch_add(1, Ordering::SeqCst);
+            if self.fail_disable {
+                return Err(PersistenceError::NotApplied(
+                    systemd::BOOT_UNIT,
+                    "disabled",
+                )
+                .into());
+            }
             Ok(())
         }
     }
 
+    #[derive(Default)]
+    struct FakeTablesState {
+        installed: BTreeSet<&'static str>,
+        /// Every call that would have changed a table.
+        changes: Vec<&'static str>,
+        fail_apply: bool,
+        /// Removal reports an error, though the table is gone regardless.
+        fail_remove: bool,
+    }
+
+    /// In-memory [`Tables`]. Cloneable for the same reason as
+    /// [`SpyBootUnit`].
+    #[derive(Clone, Default)]
+    struct FakeTables(Arc<Mutex<FakeTablesState>>);
+
+    impl FakeTables {
+        fn state(&self) -> MutexGuard<'_, FakeTablesState> {
+            self.0.lock().unwrap()
+        }
+
+        fn with_installed(tables: &[&'static str]) -> Self {
+            let fake = Self::default();
+            fake.state().installed.extend(tables);
+            fake
+        }
+
+        fn installed_tables(&self) -> Vec<&'static str> {
+            self.state().installed.iter().copied().collect()
+        }
+
+        fn changes(&self) -> Vec<&'static str> {
+            self.state().changes.clone()
+        }
+
+        /// What a reboot does to non-permanent rules.
+        fn reboot(&self) {
+            self.state().installed.clear();
+        }
+
+        fn fail_apply(&self) {
+            self.state().fail_apply = true;
+        }
+
+        fn fail_remove(&self) {
+            self.state().fail_remove = true;
+        }
+
+        fn apply(&self, call: &'static str, table: &'static str) -> Result<()> {
+            let mut state = self.state();
+            state.changes.push(call);
+            if state.fail_apply {
+                return Err(netlink_error());
+            }
+            state.installed.insert(table);
+            Ok(())
+        }
+
+        fn remove(
+            &self,
+            call: &'static str,
+            table: &'static str,
+        ) -> Result<()> {
+            let mut state = self.state();
+            state.changes.push(call);
+            state.installed.remove(table);
+            if state.fail_remove {
+                return Err(netlink_error());
+            }
+            Ok(())
+        }
+    }
+
+    fn netlink_error() -> Error {
+        RulesetError::NetlinkRejected(std::io::Error::other("fake")).into()
+    }
+
+    #[async_trait::async_trait]
+    impl Tables for FakeTables {
+        async fn apply_kill_switch(&self, _: &FirewallConfig) -> Result<()> {
+            self.apply("apply_kill_switch", KS_TABLE)
+        }
+        async fn remove_kill_switch(&self) -> Result<()> {
+            self.remove("remove_kill_switch", KS_TABLE)
+        }
+        async fn apply_ipv6_leak_protection(
+            &self,
+            _: &FirewallConfig,
+        ) -> Result<()> {
+            self.apply("apply_ipv6_leak_protection", IPV6_TABLE)
+        }
+        async fn remove_ipv6_leak_protection(&self) -> Result<()> {
+            self.remove("remove_ipv6_leak_protection", IPV6_TABLE)
+        }
+        async fn installed(&self) -> Result<Vec<String>> {
+            Ok(self
+                .installed_tables()
+                .into_iter()
+                .map(String::from)
+                .collect())
+        }
+    }
+
+    /// A kill switch over fakes, with handles to inspect them. The temp dir
+    /// lives as long as the fixture.
+    struct Fixture {
+        ks: FirewallKillSwitch,
+        tables: FakeTables,
+        boot_unit: SpyBootUnit,
+        dir: TempDir,
+    }
+
+    impl Fixture {
+        fn new(test: &str) -> Self {
+            Self::with(test, FakeTables::default(), SpyBootUnit::default())
+        }
+
+        fn with(
+            test: &str,
+            tables: FakeTables,
+            boot_unit: SpyBootUnit,
+        ) -> Self {
+            let dir = TempDir::new(test);
+            let ks = FirewallKillSwitch::with_backends(
+                Box::new(tables.clone()),
+                Box::new(boot_unit.clone()),
+                StateStore::new(dir.path()),
+            );
+
+            Self {
+                ks,
+                tables,
+                boot_unit,
+                dir,
+            }
+        }
+
+        fn store(&self) -> StateStore {
+            StateStore::new(self.dir.path())
+        }
+
+        fn set_owner(&self, owner_uid: u32) {
+            self.store().save(&State { owner_uid }).unwrap();
+        }
+    }
+
+    fn config(permanent: bool) -> FirewallConfig {
+        FirewallConfig {
+            permanent,
+            ..FirewallConfig::default()
+        }
+    }
+
+    fn is_not_owner(result: Result<()>, owner: u32) -> bool {
+        matches!(
+            result,
+            Err(Error::NotOwner(NotOwner::OwnedBy(o))) if o == owner
+        )
+    }
+
     /// (enable calls, disable calls) after one `persist`.
     async fn persist_calls(permanent: bool) -> (usize, usize) {
-        let spy = SpyBootUnit::default();
+        let fixture = Fixture::new(&format!("persist_calls_{permanent}"));
 
-        FirewallKillSwitch::with_boot_unit(Box::new(spy.clone()))
-            .persist(permanent)
-            .await
-            .unwrap();
+        fixture.ks.persist(permanent).await.unwrap();
 
         (
-            spy.enabled.load(Ordering::SeqCst),
-            spy.disabled.load(Ordering::SeqCst),
+            fixture.boot_unit.enabled.load(Ordering::SeqCst),
+            fixture.boot_unit.disabled.load(Ordering::SeqCst),
         )
     }
 
@@ -571,17 +571,349 @@ mod tests {
         assert_eq!(persist_calls(false).await, (0, 1));
     }
 
-    #[test]
-    fn iface_name_accepts_a_plain_name() {
-        assert_eq!(iface_name("proton0").unwrap().as_c_str(), c"proton0");
+    #[tokio::test]
+    async fn enable_records_the_caller_as_owner() {
+        let mut fixture = Fixture::new("enable_records_the_caller_as_owner");
+
+        fixture.ks.enable(A, &config(false)).await.unwrap();
+
+        assert_eq!(fixture.tables.installed_tables(), [KS_TABLE]);
+        assert_eq!(fixture.ks.owner(), Some(A));
     }
 
-    #[test]
-    fn iface_name_rejects_interior_nul() {
-        // A NUL byte would silently truncate the name passed to netlink, so a
-        // rule could end up matching a different interface than intended.
-        let err = iface_name("proton0\0eth0").unwrap_err();
+    #[tokio::test]
+    async fn ipv6_leak_protection_alone_makes_the_caller_the_owner() {
+        // One owner covers both tables: IPv6 leak protection on its own is
+        // enough to lock other users out of the kill switch too.
+        let mut fixture = Fixture::new("ipv6_leak_protection_alone");
 
-        assert!(matches!(err, Error::Config(ConfigError::InterfaceName(_))));
+        fixture
+            .ks
+            .enable_ipv6_leak_protection(A, &config(false))
+            .await
+            .unwrap();
+
+        assert_eq!(fixture.tables.installed_tables(), [IPV6_TABLE]);
+        assert_eq!(fixture.ks.owner(), Some(A));
+        assert!(is_not_owner(fixture.ks.enable(B, &config(false)).await, A));
+    }
+
+    #[tokio::test]
+    async fn a_non_owner_can_change_nothing() {
+        // B must not be able to undo, or replace, the protection A turned on,
+        // and refusing must not have touched the tables or the boot unit.
+        let mut fixture = Fixture::new("a_non_owner_can_change_nothing");
+        fixture.ks.enable(A, &config(true)).await.unwrap();
+        fixture
+            .ks
+            .enable_ipv6_leak_protection(A, &config(false))
+            .await
+            .unwrap();
+        let changes = fixture.tables.changes();
+        let boot_unit_calls = fixture.boot_unit.calls();
+
+        let ks = &mut fixture.ks;
+        assert!(is_not_owner(ks.enable(B, &config(false)).await, A));
+        assert!(is_not_owner(ks.install(B, &config(false)).await, A));
+        assert!(is_not_owner(ks.disable(B).await, A));
+        assert!(is_not_owner(ks.uninstall(B).await, A));
+        assert!(is_not_owner(
+            ks.enable_ipv6_leak_protection(B, &config(false)).await,
+            A
+        ));
+        assert!(is_not_owner(ks.disable_ipv6_leak_protection(B).await, A));
+
+        assert_eq!(fixture.tables.changes(), changes);
+        assert_eq!(fixture.boot_unit.calls(), boot_unit_calls);
+        assert_eq!(fixture.tables.installed_tables(), [KS_TABLE, IPV6_TABLE]);
+        assert_eq!(fixture.ks.owner(), Some(A));
+    }
+
+    #[tokio::test]
+    async fn a_non_owner_disable_leaves_the_boot_unit_alone() {
+        // Checked before persist(false), or B could stop the kill switch
+        // coming back at the next boot.
+        let mut fixture =
+            Fixture::new("a_non_owner_disable_leaves_the_boot_unit_alone");
+        fixture.ks.enable(A, &config(true)).await.unwrap();
+
+        fixture.ks.disable(B).await.unwrap_err();
+
+        assert_eq!(fixture.boot_unit.disabled.load(Ordering::SeqCst), 0);
+    }
+
+    #[tokio::test]
+    async fn the_owner_may_re_enable_and_disable() {
+        let mut fixture = Fixture::new("the_owner_may_re_enable_and_disable");
+        fixture.ks.enable(A, &config(false)).await.unwrap();
+
+        fixture.ks.enable(A, &config(true)).await.unwrap();
+        let disabled = fixture.boot_unit.disabled.load(Ordering::SeqCst);
+        fixture.ks.disable(A).await.unwrap();
+
+        assert!(fixture.tables.installed_tables().is_empty());
+        assert_eq!(
+            fixture.boot_unit.disabled.load(Ordering::SeqCst),
+            disabled + 1
+        );
+    }
+
+    #[tokio::test]
+    async fn root_may_always_change_it() {
+        let mut fixture = Fixture::new("root_may_always_change_it");
+        fixture.ks.enable(A, &config(false)).await.unwrap();
+        fixture
+            .ks
+            .enable_ipv6_leak_protection(A, &config(false))
+            .await
+            .unwrap();
+
+        fixture.ks.disable(ROOT_UID).await.unwrap();
+        fixture
+            .ks
+            .disable_ipv6_leak_protection(ROOT_UID)
+            .await
+            .unwrap();
+        fixture.ks.enable(ROOT_UID, &config(false)).await.unwrap();
+
+        assert_eq!(fixture.ks.owner(), Some(ROOT_UID));
+    }
+
+    #[tokio::test]
+    async fn a_stale_owner_is_ignored_once_the_tables_are_gone() {
+        // A non-permanent kill switch does not survive a reboot, but its
+        // record does. It must not lock the next user out.
+        let mut fixture =
+            Fixture::new("a_stale_owner_is_ignored_once_the_tables_are_gone");
+        fixture.ks.enable(A, &config(false)).await.unwrap();
+        fixture.tables.reboot();
+
+        fixture.ks.enable(B, &config(false)).await.unwrap();
+
+        assert_eq!(fixture.ks.owner(), Some(B));
+    }
+
+    #[tokio::test]
+    async fn a_table_with_no_owner_is_root_only() {
+        // E.g. installed before ownership existed: fail closed.
+        let mut fixture = Fixture::with(
+            "a_table_with_no_owner_is_root_only",
+            FakeTables::with_installed(&[KS_TABLE]),
+            SpyBootUnit::default(),
+        );
+
+        let result = fixture.ks.disable(A).await;
+
+        assert!(matches!(result, Err(Error::NotOwner(NotOwner::Unknown))));
+        assert_eq!(fixture.tables.installed_tables(), [KS_TABLE]);
+        fixture.ks.disable(ROOT_UID).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_table_with_a_corrupt_owner_is_root_only() {
+        let mut fixture = Fixture::new("a_table_with_a_corrupt_owner");
+        fixture.ks.enable(A, &config(false)).await.unwrap();
+        std::fs::write(
+            fixture.dir.path().join("firewall-kill-switch.json"),
+            b"not json",
+        )
+        .unwrap();
+
+        let result = fixture.ks.disable(A).await;
+
+        assert!(matches!(result, Err(Error::NotOwner(NotOwner::Unknown))));
+        assert_eq!(fixture.tables.installed_tables(), [KS_TABLE]);
+    }
+
+    #[tokio::test]
+    async fn a_failed_apply_restores_the_previous_owner() {
+        let mut fixture =
+            Fixture::new("a_failed_apply_restores_the_previous_owner");
+        fixture.set_owner(A);
+        fixture.tables.fail_apply();
+
+        fixture.ks.enable(B, &config(false)).await.unwrap_err();
+        assert_eq!(fixture.ks.owner(), Some(A));
+
+        fixture
+            .ks
+            .enable_ipv6_leak_protection(B, &config(false))
+            .await
+            .unwrap_err();
+        assert_eq!(fixture.ks.owner(), Some(A));
+    }
+
+    #[tokio::test]
+    async fn a_failed_first_apply_leaves_no_owner() {
+        let mut fixture = Fixture::new("a_failed_first_apply_leaves_no_owner");
+        fixture.tables.fail_apply();
+
+        fixture.ks.enable(A, &config(false)).await.unwrap_err();
+
+        assert_eq!(fixture.store().load(), None);
+    }
+
+    #[tokio::test]
+    async fn a_persistence_failure_keeps_the_new_owner() {
+        // The rules are up, so they are the caller's to remove.
+        let boot_unit = SpyBootUnit {
+            fail_enable: true,
+            ..SpyBootUnit::default()
+        };
+        let mut fixture = Fixture::with(
+            "a_persistence_failure_keeps_the_new_owner",
+            FakeTables::default(),
+            boot_unit,
+        );
+
+        let result = fixture.ks.enable(A, &config(true)).await;
+
+        assert!(matches!(result, Err(Error::Persistence(_))));
+        assert_eq!(fixture.tables.installed_tables(), [KS_TABLE]);
+        assert_eq!(fixture.ks.owner(), Some(A));
+    }
+
+    #[tokio::test]
+    async fn nothing_is_applied_when_the_owner_cannot_be_recorded() {
+        // A table nobody but root could remove is worse than none.
+        let dir = TempDir::new("nothing_is_applied_when_the_owner_cannot");
+        let not_a_dir = dir.path().join("file");
+        std::fs::write(&not_a_dir, b"").unwrap();
+        let tables = FakeTables::default();
+        let mut ks = FirewallKillSwitch::with_backends(
+            Box::new(tables.clone()),
+            Box::new(SpyBootUnit::default()),
+            StateStore::new(not_a_dir.join("state")),
+        );
+
+        let result = ks.enable(A, &config(false)).await;
+        assert!(matches!(result, Err(Error::State(_))));
+
+        let result = ks.enable_ipv6_leak_protection(A, &config(false)).await;
+        assert!(matches!(result, Err(Error::State(_))));
+
+        assert!(tables.changes().is_empty());
+    }
+
+    #[tokio::test]
+    async fn the_owner_record_outlives_the_tables() {
+        // Ignored once both tables are gone, but kept for the boot unit.
+        let mut fixture = Fixture::new("the_owner_record_outlives_the_tables");
+        fixture.ks.enable(A, &config(false)).await.unwrap();
+        fixture
+            .ks
+            .enable_ipv6_leak_protection(A, &config(false))
+            .await
+            .unwrap();
+
+        fixture.ks.disable(A).await.unwrap();
+        fixture.ks.disable_ipv6_leak_protection(A).await.unwrap();
+        assert_eq!(fixture.ks.owner(), Some(A));
+
+        fixture.ks.enable(B, &config(false)).await.unwrap();
+        assert_eq!(fixture.ks.owner(), Some(B));
+    }
+
+    #[tokio::test]
+    async fn uninstall_leaves_the_boot_unit_and_the_owner() {
+        let mut fixture =
+            Fixture::new("uninstall_leaves_the_boot_unit_and_the_owner");
+        fixture.ks.install(A, &config(false)).await.unwrap();
+
+        fixture.ks.uninstall(A).await.unwrap();
+
+        assert!(fixture.tables.installed_tables().is_empty());
+        assert_eq!(fixture.ks.owner(), Some(A));
+        assert_eq!(fixture.boot_unit.calls(), 0);
+    }
+
+    #[tokio::test]
+    async fn rules_the_boot_unit_brings_back_keep_their_owner() {
+        // Turning permanent mode off failed, so the boot unit re-applies the
+        // rules at the next boot: they must still be A's, or only root could
+        // remove them.
+        let boot_unit = SpyBootUnit {
+            fail_disable: true,
+            ..SpyBootUnit::default()
+        };
+        let mut fixture = Fixture::with(
+            "rules_the_boot_unit_brings_back_keep_their_owner",
+            FakeTables::default(),
+            boot_unit,
+        );
+        fixture.ks.enable(A, &config(true)).await.unwrap();
+
+        let result = fixture.ks.disable(A).await;
+        assert!(matches!(result, Err(Error::Persistence(_))));
+        fixture.tables.reboot();
+        fixture.ks.apply_rules(&config(false)).await.unwrap();
+
+        assert_eq!(fixture.ks.owner(), Some(A));
+        fixture.ks.uninstall(A).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn rules_brought_back_after_fwks_down_keep_their_owner() {
+        // `fwks down` removes the tables but not the boot unit.
+        let mut fixture =
+            Fixture::new("rules_brought_back_after_fwks_down_keep_their_owner");
+        fixture.ks.enable(A, &config(true)).await.unwrap();
+
+        fixture.ks.uninstall(ROOT_UID).await.unwrap();
+        fixture.ks.apply_rules(&config(false)).await.unwrap();
+
+        assert_eq!(fixture.ks.owner(), Some(A));
+        fixture.ks.disable(A).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_non_owner_cannot_turn_off_a_boot_unit_with_no_table() {
+        // The boot unit failed to bring A's rules back this boot. B may act,
+        // since nothing is installed, but must not stop them coming back at
+        // the next one.
+        let mut fixture = Fixture::new("a_non_owner_cannot_turn_off_a_boot_unit");
+        fixture.ks.enable(A, &config(true)).await.unwrap();
+        fixture.tables.reboot();
+
+        fixture.ks.disable(B).await.unwrap();
+        assert_eq!(fixture.boot_unit.disabled.load(Ordering::SeqCst), 0);
+
+        fixture.ks.disable(A).await.unwrap();
+        assert_eq!(fixture.boot_unit.disabled.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn anyone_may_turn_off_the_boot_unit_with_no_record() {
+        // A machine where the kill switch was never used.
+        let mut fixture =
+            Fixture::new("anyone_may_turn_off_the_boot_unit_with_no_record");
+
+        fixture.ks.disable(B).await.unwrap();
+
+        assert_eq!(fixture.boot_unit.disabled.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn a_removal_error_is_reported() {
+        let mut fixture = Fixture::new("a_removal_error_is_reported");
+        fixture.ks.enable(A, &config(false)).await.unwrap();
+        fixture.tables.fail_remove();
+
+        let result = fixture.ks.disable(A).await;
+
+        assert!(matches!(result, Err(Error::Ruleset(_))));
+    }
+
+    #[tokio::test]
+    async fn apply_rules_leaves_the_owner_alone() {
+        // The boot one-shot's path: rules only.
+        let mut fixture = Fixture::new("apply_rules_leaves_the_owner_alone");
+        fixture.set_owner(A);
+
+        fixture.ks.apply_rules(&config(false)).await.unwrap();
+
+        assert_eq!(fixture.tables.installed_tables(), [KS_TABLE]);
+        assert_eq!(fixture.ks.owner(), Some(A));
+        assert_eq!(fixture.boot_unit.calls(), 0);
     }
 }

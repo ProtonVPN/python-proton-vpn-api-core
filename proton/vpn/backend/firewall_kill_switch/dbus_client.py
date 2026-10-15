@@ -24,10 +24,17 @@ from typing import Optional
 
 from dbus_fast import BusType
 from dbus_fast.aio import MessageBus
+from dbus_fast.errors import DBusError
+
+from proton.vpn.killswitch.interface.exceptions import KillSwitchPermissionError
 
 BUS_NAME = "me.proton.vpn.kill_switch"
 OBJECT_PATH = "/me/proton/vpn/kill_switch"
 INTERFACE = "me.proton.vpn.kill_switch"
+
+# Replied when another user owns the kill switch: once it is on, only the user
+# who turned it on, or root, may change it.
+NOT_OWNER_ERROR = f"{INTERFACE}.Error.NotOwner"
 
 # Seconds to wait when checking whether the service answers.
 AVAILABILITY_TIMEOUT = 5
@@ -86,25 +93,50 @@ class KillSwitchDBusClient:
 
         return self._interface
 
-    async def enable(self, server_ip: Optional[str] = None, permanent: bool = False):
-        """Enables the kill switch."""
+    async def _call(self, method: str, *args):
+        """
+        Calls a method on the service, raising KillSwitchPermissionError when
+        another user owns the kill switch.
+        """
         interface = await self._get_interface()
+        try:
+            return await getattr(interface, method)(*args)
+        except DBusError as error:
+            if error.type == NOT_OWNER_ERROR:
+                raise KillSwitchPermissionError(error.text) from error
+            raise
+
+    async def enable(self, server_ip: Optional[str] = None, permanent: bool = False):
+        """
+        Enables the kill switch.
+
+        Raises KillSwitchPermissionError if another user owns it.
+        """
         # (ussb): fwmark, tunnel interface, server IP, permanent. 0 and the
         # empty string tell the service to use its defaults; permanent has no
         # such "unset" value, so False means non-permanent.
-        await interface.call_enable([0, "", server_ip or "", permanent])
+        await self._call("call_enable", [0, "", server_ip or "", permanent])
 
     async def disable(self):
-        """Disables the kill switch, removing the firewall rules."""
-        interface = await self._get_interface()
-        await interface.call_disable()
+        """
+        Disables the kill switch, removing the firewall rules.
+
+        Raises KillSwitchPermissionError if another user owns it.
+        """
+        await self._call("call_disable")
 
     async def enable_ipv6_leak_protection(self):
-        """Blocks IPv6 that is not going through the tunnel, leaving IPv4 be."""
-        interface = await self._get_interface()
-        await interface.call_enable_ipv6_leak_protection()
+        """
+        Blocks IPv6 that is not going through the tunnel, leaving IPv4 be.
+
+        Raises KillSwitchPermissionError if another user owns the kill switch.
+        """
+        await self._call("call_enable_ipv6_leak_protection")
 
     async def disable_ipv6_leak_protection(self):
-        """Disables IPv6 leak protection, leaving the kill switch alone."""
-        interface = await self._get_interface()
-        await interface.call_disable_ipv6_leak_protection()
+        """
+        Disables IPv6 leak protection, leaving the kill switch alone.
+
+        Raises KillSwitchPermissionError if another user owns the kill switch.
+        """
+        await self._call("call_disable_ipv6_leak_protection")

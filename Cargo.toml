@@ -1,6 +1,6 @@
 [package]
 name = "proton-vpn-platform"
-version = "5.8.11"
+version = "5.8.12"
 edition = "2021"
 
 [features]
@@ -30,7 +30,7 @@ core = ["dep:proton-vpn-binary-status", "dep:serde", "dep:serde_json"]
 telemetry = ["dep:serde", "dep:serde_json"]
 kill_switch = ["dep:nftnl", "dep:mnl", "dep:ipnetwork", "dep:clap",
                "dep:zbus", "dep:zvariant", "dep:serde", "dep:tokio",
-               "dep:async-trait"]
+               "dep:async-trait", "dep:serde_json"]
 python = ["proton-vpn-binary-status/serde", "dep:pyo3", "dep:pythonize",
           "dep:pyo3-async-runtimes"]
 local_agent = ["dep:serde", "dep:serde_json", "dep:async-trait",
@@ -103,6 +103,7 @@ pythonize = {version="0.29", optional=true}
 [dev-dependencies]
 test-log = "0.2.17"
 time = { version = "0.3.47", features = ["macros"] }
+tempfile = "3"
 
 [[test]]
 name = "agent_connection"

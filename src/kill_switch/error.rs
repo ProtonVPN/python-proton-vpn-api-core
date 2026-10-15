@@ -18,7 +18,9 @@
 // -----------------------------------------------------------------------------
 //! Errors reported by the kill switch.
 
-/// Three cases a caller can act on without matching every variant, with the
+use super::firewall_kill_switch::ownership::NotOwner;
+
+/// The cases a caller can act on without matching every variant, with the
 /// detail hanging off each as a source.
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -31,6 +33,13 @@ pub enum Error {
     /// Distinct from [`Error::Ruleset`]: the machine is protected right now.
     #[error("kill switch applied, but its boot persistence failed: {0}")]
     Persistence(#[from] PersistenceError),
+
+    /// Refused before anything was changed.
+    #[error("not allowed to change the kill switch: {0}")]
+    NotOwner(#[from] NotOwner),
+
+    #[error("failed to update the kill switch state file: {0}")]
+    State(#[from] StateError),
 }
 
 /// Something the caller could have got right.
@@ -81,6 +90,17 @@ pub enum PersistenceError {
 
     #[error("systemd reported success but {0} is not {1}")]
     NotApplied(&'static str, &'static str),
+}
+
+/// Writing the file that records who owns the kill switch. Reading it never
+/// errors: an unreadable file counts as no owner, which fails closed.
+#[derive(thiserror::Error, Debug)]
+pub enum StateError {
+    #[error("could not write it: {0}")]
+    Write(#[source] std::io::Error),
+
+    #[error("could not remove it: {0}")]
+    Remove(#[source] std::io::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

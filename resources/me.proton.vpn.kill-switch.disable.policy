@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- Lets the app turn off a kill switch another user turned on, by running
+     the wrapper through pkexec. Admin credentials only: "yes" or "auth_self"
+     here would let any user remove somebody else's kill switch again. -->
+<policyconfig>
+  <vendor>Proton AG</vendor>
+  <vendor_url>https://protonvpn.com</vendor_url>
+  <action id="me.proton.vpn.kill-switch.disable">
+    <description>Turn off the Proton VPN kill switch</description>
+    <message>Authentication is required to turn off the Proton VPN kill switch, which another user turned on</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/proton-vpn-disable-kill-switch</annotate>
+  </action>
+</policyconfig>

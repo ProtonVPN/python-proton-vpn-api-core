@@ -18,18 +18,24 @@
 // -----------------------------------------------------------------------------
 //! The D-Bus interface served by the kill switch service.
 
+use std::fmt;
+
 use tokio::sync::Mutex;
-use zbus::{interface, message::Header, Connection};
+use zbus::message::{Header, Message};
+use zbus::names::ErrorName;
+use zbus::{interface, Connection};
 
 use super::super::config::FirewallConfig;
 use super::super::error::Error;
 use super::super::FirewallKillSwitch;
 use super::config_wire::ConfigWire;
+use super::DBUS_ERROR_NOT_OWNER;
 
 /// The kill switch service object placed on the bus.
 ///
-/// The mutex serializes this service's calls; nftables already applies each
-/// batch atomically.
+/// The mutex serializes this service's calls, so the ownership check and the
+/// change it guards can't interleave with another caller's; nftables already
+/// applies each batch atomically.
 pub struct KillSwitch(Mutex<FirewallKillSwitch>);
 
 impl Default for KillSwitch {
@@ -38,29 +44,10 @@ impl Default for KillSwitch {
     }
 }
 
-// TODO: authorize callers. Every method below is currently open to any local
-// user that the D-Bus policy lets through, which means:
-//   - any user can disable protection another user (or the VPN client) turned
-//     on, defeating the point of a kill switch;
-//   - any user can enable it and cut networking for the whole machine, which is
-//     a local denial of service.
-// The caller's uid is already resolved and logged, so adding a check needs no
-// change to the method signatures. Two candidate models:
-//   1. Ownership match. Record the uid that enabled it; only that uid may
-//      change it afterwards. Note the two methods need *different* rules:
-//      `Enable` must accept an unclaimed kill switch (owner == None) or no
-//      unprivileged caller could ever enable it, while `Disable` must refuse
-//      when there is no recorded owner, since the nftables table may have been
-//      installed out of band by the `fwks` CLI and must not be torn down by an
-//      unprivileged caller. Root should bypass both, so an administrator can
-//      never be locked out.
-//   2. polkit. Check a `me.proton.vpn.kill_switch.{enable,disable}` action per
-//      call, which lets an unprivileged GUI be granted rights by policy and
-//      optionally prompt for authentication. Needs the `zbus_polkit` crate and
-//      a `.policy` file to package.
-// Whichever we pick, tighten `resources/proton-vpn-kill-switch.conf` to match:
-// dropping its `context="default"` rule restricts the service to root at the
-// bus level, which is the cheapest option if no unprivileged caller needs it.
+// Every method is open to any local user the D-Bus policy lets through, but
+// passes the caller's uid on: once the kill switch is installed, only the uid
+// that installed it, or root, may change it. `FirewallKillSwitch` enforces
+// that — see `firewall_kill_switch::ownership`.
 #[interface(name = "me.proton.vpn.kill_switch")]
 impl KillSwitch {
     /// Enable the kill switch. Argument wire format: `(ussb)`.
@@ -74,7 +61,7 @@ impl KillSwitch {
         #[zbus(header)] header: Header<'_>,
         #[zbus(connection)] connection: &Connection,
         config: ConfigWire,
-    ) -> zbus::fdo::Result<()> {
+    ) -> Result<(), ServiceError> {
         let caller = caller_uid(connection, &header).await?;
 
         let config = FirewallConfig::try_from(config)?;
@@ -89,7 +76,7 @@ impl KillSwitch {
             config.permanent,
         );
 
-        self.0.lock().await.enable(&config).await?;
+        self.0.lock().await.enable(caller, &config).await?;
 
         Ok(())
     }
@@ -101,12 +88,12 @@ impl KillSwitch {
         &self,
         #[zbus(header)] header: Header<'_>,
         #[zbus(connection)] connection: &Connection,
-    ) -> zbus::fdo::Result<()> {
+    ) -> Result<(), ServiceError> {
         let caller = caller_uid(connection, &header).await?;
 
         log::info!("Disabling kill switch on behalf of uid {caller}");
 
-        self.0.lock().await.disable().await.inspect_err(|e| {
+        self.0.lock().await.disable(caller).await.inspect_err(|e| {
             log::error!("Disabling the kill switch failed: {e}");
         })?;
 
@@ -127,7 +114,7 @@ impl KillSwitch {
         &self,
         #[zbus(header)] header: Header<'_>,
         #[zbus(connection)] connection: &Connection,
-    ) -> zbus::fdo::Result<()> {
+    ) -> Result<(), ServiceError> {
         let caller = caller_uid(connection, &header).await?;
 
         log::info!("Enabling IPv6 leak protection on behalf of uid {caller}");
@@ -135,7 +122,7 @@ impl KillSwitch {
         self.0
             .lock()
             .await
-            .enable_ipv6_leak_protection(&FirewallConfig::default())
+            .enable_ipv6_leak_protection(caller, &FirewallConfig::default())
             .await?;
 
         Ok(())
@@ -148,12 +135,16 @@ impl KillSwitch {
         &self,
         #[zbus(header)] header: Header<'_>,
         #[zbus(connection)] connection: &Connection,
-    ) -> zbus::fdo::Result<()> {
+    ) -> Result<(), ServiceError> {
         let caller = caller_uid(connection, &header).await?;
 
         log::info!("Disabling IPv6 leak protection on behalf of uid {caller}");
 
-        self.0.lock().await.disable_ipv6_leak_protection().await?;
+        self.0
+            .lock()
+            .await
+            .disable_ipv6_leak_protection(caller)
+            .await?;
 
         Ok(())
     }
@@ -176,6 +167,80 @@ async fn caller_uid(
         .await
 }
 
+/// What the methods reply with on failure: a standard D-Bus error, or
+/// [`DBUS_ERROR_NOT_OWNER`] when another user owns the kill switch.
+///
+/// `DBusError` is implemented by hand rather than derived: the derive's
+/// catch-all variant replies `org.freedesktop.zbus.Error`, which would rename
+/// the standard errors (`InvalidArgs`, `Failed`, `IOError`) callers match on.
+#[derive(Debug)]
+pub enum ServiceError {
+    Fdo(zbus::fdo::Error),
+    /// The message, which names the owner's uid.
+    NotOwner(String),
+}
+
+impl zbus::DBusError for ServiceError {
+    fn create_reply(&self, call: &Header<'_>) -> zbus::Result<Message> {
+        match self {
+            Self::Fdo(err) => err.create_reply(call),
+            Self::NotOwner(message) => {
+                Message::error(call, self.name())?.build(message)
+            }
+        }
+    }
+
+    fn name(&self) -> ErrorName<'_> {
+        match self {
+            Self::Fdo(err) => err.name(),
+            Self::NotOwner(_) => {
+                ErrorName::from_static_str_unchecked(DBUS_ERROR_NOT_OWNER)
+            }
+        }
+    }
+
+    fn description(&self) -> Option<&str> {
+        match self {
+            Self::Fdo(err) => err.description(),
+            Self::NotOwner(message) => Some(message),
+        }
+    }
+}
+
+impl fmt::Display for ServiceError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Fdo(err) => err.fmt(f),
+            Self::NotOwner(message) => {
+                write!(f, "{DBUS_ERROR_NOT_OWNER}: {message}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for ServiceError {}
+
+impl From<zbus::fdo::Error> for ServiceError {
+    fn from(err: zbus::fdo::Error) -> Self {
+        Self::Fdo(err)
+    }
+}
+
+impl From<zbus::Error> for ServiceError {
+    fn from(err: zbus::Error) -> Self {
+        Self::Fdo(err.into())
+    }
+}
+
+impl From<Error> for ServiceError {
+    fn from(err: Error) -> Self {
+        match err {
+            Error::NotOwner(_) => Self::NotOwner(err.to_string()),
+            other => Self::Fdo(other.into()),
+        }
+    }
+}
+
 /// Map a kill switch error onto the closest D-Bus error.
 ///
 /// Anything the caller could have got right is reported as `InvalidArgs` so
@@ -192,15 +257,23 @@ impl From<Error> for zbus::fdo::Error {
             // Not Failed: the rules *are* up, only their persistence is not,
             // which is a different thing for the caller to decide about.
             Error::Persistence(_) => zbus::fdo::Error::IOError(message),
+            Error::State(_) => zbus::fdo::Error::Failed(message),
+            // The methods reply DBUS_ERROR_NOT_OWNER instead, through
+            // ServiceError; this only keeps the match exhaustive.
+            Error::NotOwner(_) => zbus::fdo::Error::AccessDenied(message),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use zbus::DBusError;
+
     use super::super::super::error::{
         ConfigError, PersistenceError, RulesetError,
     };
+    use super::super::super::firewall_kill_switch::ownership::NotOwner;
+    use super::super::DBUS_OBJECT_PATH;
     use super::*;
 
     #[test]
@@ -233,6 +306,62 @@ mod tests {
         ));
 
         assert!(matches!(err, zbus::fdo::Error::IOError(_)));
+    }
+
+    #[test]
+    fn standard_errors_keep_their_names() {
+        // Callers match on these, so going through ServiceError must not
+        // rename them.
+        for (err, name) in [
+            (
+                Error::Config(ConfigError::InterfaceName(String::new())),
+                "org.freedesktop.DBus.Error.InvalidArgs",
+            ),
+            (
+                Error::Ruleset(RulesetError::NetlinkOpen(
+                    std::io::Error::from(std::io::ErrorKind::PermissionDenied),
+                )),
+                "org.freedesktop.DBus.Error.Failed",
+            ),
+            (
+                Error::Persistence(PersistenceError::NotApplied(
+                    "unit", "enabled",
+                )),
+                "org.freedesktop.DBus.Error.IOError",
+            ),
+        ] {
+            assert_eq!(ServiceError::from(err).name().as_str(), name);
+        }
+    }
+
+    #[test]
+    fn not_owner_has_its_own_error_name() {
+        let err = ServiceError::from(Error::NotOwner(NotOwner::OwnedBy(1000)));
+
+        assert_eq!(
+            err.name().as_str(),
+            "me.proton.vpn.kill_switch.Error.NotOwner"
+        );
+    }
+
+    #[test]
+    fn not_owner_reply_carries_the_name_and_the_owner() {
+        // The reply actually sent, not just what name() says: the client maps
+        // this error name to its own exception and shows the message.
+        let err = ServiceError::from(Error::NotOwner(NotOwner::OwnedBy(1000)));
+        let call = Message::method_call(DBUS_OBJECT_PATH, "Disable")
+            .unwrap()
+            .build(&())
+            .unwrap();
+
+        let reply = err.create_reply(&call.header()).unwrap();
+
+        assert_eq!(
+            reply.header().error_name().unwrap().as_str(),
+            DBUS_ERROR_NOT_OWNER
+        );
+        let body: String = reply.body().deserialize().unwrap();
+        assert!(body.contains("uid 1000"), "{body}");
     }
 
     #[test]

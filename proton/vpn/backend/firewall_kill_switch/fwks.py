@@ -67,6 +67,8 @@ class FirewallKillSwitch(KillSwitch):
 
         With permanent set, the service also enables a boot unit that
         re-applies the rules after a reboot.
+
+        Raises KillSwitchPermissionError if another user owns the kill switch.
         """
         # Without a server IP the service skips the rule allowing traffic to it.
         server_ip = vpn_server.server_ip if vpn_server else None
@@ -74,7 +76,11 @@ class FirewallKillSwitch(KillSwitch):
         await self._dbus_client.enable(server_ip=server_ip, permanent=permanent)
 
     async def disable(self):
-        """Disables the kill switch."""
+        """
+        Disables the kill switch.
+
+        Raises KillSwitchPermissionError if another user owns it.
+        """
         await self._dbus_client.disable()
 
     async def enable_ipv6_leak_protection(self):
@@ -83,12 +89,18 @@ class FirewallKillSwitch(KillSwitch):
 
         Installed in its own nftables table, independent of the kill switch:
         this is what the client asks for when the kill switch is off, so it has
-        to survive disable().
+        to survive disable(). It shares the kill switch's owner, though.
+
+        Raises KillSwitchPermissionError if another user owns the kill switch.
         """
         await self._dbus_client.enable_ipv6_leak_protection()
 
     async def disable_ipv6_leak_protection(self):
-        """Disables IPv6 leak protection, leaving the kill switch alone."""
+        """
+        Disables IPv6 leak protection, leaving the kill switch alone.
+
+        Raises KillSwitchPermissionError if another user owns the kill switch.
+        """
         await self._dbus_client.disable_ipv6_leak_protection()
 
     @staticmethod

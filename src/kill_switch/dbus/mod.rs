@@ -38,9 +38,14 @@
 //!
 //! Every method is idempotent.
 //!
-//! **Access is currently unrestricted** — any local user the D-Bus policy lets
-//! through can enable or disable the kill switch. See the TODO in
-//! `interface.rs` for the authorization models still to be decided.
+//! # Who may call it
+//!
+//! Any local user may reach the interface: the client runs as the desktop
+//! user. The kill switch is machine-wide, though, so once it is installed only
+//! the user who installed it, or root, may change it, through any of the four
+//! methods — one owner covers both tables. Anyone else gets
+//! [`DBUS_ERROR_NOT_OWNER`]. See
+//! [`ownership`](super::firewall_kill_switch::ownership) for the rule.
 //!
 //! # Calling it by hand
 //!
@@ -77,6 +82,14 @@ pub const DBUS_OBJECT_PATH: &str = "/me/proton/vpn/kill_switch";
 /// The `#[interface]` macro needs a string literal, so the name is repeated
 /// there; this const is the single source of truth for runtime use.
 pub const DBUS_INTERFACE_NAME: &str = "me.proton.vpn.kill_switch";
+
+/// Error replied when the caller does not own the kill switch.
+///
+/// Distinct from `org.freedesktop.DBus.Error.AccessDenied`, which is what
+/// dbus-daemon replies when the bus policy refuses a call, so a client can
+/// tell "another user owns the kill switch" from "you may not call this".
+pub const DBUS_ERROR_NOT_OWNER: &str =
+    "me.proton.vpn.kill_switch.Error.NotOwner";
 
 /// Serve the kill switch on the system bus until terminated.
 pub async fn run() -> Result<(), Box<dyn std::error::Error>> {

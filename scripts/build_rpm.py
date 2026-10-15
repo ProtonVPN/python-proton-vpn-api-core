@@ -99,6 +99,10 @@ with tarfile.open(name=f"{HOME}/rpmbuild/SOURCES/{ROOT}.tar.gz",
                 arcname=f"{ROOT}/proton-vpn-kill-switch.dbus-service")
     archive.add("resources/proton-vpn-kill-switch-boot.service",
                 arcname=f"{ROOT}/proton-vpn-kill-switch-boot.service")
+    archive.add("resources/proton-vpn-disable-kill-switch",
+                arcname=f"{ROOT}/proton-vpn-disable-kill-switch")
+    archive.add("resources/me.proton.vpn.kill-switch.disable.policy",
+                arcname=f"{ROOT}/me.proton.vpn.kill-switch.disable.policy")
 
 command = ["rpmbuild", "--quiet", "-bb",
            *(["--nodeps"] if args.nodeps else []),

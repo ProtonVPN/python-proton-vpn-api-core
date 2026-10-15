@@ -79,6 +79,15 @@ sudo install -m 644 resources/proton-vpn-kill-switch.dbus-service \
 sudo systemctl reload dbus
 ```
 
+Optionally, for the admin override described under [Ownership](#ownership):
+
+```shell
+sudo install -m 755 resources/proton-vpn-disable-kill-switch \
+    /usr/libexec/proton-vpn-disable-kill-switch
+sudo install -m 644 resources/me.proton.vpn.kill-switch.disable.policy \
+    /usr/share/polkit-1/actions/me.proton.vpn.kill-switch.disable.policy
+```
+
 ## Calling it
 
 The service starts on the first call, so nothing needs launching. `Enable`
@@ -101,6 +110,45 @@ busctl call $KS DisableIpv6LeakProtection
 Enabling it drops all non-VPN traffic, so with no tunnel up you lose WAN
 access. Loopback and the LAN keep working, so a local session survives.
 
+## Ownership
+
+The kill switch is machine-wide but any local user can reach the service, so
+it has an owner: the uid that last enabled either table. While a table is
+installed, only the owner or root may call any of the four methods; anyone else
+gets `me.proton.vpn.kill_switch.Error.NotOwner` and nothing changes. Otherwise
+user B could disable user A's kill switch - or re-enable it with a config that
+no longer protects A - and leak A's real IP.
+
+| caller | table installed? | result |
+| --- | --- | --- |
+| root | any | allowed |
+| anyone | no | allowed (a leftover owner record is ignored) |
+| the owner | yes | allowed |
+| anyone else | yes | `NotOwner` |
+| non-root, owner unknown | yes | `NotOwner` - only root may change it |
+
+The owner is recorded in `/var/lib/Proton/VPN/firewall-kill-switch.json`
+(root-only, `0600`). It only counts while a table is installed: after a reboot
+the non-permanent rules are gone and so is any claim to them, while permanent
+rules come back with their owner. The record is never deleted, since the boot
+unit may bring the tables back; whoever installs next overwrites it. For the
+same reason only the owner or root may turn the boot unit off, even with no
+table installed (known gap: an `Enable` then still takes it over). A missing or
+corrupt record next to an installed table fails closed: only root may change
+it. The Python client raises `KillSwitchPermissionError` on `NotOwner`.
+
+To get out of a kill switch another user left on, use admin credentials:
+
+```shell
+pkexec /usr/libexec/proton-vpn-disable-kill-switch  # what the app runs
+sudo /usr/libexec/proton-vpn-disable-kill-switch    # without a polkit agent
+```
+
+The wrapper runs `python3 -m proton.vpn.killswitch.disable` as root. Its polkit
+action, `me.proton.vpn.kill-switch.disable`, asks for an admin password in
+every session - it must never be `yes` or `auth_self`, or the hole is back
+(`test_disable_policy.py` guards it).
+
 ## Disabling every backend
 
 ```shell
@@ -109,13 +157,17 @@ python3 -m proton.vpn.killswitch.disable
 
 Turns off the kill switch and IPv6 leak protection of every backend registered
 with `proton.loader`, not just this one, and exits non-zero if anything failed.
+Run it as the kill switch's owner or as root - anyone else is refused (see
+[Ownership](#ownership)).
 
 Run it **before uninstalling the package**. Nothing does it for you: the removal
 scriptlets used to, but they also fired when the app switches between the beta
 and stable repos, which uninstalls and reinstalls and so would drop the user's
 kill switch mid-toggle. Until that is solved, uninstalling with the kill switch
 on leaves a drop-by-default firewall and no service left able to remove it —
-`nft delete table` is then the only way out.
+reboot, or remove the tables with `nft delete table`. The boot unit's
+enablement and the owner record are left behind too; neither does anything
+without the package, and both are picked up again if it is reinstalled.
 
 ## Permanent mode
 
@@ -138,7 +190,8 @@ still enabled, the rules come back on the next one.
 ## Inspecting and recovering
 
 ```shell
-sudo ./target/debug/fwks status            # lists both tables and their rules
+sudo ./target/debug/fwks status            # owner, both tables and their rules
+sudo cat /var/lib/Proton/VPN/firewall-kill-switch.json  # the owner record
 
 # Manually list the tables with
 sudo nft list table inet proton_vpn_ks
@@ -148,6 +201,10 @@ sudo nft list table ip6 proton_vpn_ks_ipv6
 sudo nft delete table inet proton_vpn_ks
 sudo nft delete table ip6 proton_vpn_ks_ipv6
 ```
+
+Deleting the tables by hand leaves the owner record in place. That is
+intended: with no table installed it is ignored, and if the boot unit brings
+the tables back they are still the owner's.
 
 ## The CLI
 
@@ -161,10 +218,15 @@ sudo ./target/debug/fwks down
 sudo ./target/debug/fwks ipv6-up   # IPv6 leak protection only
 sudo ./target/debug/fwks ipv6-down
 
-sudo ./target/debug/fwks status  # Shows the nft tables if existing
+sudo ./target/debug/fwks status  # Shows the owner and the nft tables if existing
 ```
 
 Every subcommand needs root, netfilter requires `CAP_NET_ADMIN` even to read.
+Since it runs as root, `fwks` may change a kill switch whoever owns it, and the
+tables it installs are recorded as owned by root (uid 0), so the client can't
+change them afterwards. When tables are installed, `status` prints the owner
+before the rules - `Owner: uid 1000`, or `Owner: none (only root may change it)`
+when there is no readable record.
 
 Useful for checking a rule change in isolation: run a subcommand and diff
 `fwks status` before and after. `ipv6-down` leaving `proton_vpn_ks` standing is

@@ -38,3 +38,11 @@ class MissingKillSwitchBackendDetails(KillSwitchException):
     NetworkManager is installed but not running and for some reason we can't access it,
     thus this exception is raised as we can't do anything.
     """
+
+
+class KillSwitchPermissionError(KillSwitchException):
+    """Another user owns the kill switch.
+
+    The kill switch is machine-wide, so once a user turns it on only that user,
+    or root, may change or turn it off.
+    """

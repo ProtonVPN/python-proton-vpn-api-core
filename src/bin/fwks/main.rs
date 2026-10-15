@@ -33,6 +33,7 @@ async fn main() -> std::process::ExitCode {
     use clap::{Parser, Subcommand};
 
     use proton_vpn_platform::kill_switch::{
+        firewall_kill_switch::ownership::ROOT_UID,
         FirewallKillSwitch,
         parse_fwmark,
         FirewallConfig,
@@ -111,29 +112,49 @@ async fn main() -> std::process::ExitCode {
 
                 // The CLI is just for development purposes and doesn't allow
                 // persisting the firewall ruleset (advanced mode), that's why
-                // `apply_rules` is called instead of `enable`.
-                ks.apply_rules(&FirewallConfig {
-                    fwmark,
-                    tunnel_iface: iface,
-                    server_ip,
-                    permanent: false,
-                })
+                // `install` is called instead of `enable`.
+                //
+                // It must run as root, so it acts as root: it may override
+                // whoever owns the kill switch, and what it installs is
+                // recorded as root's.
+                ks.install(
+                    ROOT_UID,
+                    &FirewallConfig {
+                        fwmark,
+                        tunnel_iface: iface,
+                        server_ip,
+                        // `permanent` is ignored by `install`.
+                        ..FirewallConfig::default()
+                    },
+                )
                 .await
             }
-            Command::Down => ks.remove_rules().await,
+            Command::Down => ks.uninstall(ROOT_UID).await,
             Command::Ipv6Up { iface } => {
-                ks.enable_ipv6_leak_protection(&FirewallConfig {
-                    tunnel_iface: iface,
-                    ..FirewallConfig::default()
-                })
+                ks.enable_ipv6_leak_protection(
+                    ROOT_UID,
+                    &FirewallConfig {
+                        tunnel_iface: iface,
+                        ..FirewallConfig::default()
+                    },
+                )
                 .await
             }
-            Command::Ipv6Down => ks.disable_ipv6_leak_protection().await,
+            Command::Ipv6Down => {
+                ks.disable_ipv6_leak_protection(ROOT_UID).await
+            }
             Command::Status => {
                 let tables = ks.list_installed_tables().await?;
 
                 if tables.is_empty() {
                     println!("No kill switch tables installed.");
+                } else {
+                    match ks.owner() {
+                        Some(uid) => println!("Owner: uid {uid}"),
+                        None => {
+                            println!("Owner: none (only root may change it)")
+                        }
+                    }
                 }
 
                 for table in tables {

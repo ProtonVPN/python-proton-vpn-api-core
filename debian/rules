@@ -20,6 +20,8 @@ override_dh_auto_build:
 	cp $(CURDIR)/../resources/proton-vpn-kill-switch.conf me.proton.vpn.kill_switch.conf
 	cp $(CURDIR)/../resources/proton-vpn-kill-switch.dbus-service me.proton.vpn.kill_switch.service
 	cp $(CURDIR)/../resources/proton-vpn-kill-switch-boot.service proton-vpn-kill-switch-boot.service
+	install -m 755 $(CURDIR)/../resources/proton-vpn-disable-kill-switch usr/libexec/proton-vpn-disable-kill-switch
+	cp $(CURDIR)/../resources/me.proton.vpn.kill-switch.disable.policy me.proton.vpn.kill-switch.disable.policy
 	dh_auto_build
 
 # Shipped disabled: the kill switch service enables the boot unit itself when
