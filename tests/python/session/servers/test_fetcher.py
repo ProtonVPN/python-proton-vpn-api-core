@@ -69,7 +69,8 @@ async def test_serverlist_fetch_paths(case_id, serverlist_version, endpoint,
     fetcher = ServerListFetcher(
         session=Mock(),
         server_list=build_mock_server_list(serverlist_version,"Wed Aug 12 05:01:26 PM EEST 2026"),
-        cache_file=Mock())
+        cache_file=Mock(),
+        binary_status_cache_file=Mock())
     location = Mock()
     fetcher._v2_validate_location = lambda: location
     v1 = AsyncMock(return_value=({}, "last-modified-time"))
@@ -121,7 +122,8 @@ async def test_v2_update_loads_updates_each_server():
     LOCATION = Mock(Lat=47.3, Long=8.5, Country="CH", IP="1.2.3.4")
     server_list, logicals = build_mock_server_list_with_loads(2)
     fetcher = ServerListFetcher(
-        session=Mock(), server_list=server_list, cache_file=Mock()
+        session=Mock(), server_list=server_list, cache_file=Mock(),
+        binary_status_cache_file=Mock()
     )
     fetcher._v2_validate_location = Mock(return_value=LOCATION)
     fetcher._request_status = AsyncMock(return_value=b"binary-status")

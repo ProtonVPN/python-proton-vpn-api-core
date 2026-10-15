@@ -421,3 +421,87 @@ def test_sort_servers_by_country_and_city_and_enabled_and_load():
     ]
     actual_server_name_order = [server.name for server in logicals]
     assert actual_server_name_order == expected_server_name_order
+
+
+GROUP_BY_COUNTRY_MODES = [
+    pytest.param({}, id="by-country"),
+    pytest.param({"group_by_location": True}, id="by-location"),
+    pytest.param({"group_by_city": True}, id="by-city"),
+]
+
+
+@pytest.mark.parametrize("group_by_kwargs", GROUP_BY_COUNTRY_MODES)
+def test_group_by_country_does_not_reorder_server_list(
+        api_response: dict, group_by_kwargs: dict
+):
+    server_list = ServerList(
+        user_tier=2,
+        logicals=[LogicalServer(ls) for ls in api_response["LogicalServers"]]
+    )
+    logicals = server_list.logicals
+    original_order = [server.name for server in logicals]
+
+    server_list.group_by_country(**group_by_kwargs)
+
+    assert server_list.logicals is logicals
+    assert [server.name for server in server_list.logicals] == original_order
+
+
+@pytest.mark.parametrize("group_by_kwargs", GROUP_BY_COUNTRY_MODES)
+def test_group_by_country_keeps_server_list_readable_while_grouping(
+        api_response: dict, group_by_kwargs: dict
+):
+    """
+    The server list may be read from another thread (e.g. by the server list
+    refresher when updating loads) while the UI groups it by country.
+    Sorting the server list in place makes it look empty to readers while the
+    sort is in progress, so readers must always see all servers.
+    """
+    sizes_seen_while_sorting = []
+
+    class LogicalServerReadingServerList(LogicalServer):
+        """Reads the server list whenever a sort key reads the exit country name."""
+        @property
+        def exit_country_name(self) -> str:
+            sizes_seen_while_sorting.append(len(server_list))
+            return super().exit_country_name
+
+    server_list = ServerList(
+        user_tier=2,
+        logicals=[
+            LogicalServerReadingServerList(ls) for ls in api_response["LogicalServers"]
+        ]
+    )
+
+    server_list.group_by_country(**group_by_kwargs)
+
+    assert sizes_seen_while_sorting  # The servers were read while sorting.
+    assert set(sizes_seen_while_sorting) == {len(api_response["LogicalServers"])}
+
+
+@pytest.mark.parametrize("group_by_kwargs, expected_grouping", [
+    pytest.param({}, [
+        ("ar", ["AR#9", "AR#11", "AR#13", "AR#14"]),
+        ("jp", ["JP#1", "JP#10"]),
+        ("ch", ["CH#18-TOR", "CH-US#1"]),
+    ], id="by-country"),
+    pytest.param({"group_by_location": True}, [
+        ("ar", ["AR#11", "AR#13", "AR#14", "AR#9"]),
+        ("jp", ["JP#1", "JP#10"]),
+        ("ch", ["CH-US#1", "CH#18-TOR"]),
+    ], id="by-location"),
+])
+def test_group_by_country_groups_sorted_servers(
+        api_response: dict, group_by_kwargs: dict, expected_grouping: list
+):
+    server_list = ServerList(
+        user_tier=2,
+        logicals=[LogicalServer(ls) for ls in api_response["LogicalServers"]]
+    )
+
+    countries = server_list.group_by_country(**group_by_kwargs)
+
+    assert [
+        (country.code, [server.name for server in country.servers])
+        for country in countries
+    ] == expected_grouping

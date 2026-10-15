@@ -352,17 +352,22 @@ class ServerList:  # pylint: disable=R0902, R0904
 
         :param group_by_location: whether to group the servers by city/state as well.
 
-        The server list is also sorted to facilitate grouping.
+        A sorted copy of the server list is used to facilitate grouping. The
+        server list itself is not sorted in place, since it may be read from
+        another thread (e.g. when updating server loads) while grouping, and
+        CPython makes a list appear empty while it's being sorted.
 
         :return: The list of countries, each of them containing the locations/servers
         in that country.
         """
         if group_by_location:
-            self.sort(sort_servers_by_country_and_location_and_enabled_and_load)
+            key = sort_servers_by_country_and_location_and_enabled_and_load
         elif group_by_city:
-            self.sort(sort_servers_by_country_and_city_and_enabled_and_load)
+            key = sort_servers_by_country_and_city_and_enabled_and_load
         else:
-            self.sort()
+            key = sort_servers_alphabetically_by_country_and_server_name
+
+        sorted_logicals = sorted(self.logicals, key=key)
 
         return [
             Country(
@@ -373,7 +378,7 @@ class ServerList:  # pylint: disable=R0902, R0904
                 include_free_servers
             )
             for country_code, country_servers in itertools.groupby(
-                self.logicals, lambda server: server.exit_country.lower()
+                sorted_logicals, lambda server: server.exit_country.lower()
             )
         ]
 
