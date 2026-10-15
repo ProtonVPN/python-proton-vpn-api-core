@@ -38,7 +38,7 @@ def mixin_mock():
 @pytest.mark.asyncio
 async def test_request_features_is_skipped_when_user_is_free(mixin_mock):
     mixin_mock._user_tier = TierEnum.FREE
-    features = Features.default(user_tier=0)
+    features = Features.from_dict(None)
 
     await mixin_mock._request_connection_features(features)
 
@@ -48,7 +48,7 @@ async def test_request_features_is_skipped_when_user_is_free(mixin_mock):
 @pytest.mark.asyncio
 async def test_request_features_is_called_when_user_tier_is_not_free(mixin_mock):
     mixin_mock._user_tier = TierEnum.PLUS
-    features = Features.default(user_tier=0)
+    features = Features.from_dict(None)
     await mixin_mock._request_connection_features(features)
 
     mixin_mock._agent_listener.request_features.assert_called_once()

@@ -17,7 +17,6 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from unittest.mock import Mock
-import copy
 import itertools
 
 import pytest
@@ -66,14 +65,32 @@ def default_free_settings_dict():
     }
 
 
-def test_settings_get_default(default_free_settings_dict):
-    free_settings = Settings.default(FREE_TIER)
+def test_settings_without_stored_values_use_defaults_and_serialize_to_nothing(
+    default_free_settings_dict
+):
+    defaults = default_free_settings_dict
+    free_settings = Settings.from_dict({})
 
-    assert free_settings.to_dict() == default_free_settings_dict
+    assert free_settings.to_dict() == {}
+    assert free_settings.protocol == defaults["protocol"]
+    assert free_settings.killswitch == defaults["killswitch"]
+    assert free_settings.features.netshield == (
+        defaults["features"]["netshield"]
+    )
+    split_tunneling = free_settings.features.split_tunneling
+    assert split_tunneling.exclude.app_paths == ()
+
+
+def test_settings_loaded_from_a_full_dict_serialize_back_to_it(
+    default_free_settings_dict
+):
+    settings = Settings.from_dict(default_free_settings_dict)
+
+    assert settings.to_dict() == default_free_settings_dict
 
 
 def test_settings_save_to_disk(default_free_settings_dict):
-    free_settings = Settings.default(FREE_TIER)
+    free_settings = Settings.from_dict(default_free_settings_dict)
     cache_handler_mock = Mock()
 
     sp = SettingsPersistence(cache_handler_mock)
@@ -96,7 +113,7 @@ def test_settings_persistence_save_persisted_settings(default_free_settings_dict
     cache_handler_mock = Mock()
     sp = SettingsPersistence(cache_handler_mock)
 
-    sp.save(Settings.from_dict(default_free_settings_dict, FREE_TIER))
+    sp.save(Settings.from_dict(default_free_settings_dict))
 
     cache_handler_mock.save.assert_called()
 
@@ -151,7 +168,7 @@ def test_get_ipv4_custom_dns_ips_returns_only_valid_ips(default_free_settings_di
         {"ip": "ef0e:e1d4:87f9:a578:5e52:fb88:46a7:010a"}
     ]
     default_free_settings_dict["custom_dns"]["ip_list"] = list(itertools.chain.from_iterable([valid_ips, invalid_ips]))
-    sp = Settings.from_dict(default_free_settings_dict, FREE_TIER)
+    sp = Settings.from_dict(default_free_settings_dict)
     list_of_ipv4_addresses_in_string_form = [ip.exploded for ip in sp.custom_dns.get_enabled_ipv4_ips()]
 
     assert [dns["ip"] for dns in valid_ips] == list_of_ipv4_addresses_in_string_form
@@ -172,15 +189,17 @@ def test_get_ipv6_custom_dns_ips_returns_only_valid_ips(default_free_settings_di
         {"ip": "123123123.123123123.123123123.123123"}
     ]
     default_free_settings_dict["custom_dns"]["ip_list"] = list(itertools.chain.from_iterable([valid_ips, invalid_ips]))
-    sp = Settings.from_dict(default_free_settings_dict, FREE_TIER)
+    sp = Settings.from_dict(default_free_settings_dict)
     list_of_ipv6_addresses_in_string_form = [ip.exploded for ip in sp.custom_dns.get_enabled_ipv6_ips()]
 
     assert [dns["ip"] for dns in valid_ips] == list_of_ipv6_addresses_in_string_form
 
 
 def test_settings_default_split_tunneling_data_is_built_when_config_by_mode_value_is_invalid(default_free_settings_dict):
-    deep_copy_default_free_settings_dict = copy.deepcopy(default_free_settings_dict)
     default_free_settings_dict["features"]["split_tunneling"]["config_by_mode"] = {}
-    free_settings = Settings.default(FREE_TIER)
 
-    free_settings.to_dict() == deep_copy_default_free_settings_dict
+    free_settings = Settings.from_dict(default_free_settings_dict)
+
+    split_tunneling = free_settings.features.split_tunneling
+    assert split_tunneling.exclude.app_paths == ()
+    assert split_tunneling.include.ip_ranges == ()

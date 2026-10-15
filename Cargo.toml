@@ -1,6 +1,6 @@
 [package]
 name = "proton-vpn-platform"
-version = "5.8.12"
+version = "6.0.0"
 edition = "2021"
 
 [features]

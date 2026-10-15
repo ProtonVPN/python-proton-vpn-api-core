@@ -20,9 +20,10 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
-from dataclasses import dataclass
 from enum import IntEnum
+from typing import Optional
 
+from proton.vpn.core.settings.settings_types import Group, Setting, settings
 from proton.vpn.core.settings.split_tunneling import SplitTunneling
 
 from proton.vpn import logging
@@ -36,59 +37,39 @@ class NetShield(IntEnum):  # pylint: disable=missing-class-docstring
     BLOCK_ADS_AND_TRACKING = 2
 
 
-@dataclass
+@settings
 class Features:
     """Contains features that affect a vpn connection"""
-    # pylint: disable=duplicate-code
-    netshield: int
-    moderate_nat: bool
-    vpn_accelerator: bool
-    port_forwarding: bool
-    split_tunneling: SplitTunneling
+    netshield = Setting[int](default=NetShield.NO_BLOCK.value)
+    moderate_nat = Setting[bool](default=False)
+    vpn_accelerator = Setting[bool](default=True)
+    port_forwarding = Setting[bool](default=False)
+    split_tunneling = Group[SplitTunneling]()
 
     @staticmethod
-    def from_dict(data: dict, user_tier: int) -> Features:
+    def from_dict(data: Optional[dict]) -> Features:
         """Creates and returns `Features` from the provided dict."""
-        default = Features.default(user_tier)
-        split_tunneling = data.get("split_tunneling")
-        split_tunneling = SplitTunneling.from_dict(split_tunneling) \
-            if split_tunneling else SplitTunneling()
+        data = data or {}
 
         return Features(
-            netshield=data.get("netshield", default.netshield),
-            moderate_nat=data.get("moderate_nat", default.moderate_nat),
-            vpn_accelerator=data.get(
-                "vpn_accelerator", default.vpn_accelerator),
-            port_forwarding=data.get(
-                "port_forwarding", default.port_forwarding),
-            split_tunneling=split_tunneling
+            netshield=data.get("netshield"),
+            moderate_nat=data.get("moderate_nat"),
+            vpn_accelerator=data.get("vpn_accelerator"),
+            port_forwarding=data.get("port_forwarding"),
+            split_tunneling=SplitTunneling.from_dict(data.get("split_tunneling"))
         )
 
     def to_dict(self) -> dict:
         """Converts the class to dict."""
-        return {
-            "netshield": self.netshield,
-            "moderate_nat": self.moderate_nat,
-            "vpn_accelerator": self.vpn_accelerator,
-            "port_forwarding": self.port_forwarding,
-            "split_tunneling": self.split_tunneling.to_dict(),
-        }
-
-    @staticmethod
-    def default(user_tier: int) -> Features:  # pylint: disable=unused-argument
-        """Creates and returns `Features` from default configurations."""
-        return Features(
-            netshield=(
-                NetShield.NO_BLOCK.value
-                if user_tier < 1
-                else NetShield.BLOCK_MALICIOUS_URL.value
-            ),
-            moderate_nat=False,
-            vpn_accelerator=True,
-            port_forwarding=False,
-            split_tunneling=SplitTunneling()
-        )
-
-    def is_default(self, user_tier: int) -> bool:
-        """Returns true if the features are the default ones."""
-        return self == Features.default(user_tier)
+        data = {}
+        if Features.netshield.is_set(self):
+            data["netshield"] = self.netshield
+        if Features.moderate_nat.is_set(self):
+            data["moderate_nat"] = self.moderate_nat
+        if Features.vpn_accelerator.is_set(self):
+            data["vpn_accelerator"] = self.vpn_accelerator
+        if Features.port_forwarding.is_set(self):
+            data["port_forwarding"] = self.port_forwarding
+        if split_tunneling := self.split_tunneling.to_dict():
+            data["split_tunneling"] = split_tunneling
+        return data

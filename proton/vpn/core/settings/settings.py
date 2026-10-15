@@ -22,7 +22,6 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
 
 from proton.vpn import logging
@@ -30,8 +29,9 @@ from proton.utils.environment import VPNExecutionEnvironment
 from proton.vpn.core.cache_handler import CacheHandler
 from proton.vpn.killswitch.interface import KillSwitchState
 from proton.vpn.core.settings.custom_dns import CustomDNS
-from proton.vpn.core.settings.features import Features
+from proton.vpn.core.settings.features import Features, NetShield
 from proton.vpn.core.settings.packet_capture import PacketCapture
+from proton.vpn.core.settings.settings_types import Group, Setting, settings
 
 
 logger = logging.getLogger(__name__)
@@ -49,70 +49,58 @@ DEFAULT_ANONYMOUS_CRASH_REPORTS = True
 DEFAULT_TELEMETRY = True
 
 
-@dataclass
+@settings
 class Settings:  # pylint: disable=too-many-instance-attributes
     """Contains general settings."""
-    protocol: str
-    killswitch: int
-    custom_dns: CustomDNS
-    ipv6: bool
-    anonymous_crash_reports: bool
-    features: Features
-    packet_capture: PacketCapture
-    telemetry: bool
+    protocol = Setting[str](default=DEFAULT_PROTOCOL)
+    killswitch = Setting[int](default=DEFAULT_KILLSWITCH)
+    ipv6 = Setting[bool](default=True)
+    anonymous_crash_reports = Setting[bool](default=DEFAULT_ANONYMOUS_CRASH_REPORTS)
+    telemetry = Setting[bool](default=DEFAULT_TELEMETRY)
+    features = Group[Features]()
+    custom_dns = Group[CustomDNS]()
+    # We dont want to persist packet capture settings for now
+    packet_capture = Group[PacketCapture]()
 
     @staticmethod
-    def from_dict(data: dict, user_tier: int) -> Settings:
+    def from_dict(data: dict) -> Settings:
         """Creates and returns `Settings` from the provided dict."""
-        default = Settings.default(user_tier)
-
-        features = data.get("features")
-        features = Features.from_dict(
-            features, user_tier) if features else default.features
-        custom_dns = data.get("custom_dns")
-        custom_dns = CustomDNS.from_dict(
-            custom_dns) if custom_dns else default.custom_dns
-
         return Settings(
-            protocol=data.get("protocol", default.protocol),
-            killswitch=data.get("killswitch", default.killswitch),
-            custom_dns=custom_dns,
-            ipv6=data.get("ipv6", default.ipv6),
-            anonymous_crash_reports=data.get(
-                "anonymous_crash_reports",
-                default.anonymous_crash_reports
-            ),
-            features=features,
-            # We dont want to persist packet capture settings for now
-            packet_capture=default.packet_capture,
-            telemetry=data.get("telemetry", default.telemetry),
+            protocol=data.get("protocol"),
+            killswitch=data.get("killswitch"),
+            custom_dns=CustomDNS.from_dict(data.get("custom_dns")),
+            ipv6=data.get("ipv6"),
+            anonymous_crash_reports=data.get("anonymous_crash_reports"),
+            features=Features.from_dict(data.get("features")),
+            telemetry=data.get("telemetry"),
+            packet_capture=PacketCapture(directory_path=None),
+        )
+
+    def set_defaults(self, user_tier: int) -> None:
+        """Updates the defaults that depend on the user tier."""
+        Features.netshield.set_default(
+            self.features,
+            NetShield.NO_BLOCK.value if user_tier < 1 else NetShield.BLOCK_MALICIOUS_URL.value
         )
 
     def to_dict(self) -> dict:
         """Converts the class to dict."""
-        return {
-            "protocol": self.protocol,
-            "killswitch": self.killswitch,
-            "custom_dns": self.custom_dns.to_dict(),
-            "ipv6": self.ipv6,
-            "anonymous_crash_reports": self.anonymous_crash_reports,
-            "features": self.features.to_dict(),
-            "telemetry": self.telemetry,
-        }
-
-    @staticmethod
-    def default(user_tier: int) -> Settings:
-        """Creates and returns `Settings` from default configurations."""
-        return Settings(
-            protocol=DEFAULT_PROTOCOL,
-            killswitch=DEFAULT_KILLSWITCH,
-            custom_dns=CustomDNS.default(),
-            ipv6=True,
-            anonymous_crash_reports=DEFAULT_ANONYMOUS_CRASH_REPORTS,
-            features=Features.default(user_tier),
-            packet_capture=PacketCapture.default(),
-            telemetry=DEFAULT_TELEMETRY,
-        )
+        data = {}
+        if Settings.protocol.is_set(self):
+            data["protocol"] = self.protocol
+        if Settings.killswitch.is_set(self):
+            data["killswitch"] = self.killswitch
+        if Settings.ipv6.is_set(self):
+            data["ipv6"] = self.ipv6
+        if Settings.anonymous_crash_reports.is_set(self):
+            data["anonymous_crash_reports"] = self.anonymous_crash_reports
+        if Settings.telemetry.is_set(self):
+            data["telemetry"] = self.telemetry
+        if features := self.features.to_dict():
+            data["features"] = features
+        if custom_dns := self.custom_dns.to_dict():
+            data["custom_dns"] = custom_dns
+        return data
 
 
 class SettingsPersistence:
@@ -121,33 +109,30 @@ class SettingsPersistence:
     def __init__(self, cache_handler: CacheHandler = None):
         self._cache_handler = cache_handler or CacheHandler(SETTINGS)
         self._settings = None
-        self._settings_are_default = True
 
     def get(self, user_tier: int) -> Settings:
         """Load the user settings, either the ones stored on disk or getting
         default based on tier"""
-
-        if self._settings is not None:
-            return self._settings
-
-        raw_settings = self._cache_handler.load()
-        if raw_settings is None:
-            self._settings = Settings.default(user_tier)
-        else:
-            self._settings = Settings.from_dict(raw_settings, user_tier)
-            self._settings_are_default = False
+        if self._settings is None:
+            self._settings = Settings.from_dict(
+                self._cache_handler.load() or {}
+            )
+            self._settings.set_defaults(user_tier)
 
         return self._settings
 
-    def save(self, settings: Settings):
+    def update_defaults(self, user_tier):
+        """If we have settings cached, then update the default values"""
+        if self._settings is not None:
+            self._settings.set_defaults(user_tier)
+
+    def save(self, settings_to_save: Settings):
         """Store settings to disk."""
-        self._cache_handler.save(settings.to_dict())
-        self._settings = settings
-        self._settings_are_default = False
+        self._cache_handler.save(settings_to_save.to_dict())
+        self._settings = settings_to_save
 
     def delete(self):
         """Deletes the file stored on disk containing the settings
         and resets internal settings property."""
         self._cache_handler.remove()
         self._settings = None
-        self._settings_are_default = True

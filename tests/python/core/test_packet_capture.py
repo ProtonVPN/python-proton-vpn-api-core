@@ -31,7 +31,17 @@ def test_default_directory_path():
 
 
 def test_default_values():
-    pc = PacketCapture.default()
+    pc = PacketCapture(directory_path=None)
     assert pc.directory_path == DEFAULT_DIRECTORY_PATH
     assert pc.mode == PacketCaptureMode.OVERWRITE
     assert pc.max_bytes == MAX_PACKET_CAPTURE_FILE_SIZE
+
+
+def test_directory_path_can_be_set_and_is_not_shared_between_instances():
+    first = PacketCapture(directory_path=None)
+    second = PacketCapture(directory_path=None)
+
+    first.directory_path = "/elsewhere"
+
+    assert first.directory_path == "/elsewhere"
+    assert second.directory_path == DEFAULT_DIRECTORY_PATH

@@ -1,3 +1,10 @@
+version: 6.0.0
+time: 2026/10/15 12:06
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "feat!: Make settings sparse"
+---
 version: 5.8.12
 time: 2026/10/15 12:20
 author: Pep Llaneras

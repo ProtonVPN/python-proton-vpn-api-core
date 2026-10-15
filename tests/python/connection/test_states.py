@@ -413,7 +413,7 @@ async def test_connected_run_tasks_swallows_split_tunneling_errors():
     context.kill_switch = AsyncMock()
     context.kill_switch_setting = KillSwitchSetting.OFF
     context.split_tunneling = AsyncMock()
-    context.split_tunneling_setting = SplitTunnelingSetting(enabled=True)
+    context.split_tunneling_setting = SplitTunnelingSetting.from_dict({"enabled": True})
     context.split_tunneling.set_config = AsyncMock(side_effect=SplitTunnelingError("forced error"))
     connected = states.Connected(context)
 
@@ -429,7 +429,7 @@ async def test_disconnected_run_tasks_swallows_split_tunneling_errors():
     context.kill_switch = AsyncMock()
     context.kill_switch_setting = KillSwitchSetting.OFF
     context.split_tunneling = AsyncMock()
-    context.split_tunneling_setting = SplitTunnelingSetting(enabled=True)
+    context.split_tunneling_setting = SplitTunnelingSetting.from_dict({"enabled": True})
     context.split_tunneling.clear_config = AsyncMock(side_effect=SplitTunnelingError("forced error"))
     disconnected = states.Disconnected(context)
 

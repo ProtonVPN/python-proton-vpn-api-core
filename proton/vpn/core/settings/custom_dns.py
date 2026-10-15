@@ -21,16 +21,17 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Union
+from dataclasses import dataclass
+from typing import Optional, Tuple, Union
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
 from proton.vpn import logging
+from proton.vpn.core.settings.settings_types import Setting, settings
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class CustomDNSEntry:
     """Custom DNS IP object."""
     ip: Union[IPv4Address, IPv6Address]  # pylint: disable=invalid-name
@@ -84,19 +85,22 @@ class CustomDNSEntry:
         }
 
 
-@dataclass
+@settings
 class CustomDNS:
     """Contains all settings related to custom DNS."""
-    enabled: bool = False
-    ip_list: list[CustomDNSEntry] = field(default_factory=list)  # type: ignore
+    enabled = Setting[bool](default=False)
+    ip_list = Setting[Tuple[CustomDNSEntry, ...]](default=())
 
     @staticmethod
-    def from_dict(data: dict[str, Union[bool, str, list]]) -> CustomDNS:
+    def from_dict(data: Optional[dict[str, Union[bool, str, list]]]) -> CustomDNS:
         """Creates and returns `CustomDNS` from the provided dict."""
-        default = CustomDNS.default()
-        loaded_ip_list: dict[str, Union[bool, str]] = data.get("ip_list", default.ip_list)
-        ip_list = []
+        data = data or {}
+        loaded_ip_list: Optional[list[dict[str, Union[bool, str]]]] = data.get("ip_list")
 
+        if loaded_ip_list is None:
+            return CustomDNS(enabled=data.get("enabled"), ip_list=None)
+
+        ip_list: list[CustomDNSEntry] = []
         for dns_entry_dict in loaded_ip_list:
             try:
                 dns_ip = CustomDNSEntry.from_dict(dns_entry_dict)
@@ -107,14 +111,9 @@ class CustomDNS:
                 ip_list.append(dns_ip)
 
         return CustomDNS(
-            enabled=data.get("enabled", default.enabled),
-            ip_list=ip_list
+            enabled=data.get("enabled"),
+            ip_list=tuple(ip_list)
         )
-
-    @staticmethod
-    def default() -> CustomDNS:  # pylint: disable=unused-argument
-        """Creates and returns `CustomDNS` from default configurations."""
-        return CustomDNS()
 
     def get_enabled_ipv4_ips(self) -> list[IPv4Address]:
         """Returns a list of IPv4 custom DNSs that are enabled."""
@@ -135,9 +134,11 @@ class CustomDNS:
 
         return dns_list
 
-    def to_dict(self) -> dict[str, Union[bool, list[dict[str, Union[str, bool]]]]]:
+    def to_dict(self) -> dict:
         """Converts the class to dict."""
-        return {
-            "enabled": self.enabled,
-            "ip_list": [ip.to_dict() for ip in self.ip_list]
-        }
+        data = {}
+        if CustomDNS.enabled.is_set(self):
+            data["enabled"] = self.enabled
+        if CustomDNS.ip_list.is_set(self):
+            data["ip_list"] = [entry.to_dict() for entry in self.ip_list]
+        return data

@@ -4,5 +4,5 @@ variables:
 
 include:
  - project: 'ProtonVPN/Linux/integration/ci-libraries-rust'
-   ref:  71fe1964d7cc3a56c75a2088752a4d523087c825 # chore: update latest Fedora to 45
+   ref:  cb39f5a2ed5b57f110b8186cd62cd9c8901786d7 # chore: update release package versions
    file: 'develop-pipeline.yml'

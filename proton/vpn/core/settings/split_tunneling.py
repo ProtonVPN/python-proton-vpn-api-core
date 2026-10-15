@@ -19,9 +19,13 @@ You should have received a copy of the GNU General Public License
 along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
-from typing import List, Dict
+from typing import Any, Iterable, Optional, Tuple, Type, TypeVar
 from enum import Enum
-from dataclasses import dataclass, field
+
+from proton.vpn.core.settings.settings_types import Group, Setting, settings
+
+
+C = TypeVar("C", bound="SplitTunnelingConfig")
 
 
 class SplitTunnelingMode(Enum):
@@ -31,31 +35,44 @@ class SplitTunnelingMode(Enum):
     INCLUDE = "include"
 
 
-@dataclass
 class SplitTunnelingConfig:
     """Contains split tunneling data.
     """
-    mode: SplitTunnelingMode = SplitTunnelingMode.EXCLUDE
-    app_paths: List[str] = field(default_factory=list)
-    ip_ranges: List[str] = field(default_factory=list)
+    app_paths = Setting[Tuple[str, ...]](default=())
+    ip_ranges = Setting[Tuple[str, ...]](default=())
+
+    def __init__(
+        self,
+        *,
+        mode: SplitTunnelingMode,
+        app_paths: Optional[Iterable[str]] = None,
+        ip_ranges: Optional[Iterable[str]] = None
+    ):
+        self._mode = mode
+        self.app_paths = tuple(app_paths) if app_paths is not None else None
+        self.ip_ranges = tuple(ip_ranges) if ip_ranges is not None else None
+
+    @property
+    def mode(self) -> SplitTunnelingMode:
+        """The mode this config is for."""
+        return self._mode
 
     @staticmethod
-    def from_dict(data: dict):
-        """Generates `SplitTunnelingConfig` from regular python dict.
+    def _from_dict(config_class: Type[C], data: Optional[dict]) -> C:
+        """Generates a `SplitTunnelingConfig` subclass from regular python dict.
 
         Args:
+            config_class: the `SplitTunnelingConfig` subclass to create
             data (dict): the dict containing the necessary information
 
         Returns:
             SplitTunnelingConfig: new `SplitTunnelingConfig`
         """
-        if not data:
-            return SplitTunnelingConfig()
+        data = data or {}
 
-        return SplitTunnelingConfig(
-            mode=SplitTunnelingMode(data.get("mode")),
-            app_paths=data.get("app_paths", []),
-            ip_ranges=data.get("ip_ranges", [])
+        return config_class(
+            app_paths=data.get("app_paths"),
+            ip_ranges=data.get("ip_ranges")
         )
 
     def to_dict(self) -> dict:
@@ -64,44 +81,69 @@ class SplitTunnelingConfig:
         Returns:
             dict: current object in dict
         """
-        return {
-            "mode": self.mode.value,
-            "app_paths": self.app_paths,
-            "ip_ranges": self.ip_ranges
-        }
+        data = {}
+        if SplitTunnelingConfig.app_paths.is_set(self):
+            data["app_paths"] = list(self.app_paths)
+        if SplitTunnelingConfig.ip_ranges.is_set(self):
+            data["ip_ranges"] = list(self.ip_ranges)
+        if data:
+            data["mode"] = self.mode.value
+        return data
 
 
-@dataclass
+class SplitTunnelingConfigExclude(SplitTunnelingConfig):
+    """Split tunneling data for the exclude mode."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, mode=SplitTunnelingMode.EXCLUDE, **kwargs)
+
+    @staticmethod
+    def from_dict(data: Optional[dict]) -> SplitTunnelingConfigExclude:
+        """Generates `SplitTunnelingConfigExclude` from regular python dict."""
+        return SplitTunnelingConfig._from_dict(SplitTunnelingConfigExclude, data)
+
+
+class SplitTunnelingConfigInclude(SplitTunnelingConfig):
+    """Split tunneling data for the include mode."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, mode=SplitTunnelingMode.INCLUDE, **kwargs)
+
+    @staticmethod
+    def from_dict(data: Optional[dict]) -> SplitTunnelingConfigInclude:
+        """Generates `SplitTunnelingConfigInclude` from regular python dict."""
+        return SplitTunnelingConfig._from_dict(SplitTunnelingConfigInclude, data)
+
+
+def _complete_config_by_mode(data: dict) -> None:
+    """Downgrade compatibility shim for pre-6.x readers, which need
+    both configs, each with its mode. Delete when downgrades to
+    pre-6.x are no longer supported."""
+    if "config_by_mode" not in data:
+        return
+    for mode in SplitTunnelingMode:
+        data["config_by_mode"].setdefault(mode.value, {})["mode"] = mode.value
+
+
+@settings
 class SplitTunneling:
     """Config that is used for split tunneling
     """
-    enabled: bool = False
-    mode: SplitTunnelingMode = SplitTunnelingMode.EXCLUDE
-    config_by_mode: dict[SplitTunnelingMode, SplitTunnelingConfig] = field(
-        default_factory=lambda: {  # nosemgrep: python.lang.maintainability.return.return-not-in-function  # pylint: disable=line-too-long  # noqa: E501
-            SplitTunnelingMode.EXCLUDE.value: SplitTunnelingConfig(mode=SplitTunnelingMode.EXCLUDE),
-            SplitTunnelingMode.INCLUDE.value: SplitTunnelingConfig(mode=SplitTunnelingMode.INCLUDE)
-        }
-    )
+    enabled = Setting[bool](default=False)
+    mode = Setting[SplitTunnelingMode](default=SplitTunnelingMode.EXCLUDE)
+    exclude = Group[SplitTunnelingConfigExclude]()
+    include = Group[SplitTunnelingConfigInclude]()
 
-    @property
-    def exclude(self) -> SplitTunnelingConfig:
-        """Returns the split tunneling config for the exclude mode."""
-        return self.config_by_mode.get(
-            SplitTunnelingMode.EXCLUDE.value,
-            SplitTunnelingConfig(mode=SplitTunnelingMode.EXCLUDE)
-        )
+    def get_config(self) -> SplitTunnelingConfig:
+        """Returns the split tunneling config for the currently selected mode.
 
-    @property
-    def include(self) -> SplitTunnelingConfig:
-        """Returns the split tunneling config for the include mode."""
-        return self.config_by_mode.get(
-            SplitTunnelingMode.INCLUDE.value,
-            SplitTunnelingConfig(mode=SplitTunnelingMode.INCLUDE)
-        )
+        Returns:
+            SplitTunnelingConfig: the split tunneling object
+        """
+        return self.exclude if self.mode is SplitTunnelingMode.EXCLUDE else self.include
 
     @staticmethod
-    def from_dict(data: dict) -> SplitTunneling:
+    def from_dict(data: Optional[dict]) -> SplitTunneling:
         """Generates `SplitTunneling` from regular python dict.
 
         Args:
@@ -110,51 +152,35 @@ class SplitTunneling:
         Returns:
             SplitTunneling: new `SplitTunneling`
         """
-        if not data:
-            return SplitTunneling()
-
-        raw_data = data.get("config_by_mode")
-
-        if not raw_data:
-            config_by_mode = {
-                SplitTunnelingMode.EXCLUDE.value:
-                    SplitTunnelingConfig(mode=SplitTunnelingMode.EXCLUDE),
-                SplitTunnelingMode.INCLUDE.value:
-                    SplitTunnelingConfig(mode=SplitTunnelingMode.INCLUDE)
-            }
-        else:
-            config_by_mode = {
-                SplitTunnelingMode(k).value: SplitTunnelingConfig.from_dict(v)
-                for k, v in raw_data.items()
-            }
-
-        mode = SplitTunnelingMode(data.get("mode", SplitTunnelingMode.EXCLUDE.value))
+        data = data or {}
+        config_by_mode = data.get("config_by_mode") or {}
+        mode = data.get("mode")
 
         return SplitTunneling(
-            enabled=data.get("enabled", False),
-            mode=mode,
-            config_by_mode=config_by_mode
+            enabled=data.get("enabled"),
+            mode=SplitTunnelingMode(mode) if mode is not None else None,
+            exclude=SplitTunnelingConfigExclude.from_dict(
+                config_by_mode.get(SplitTunnelingMode.EXCLUDE.value)),
+            include=SplitTunnelingConfigInclude.from_dict(
+                config_by_mode.get(SplitTunnelingMode.INCLUDE.value)),
         )
 
-    def get_config(self) -> SplitTunnelingConfig:
-        """Returns the split tunneling config for the currently selected mode.
-
-        Returns:
-            SplitTunnelingConfig: the split tunneling object
-        """
-        return self.config_by_mode[self.mode.value]
-
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, Any]:
         """Converts actual object to dict.
 
         Returns:
             dict: current object in dict
         """
-        config_by_mode: dict[str, dict[str, str]] = \
-            {k: v.to_dict() for k, v in self.config_by_mode.items()}
-
-        return {
-            "enabled": self.enabled,
-            "mode": self.mode.value,
-            "config_by_mode": config_by_mode
-        }
+        data = {}
+        if SplitTunneling.enabled.is_set(self):
+            data["enabled"] = self.enabled
+        if SplitTunneling.mode.is_set(self):
+            data["mode"] = self.mode.value
+        config_by_mode = {}
+        for config in (self.exclude, self.include):
+            if config_data := config.to_dict():
+                config_by_mode[config.mode.value] = config_data
+        if config_by_mode:
+            data["config_by_mode"] = config_by_mode
+        _complete_config_by_mode(data)
+        return data

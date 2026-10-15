@@ -21,8 +21,9 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
 from enum import Enum
-from dataclasses import dataclass
 import tempfile
+
+from proton.vpn.core.settings.settings_types import Setting, settings
 
 
 class PacketCaptureMode(Enum):
@@ -37,17 +38,12 @@ DEFAULT_MODE = PacketCaptureMode.OVERWRITE
 MAX_PACKET_CAPTURE_FILE_SIZE = 1024 * 1024 * 512  # 0.5 GB
 
 
-@dataclass
+@settings
 class PacketCapture:
     """
     Class for managing packet capture settings.
     """
-    directory_path: str = DEFAULT_DIRECTORY_PATH
-
-    @staticmethod
-    def default() -> PacketCapture:  # pylint: disable=unused-argument
-        """Creates and returns `PacketCapture` from default configurations."""
-        return PacketCapture()
+    directory_path = Setting[str](default=DEFAULT_DIRECTORY_PATH)
 
     @property
     def mode(self) -> PacketCaptureMode:
