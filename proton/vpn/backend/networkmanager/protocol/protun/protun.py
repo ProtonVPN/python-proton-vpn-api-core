@@ -129,7 +129,7 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
     VIRTUAL_DEVICE_NAME: str = "proton0"
     PLUGIN_NAME: str = "protun"
     connection: Optional[NM.SimpleConnection] = None
-    plugin_exists: Optional[bool] = None
+    _is_valid: Optional[bool] = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -418,6 +418,13 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
 
     @classmethod
     def validate(cls):
+        if cls._is_valid is None:
+            cls._is_valid = cls._check_is_valid()
+        return cls._is_valid
+
+    @classmethod
+    def _check_is_valid(cls) -> bool:
+        """Checks protun requirements that don't change while the app runs."""
         if not super().validate():
             return False
         # Protun doesn't support distributions with older versions
@@ -429,9 +436,7 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
         if in_a_sandbox():
             logger.info("Protun is not supported inside snap or flatpak")
             return False
-        if cls.plugin_exists is None:
-            cls.plugin_exists = cls._plugin_exists(cls.PLUGIN_NAME)
-        return cls.plugin_exists
+        return cls._plugin_exists(cls.PLUGIN_NAME)
 
     async def _get_protun_client(self):
         """Returns the cached protun client, creating it on first call."""

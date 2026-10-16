@@ -22,6 +22,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from proton.vpn.backend.networkmanager.protocol.protun import (
+    protun as protun_module
+)
 from proton.vpn.backend.networkmanager.protocol.protun.protun import (
     Protun, ProtunUDP, ProtunTCP, ProtunTLS, ProtunSmart, generate_capture_path,
 )
@@ -38,10 +41,10 @@ def test_generate_capture_path():
 # ─── Protun class methods ─────────────────────────────────────────────────────
 
 @pytest.fixture(autouse=True)
-def reset_plugin_exists():
-    original = Protun.plugin_exists
+def reset_is_valid():
+    original = Protun._is_valid
     yield
-    Protun.plugin_exists = original
+    Protun._is_valid = original
 
 
 @pytest.mark.parametrize("cls", [Protun, ProtunUDP, ProtunTCP, ProtunTLS, ProtunSmart])
@@ -53,35 +56,51 @@ def test_supports_packet_capture_returns_false_when_module_unavailable():
     assert Protun.supports_packet_capture(None) is False
 
 
-def test_validate_returns_false_when_plugin_does_not_exist():
-    Protun.plugin_exists = False
-    with patch.object(LinuxNetworkManager, "validate", return_value=True):
-        assert Protun.validate() is False
+def test_validate_returns_false_when_not_valid():
+    Protun._is_valid = False
+    assert Protun.validate() is False
 
 
-def test_validate_returns_true_when_plugin_exists_and_module_available():
-    Protun.plugin_exists = True
-    with patch.object(LinuxNetworkManager, "validate", return_value=True):
-        if is_deprecated_network_manager():
-            assert Protun.validate() is False
-        else:
-            assert Protun.validate() is True
+def test_validate_returns_true_when_valid():
+    Protun._is_valid = True
+    assert Protun.validate() is True
+
+
+@pytest.mark.parametrize(
+    "nm_compatible,nm_supported,sandboxed,plugin_exists,expected",
+    [
+        (True,  True,  False, True,  True),
+        (False, True,  False, True,  False),  # NM version not compatible
+        (True,  False, False, True,  False),  # NM too old
+        (True,  True,  True,  True,  False),  # snap / flatpak
+        (True,  True,  False, False, False),  # plugin not installed
+    ],
+)
+def test_check_is_valid(
+    nm_compatible, nm_supported, sandboxed, plugin_exists, expected
+):
+    nm = MagicMock() if nm_supported else MagicMock(spec=[])
+    nm_validate = patch.object(
+        LinuxNetworkManager, "validate", return_value=nm_compatible
+    )
+    sandbox = patch.object(
+        protun_module, "in_a_sandbox", return_value=sandboxed
+    )
+    plugin = patch.object(Protun, "_plugin_exists", return_value=plugin_exists)
+    with nm_validate, patch.object(protun_module, "NM", nm), sandbox, plugin:
+        assert Protun._check_is_valid() is expected
+
+
+def test_validate_only_checks_requirements_once():
+    Protun._is_valid = None
+    with patch.object(Protun, "_check_is_valid", return_value=True) as check:
+        assert Protun.validate() is True
+        assert Protun.validate() is True
+
+    check.assert_called_once()
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
-
-
-def is_deprecated_network_manager():
-    """Return true if this is a recent enough network manager version"""
-    # pylint: disable=wrong-import-position
-    import gi
-
-    gi.require_version("NM", "1.0")  # noqa: required before importing NM module
-
-    # pylint: disable=wrong-import-position
-    from gi.repository import NM
-
-    return not hasattr(NM, "SETTING_IP_CONFIG_AUTO_ROUTE_EXT_GW")
 
 
 def _make_instance(mode, directory_path="/tmp", max_bytes=512 * 1024 * 1024, protun=None):

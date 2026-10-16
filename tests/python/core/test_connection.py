@@ -21,6 +21,11 @@ from proton.vpn.core.registry import Registry
 from proton.vpn.session.servers import LogicalServer
 from proton.vpn.session.client_config import ClientConfig
 from proton.vpn.core.vpnconnector import VPNConnector
+from proton.vpn.core.settings import SettingsPersistence
+from proton.vpn.core.settings.settings import DEFAULT_FREE_PROTOCOL
+from proton.vpn.session.feature_flags_fetcher import (
+    PROTUN_DEFAULT_FOR_FREE_FLAG
+)
 from proton.vpn.connection import events, exceptions, states
 from proton.vpn.connection.publisher import Publisher
 from unittest.mock import Mock, AsyncMock
@@ -36,6 +41,14 @@ class _ProtonProtocol(DummyVPNConnection):
     @classmethod
     def get_protocol_group(cls):
         return "proton"
+
+
+class _ProtunSmartProtocol(DummyVPNConnection):
+    protocol = DEFAULT_FREE_PROTOCOL
+
+    @classmethod
+    def get_protocol_group(cls):
+        return "protun"
 
 
 class _GenericProtocol(DummyVPNConnection):
@@ -382,3 +395,28 @@ def test_iter_available_protocols_returns_empty_when_no_protocols_match_group():
     result = list(connector.iter_available_protocols("nonexistent"))
 
     assert result == []
+
+
+@pytest.mark.asyncio
+async def test_get_settings_defaults_free_users_to_protun_when_available():
+    registry = Registry()
+    registry.register(_ProtunSmartProtocol)
+
+    session_holder = Mock()
+    session_holder.user_tier = None  # session not loaded yet: free tier
+    session_holder.session.feature_flags.get = Mock(
+        side_effect=lambda name: name == PROTUN_DEFAULT_FOR_FREE_FLAG
+    )
+    cache_handler = Mock()
+    cache_handler.load.return_value = None
+
+    connector = VPNConnector(
+        session_holder=session_holder,
+        settings_persistence=SettingsPersistence(cache_handler),
+        usage_reporting=None,
+        registry=registry,
+    )
+
+    settings = await connector.get_settings()
+
+    assert settings.protocol == DEFAULT_FREE_PROTOCOL

@@ -44,6 +44,7 @@ SETTINGS = os.path.join(
 
 
 DEFAULT_PROTOCOL = "wireguard"
+DEFAULT_FREE_PROTOCOL = "protun-smart"
 DEFAULT_KILLSWITCH = KillSwitchState.OFF.value
 DEFAULT_ANONYMOUS_CRASH_REPORTS = True
 DEFAULT_TELEMETRY = True
@@ -76,12 +77,23 @@ class Settings:  # pylint: disable=too-many-instance-attributes
             packet_capture=PacketCapture(directory_path=None),
         )
 
-    def set_defaults(self, user_tier: int) -> None:
+    def set_defaults(
+        self, user_tier: int, protun_available: bool = False
+    ) -> None:
         """Updates the defaults that depend on the user tier."""
-        Features.netshield.set_default(
-            self.features,
-            NetShield.NO_BLOCK.value if user_tier < 1 else NetShield.BLOCK_MALICIOUS_URL.value
-        )
+
+        def default_protocol():
+            if protun_available and user_tier < 1:
+                return DEFAULT_FREE_PROTOCOL
+            return DEFAULT_PROTOCOL
+
+        def default_netshield():
+            if user_tier < 1:
+                return NetShield.NO_BLOCK.value
+            return NetShield.BLOCK_MALICIOUS_URL.value
+
+        Settings.protocol.set_default(self, default_protocol())
+        Features.netshield.set_default(self.features, default_netshield())
 
     def to_dict(self) -> dict:
         """Converts the class to dict."""
@@ -110,21 +122,21 @@ class SettingsPersistence:
         self._cache_handler = cache_handler or CacheHandler(SETTINGS)
         self._settings = None
 
-    def get(self, user_tier: int) -> Settings:
+    def get(self, user_tier: int, protun_available: bool = False) -> Settings:
         """Load the user settings, either the ones stored on disk or getting
         default based on tier"""
         if self._settings is None:
             self._settings = Settings.from_dict(
                 self._cache_handler.load() or {}
             )
-            self._settings.set_defaults(user_tier)
+            self._settings.set_defaults(user_tier, protun_available)
 
         return self._settings
 
-    def update_defaults(self, user_tier):
+    def update_defaults(self, user_tier: int, protun_available: bool = False):
         """If we have settings cached, then update the default values"""
         if self._settings is not None:
-            self._settings.set_defaults(user_tier)
+            self._settings.set_defaults(user_tier, protun_available)
 
     def save(self, settings_to_save: Settings):
         """Store settings to disk."""

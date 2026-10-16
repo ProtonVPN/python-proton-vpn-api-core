@@ -28,6 +28,7 @@ import threading
 from typing import Optional, runtime_checkable, Protocol, Iterator
 
 from proton.vpn.connection.persistence import ConnectionPersistence
+from proton.vpn.core.protun_default import is_default_for_free_users
 from proton.vpn.core.refresher import VPNDataRefresher
 from proton.vpn.core.session_holder import SessionHolder
 from proton.vpn.core.settings import SettingsPersistence
@@ -150,10 +151,14 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         """Returns the user's settings."""
         # Default to free user settings if the session is not loaded yet.
         user_tier = self._session_holder.user_tier or 0
+        protun_available = is_default_for_free_users(
+            self._registry, self._session_holder.session.feature_flags
+        )
         loop = asyncio.get_running_loop()
         settings = await loop.run_in_executor(
             None, self._settings_persistence.get,
-            user_tier
+            user_tier,
+            protun_available
         )
 
         return settings

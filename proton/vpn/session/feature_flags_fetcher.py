@@ -34,7 +34,7 @@ FF_ENV_VAR = "PROTON_VPN_FEATURE_FLAG_{flag}"
 
 FREE_RESCOPE_FLAG = "FreeRescope"
 TELEMETRY_FEATURE_FLAG = "LinuxTelemetry"
-PROTUN_ONLY_FEATURE_FLAG = "LinuxProtunOnly"
+PROTUN_DEFAULT_FOR_FREE_FLAG = "LinuxProtunDefaultForFree"
 
 DEFAULT = {
     "toggles": [
@@ -75,7 +75,7 @@ DEFAULT = {
             }
         },
         {
-            "name": PROTUN_ONLY_FEATURE_FLAG,
+            "name": PROTUN_DEFAULT_FOR_FREE_FLAG,
             "enabled": False,
             "impressionData": False,
             "variant": {

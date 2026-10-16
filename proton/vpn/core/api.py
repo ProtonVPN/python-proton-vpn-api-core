@@ -39,7 +39,7 @@ from proton.vpn.session.dataclasses import LoginResult, BugReportForm, NPSSurvey
 from proton.vpn.session.account import VPNAccount
 from proton.vpn.session.location_names_fetcher import LocationTranslations
 from proton.vpn.session import FeatureFlags
-from proton.vpn.session.feature_flags_fetcher import PROTUN_ONLY_FEATURE_FLAG
+from proton.vpn.core.protun_default import is_default_for_free_users
 from proton.vpn.core.usage import UsageReporting
 from proton.vpn.connection.vpnconnection import VPNConnection
 
@@ -97,7 +97,6 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods, too-many-instanc
         )
         self._split_tunneling_client = None
         self._registry = registry or self.create_registry()
-        self._startup_force_proton_check = True
 
     @staticmethod
     def create_registry() -> Registry:
@@ -149,72 +148,6 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods, too-many-instanc
 
         return result
 
-    async def _should_force_protun_for_free_users(self) -> bool:
-        """
-        Decide whether the caller should override the persisted protocol with a
-        protun variant on this call.
-
-        Returns True only when all of the following hold:
-          - the one-shot latch `self._startup_force_proton_check` is still set (True at
-            construction, cleared here),
-          - the VPN connector exposes at least one "protun" protocol,
-          - the user is on the free tier (`user_tier == 0`).
-
-        The latch is cleared unconditionally before returning, so every
-        subsequent call in the same process returns False — this is what makes
-        the forcing behaviour fire at most once per app run.
-        """
-        if self._startup_force_proton_check and (self.user_tier == 0):
-            force_protun = bool(
-                list(
-                    (await self.get_vpn_connector())
-                    .iter_available_protocols("protun")
-                )
-            )
-        else:
-            force_protun = False
-
-        if force_protun:
-            logger.info(
-                f"force_protun: {force_protun}, user_tier {self.user_tier}"
-            )
-
-        self._startup_force_proton_check = False
-
-        return force_protun
-
-    async def _force_protun_for_free_users(self, protocol: str) -> str:
-        """
-        Map `protocol` to its protun equivalent for eligible free-tier users.
-
-        Delegates the eligibility check to `_should_force_protun_for_free_users`;
-        if that returns False, `protocol` is returned unchanged. Otherwise the
-        following mapping is applied:
-            wireguard   -> protun-smart
-            openvpn-udp -> protun-udp
-            openvpn-tcp -> protun-tcp
-        Any protocol not in the table is returned as-is.
-
-        Because the eligibility check is a one-shot latch, the override happens
-        at most once per app run: the user is free to pick a different protocol
-        afterwards, but the choice is re-overridden on the next launch.
-        """
-        if not await self._should_force_protun_for_free_users():
-            return protocol
-
-        mapping = {
-            "wireguard": "protun-smart",
-            "openvpn-udp": "protun-udp",
-            "openvpn-tcp": "protun-tcp"
-        }
-
-        mapped = mapping.get(protocol, protocol)
-
-        if mapped != protocol:
-            logger.info(f"Switching protocol: {protocol} -> {mapped}")
-
-        return mapped
-
     async def load_settings(self) -> Settings:
         """
         Returns a copy of the settings saved to disk, or the defaults if they
@@ -223,18 +156,18 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods, too-many-instanc
         # Default to free user settings if the session is not loaded yet.
         # pylint: disable=duplicate-code
         user_tier = self._session_holder.user_tier or 0
+        protun_available = is_default_for_free_users(
+            self._registry, self.feature_flags
+        )
 
         loop = asyncio.get_running_loop()
         settings = await loop.run_in_executor(
             None, self._settings_persistence.get,
-            user_tier
+            user_tier,
+            protun_available
         )
         self._usage_reporting.enabled = settings.anonymous_crash_reports
         self._telemetry_events.enable(settings.telemetry)
-
-        if self.feature_flags.get(PROTUN_ONLY_FEATURE_FLAG):
-            settings.protocol =\
-                await self._force_protun_for_free_users(settings.protocol)
 
         # We have to return a copy of the settings to force the caller to
         # use the `save_settings` method to apply the changes.
@@ -253,6 +186,16 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods, too-many-instanc
         self._usage_reporting.enabled = settings.anonymous_crash_reports
         self._telemetry_events.enable(settings.telemetry)
 
+    def _update_default_settings(self):
+        # Default to free user settings if the session is not loaded yet.
+        # pylint: disable=duplicate-code
+        user_tier = self._session_holder.user_tier or 0
+
+        self._settings_persistence.update_defaults(
+            user_tier,
+            is_default_for_free_users(self._registry, self.feature_flags)
+        )
+
     async def login(self, username: str, password: str) -> LoginResult:
         """
         Logs the user in provided the right credentials.
@@ -265,6 +208,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods, too-many-instanc
         result = await session.login(username, password)
         if result.success and not session.loaded:
             await session.fetch_session_data()
+            self._update_default_settings()
 
         return result
 
@@ -279,6 +223,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods, too-many-instanc
 
         if result.success and not session.loaded:
             await session.fetch_session_data()
+            self._update_default_settings()
 
         return result
 
@@ -341,6 +286,7 @@ class ProtonVPNAPI:  # pylint: disable=too-many-public-methods, too-many-instanc
 
         if result.success and not session.loaded:
             await session.fetch_session_data()
+            self._update_default_settings()
 
         return result
 

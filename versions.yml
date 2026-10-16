@@ -1,3 +1,10 @@
+version: 6.1.0
+time: 2026/10/16 16:50
+author: Luke Titley
+email: luke.titley@proton.ch
+description:
+- "feat: Free users default to protun"
+---
 version: 6.0.1
 time: 2026/10/16 12:59
 author: Luke Titley

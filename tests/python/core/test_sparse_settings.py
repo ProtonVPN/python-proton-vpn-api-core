@@ -29,6 +29,9 @@ from proton.vpn.core.settings import (
 )
 from proton.vpn.core.settings.custom_dns import CustomDNS
 from proton.vpn.core.settings.features import Features
+from proton.vpn.core.settings.settings import (
+    DEFAULT_PROTOCOL, DEFAULT_FREE_PROTOCOL
+)
 from proton.vpn.core.settings.settings_types import Group
 
 FREE_TIER = 0
@@ -292,6 +295,40 @@ def test_set_defaults_does_not_apply_to_an_explicit_value():
     assert settings.features.netshield == NetShield.NO_BLOCK.value
 
 
+@pytest.mark.parametrize("tier, protun_available, protocol", [
+    (FREE_TIER, True, DEFAULT_FREE_PROTOCOL),
+    (FREE_TIER, False, DEFAULT_PROTOCOL),
+    (PLUS_TIER, True, DEFAULT_PROTOCOL),
+    (PLUS_TIER, False, DEFAULT_PROTOCOL),
+])
+def test_set_defaults_picks_the_protocol_default_from_tier_and_protun(
+    tier, protun_available, protocol
+):
+    settings = Settings.from_dict({})
+
+    settings.set_defaults(tier, protun_available)
+
+    assert settings.protocol == protocol
+    assert settings.to_dict() == {}
+
+
+def test_set_defaults_does_not_override_an_explicit_protocol():
+    settings = _load({"protocol": "openvpn-udp"})
+
+    settings.set_defaults(FREE_TIER, protun_available=True)
+
+    assert settings.protocol == "openvpn-udp"
+
+
+def test_set_defaults_reverts_the_protocol_default_when_the_user_upgrades():
+    settings = Settings.from_dict({})
+    settings.set_defaults(FREE_TIER, protun_available=True)
+
+    settings.set_defaults(PLUS_TIER, protun_available=True)
+
+    assert settings.protocol == DEFAULT_PROTOCOL
+
+
 def test_groups_are_read_only():
     settings = _pristine()
 
@@ -486,6 +523,24 @@ def test_update_defaults_applies_to_the_saved_settings():
     persistence.update_defaults(PLUS_TIER)
 
     assert saved.features.netshield == NetShield.BLOCK_MALICIOUS_URL.value
+
+
+def test_get_passes_protun_availability_to_the_defaults():
+    persistence, _ = _persistence()
+
+    settings = persistence.get(FREE_TIER, protun_available=True)
+
+    assert settings.protocol == DEFAULT_FREE_PROTOCOL
+
+
+def test_update_defaults_passes_protun_availability_to_the_defaults():
+    persistence, cache_handler = _persistence()
+    settings = persistence.get(FREE_TIER)
+
+    persistence.update_defaults(FREE_TIER, protun_available=True)
+
+    assert settings.protocol == DEFAULT_FREE_PROTOCOL
+    cache_handler.save.assert_not_called()
 
 
 def test_to_dict_is_a_copy():
