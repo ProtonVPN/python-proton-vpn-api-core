@@ -56,8 +56,8 @@ Requires: gobject-introspection
 Requires: python3-jinja2
 Requires: python3-dbus-fast
 
-Conflicts: proton-vpn-gtk-app < 4.19.0
-Conflicts: proton-vpn-cli < 1.1.0
+Conflicts: proton-vpn-gtk-app < 4.18.9~rc202610161032
+Conflicts: proton-vpn-cli < 1.0.6~rc202610161029
 Conflicts: proton-vpn-daemon < 0.14.0
 Conflicts: python3-proton-vpn-network-manager < 0.13.5
 
