@@ -1,6 +1,7 @@
 variables:
  PROJECT_NAME: "proton-vpn-api-core"
  CARGO_HOME: $CI_PROJECT_DIR/.cargo
+ DEV_VERSION_ENABLED: "true"
 
 include:
  - project: 'ProtonVPN/Linux/integration/ci-libraries-rust'
