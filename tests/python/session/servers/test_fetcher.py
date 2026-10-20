@@ -163,6 +163,7 @@ def test_refresh_loads_recomputes_from_cached_binary_file():
         ("1", 31.0, 30), ("2", 41.0, 40)]
     fetcher._request_status.assert_not_awaited() # no api call
     fetcher._cache_file.save.assert_called_once() # updated logicals saved
+    server_list.reset_loads_expiration.assert_not_called()
 
 @pytest.mark.asyncio
 async def test_v2_fetch_logicals_adds_loads_into_logical_servers():

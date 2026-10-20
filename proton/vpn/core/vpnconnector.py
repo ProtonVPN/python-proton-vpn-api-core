@@ -45,7 +45,6 @@ from proton.vpn.connection.enum import KillSwitchSetting, ConnectionStateEnum
 from proton.vpn.connection.publisher import Publisher
 from proton.vpn.connection.states import StateContext
 from proton.vpn.session.client_config import ClientConfig
-from proton.vpn.session.dataclasses import VPNLocation
 from proton.vpn.session.servers import LogicalServer, ServerFeatureEnum
 from proton.vpn.core.usage import UsageReporting
 from proton.vpn.connection.exceptions import FeatureSyntaxError, FeatureError
@@ -529,47 +528,14 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         return new_event
 
     def _on_state_change_update_location(self, state: states.State):
-        """Updates the user location when the connection is established or ended."""
-        if isinstance(state, states.Disconnected):
-            # Only refresh after disconnection, not on the initial state.
-            if state.context.connection:
-                loop = asyncio.get_running_loop()
-                task = loop.create_task(
-                    self._session_holder.session.update_and_set_location_if_necessary()
-                )
-                self._background_tasks.add(task)
-            return
-
-        connection_details = self._get_connection_details_from_state(state)
-        if not connection_details:
-            return
-
-        current_location = self._session_holder.session.vpn_account.location
-
-        self._session_holder.session.set_location(
-            self._create_new_vpn_location(connection_details, current_location)
-        )
-
-    def _get_connection_details_from_state(
-            self, state: states.State
-    ) -> Optional[events.ConnectionDetails]:
-        if not isinstance(state, states.Connected):
-            return None
-
-        connection_details = state.context.event.context.connection_details
-        if not connection_details or not connection_details.device_ip:
-            return None
-
-        return connection_details
-
-    def _create_new_vpn_location(self, connection_details, current_location) -> VPNLocation:
-        return VPNLocation(
-            IP=connection_details.device_ip,
-            Country=connection_details.device_country,
-            ISP=current_location.ISP,
-            Long=current_location.Long,
-            Lat=current_location.Lat
-        )
+        """Updates the user location from the API when the connection has ended."""
+        # Only refresh after disconnection, not on the initial state.
+        if isinstance(state, states.Disconnected) and state.context.connection:
+            loop = asyncio.get_running_loop()
+            task = loop.create_task(
+                self._session_holder.session.update_and_set_location_if_necessary()
+            )
+            self._background_tasks.add(task)
 
     def _set_ks_impl(self, protocol: str):
         """

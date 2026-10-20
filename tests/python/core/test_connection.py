@@ -195,41 +195,20 @@ async def test_on_state_change_updates_location_when_disconnected_after_a_connec
 
     session_holder_mock.session.update_and_set_location_if_necessary.assert_awaited_once()
 
-def test_on_state_change_stores_new_device_ip_when_successfully_connected_to_vpn_and_connection_details_and_device_ip_are_set():
-    publisher_mock = Mock()
+@pytest.mark.asyncio
+async def test_on_state_change_does_not_update_location_on_initial_disconnected_state():
     session_holder_mock = Mock()
-    new_connection_details = events.ConnectionDetails(
-        device_ip="192.168.0.1",
-        device_country="PT",
-        server_ipv4="0.0.0.0",
-        server_ipv6=None,
-    )
-    _ = VPNConnector(
-        session_holder=session_holder_mock,
-        settings_persistence=None,
-        usage_reporting=None,
-        registry=Registry(),
-        connection_persistence=Mock(),
-        publisher=publisher_mock,
-        port_forward_file_handler=Mock()
-    )
+    session_holder_mock.session.update_and_set_location_if_necessary = AsyncMock()
 
-    on_state_change_update_location_callback = publisher_mock.register.call_args_list[0][0][0]
+    publisher = _connector_publisher(session_holder_mock)
+    initial_state = states.Disconnected()
 
-    connected_event = events.Connected(
-        context=events.EventContext(
-            connection=Mock(),
-            connection_details=new_connection_details
-        )
-    )
-    connected_state = states.Connected(context=states.StateContext(connected_event))
+    publisher.notify(initial_state)
 
-    on_state_change_update_location_callback(connected_state)
+    # Give the event loop a chance to run any scheduled task
+    await asyncio.sleep(0)
 
-    vpn_location = session_holder_mock.session.set_location.call_args[0][0]
-
-    session_holder_mock.session.set_location.assert_called_once()
-    assert vpn_location.IP == new_connection_details.device_ip
+    session_holder_mock.session.update_and_set_location_if_necessary.assert_not_called()
 
 
 def test_on_state_change_notifies_port_forwarding_file_handler_with_new_state():
@@ -264,66 +243,6 @@ def test_on_state_change_notifies_port_forwarding_file_handler_with_new_state():
     on_state_change_update_port_callback(connected_state)
 
     port_forwarding_file_handler_mock.on_state_change_update_port.assert_called_once_with(connected_state)
-
-
-def test_on_state_change_skip_store_new_device_ip_when_successfully_connected_to_vpn_and_connection_details_is_none():
-    publisher_mock = Mock()
-    session_holder_mock = Mock()
-    _ = VPNConnector(
-        session_holder=session_holder_mock,
-        settings_persistence=None,
-        usage_reporting=None,
-        registry=Registry(),
-        connection_persistence=Mock(),
-        publisher=publisher_mock
-    )
-
-    on_state_change_callback = publisher_mock.register.call_args[0][0]
-
-    connected_event = events.Connected(
-        context=events.EventContext(
-            connection=Mock(),
-            connection_details=None
-        )
-    )
-    connected_state = states.Connected(context=states.StateContext(connected_event))
-
-    on_state_change_callback(connected_state)
-
-    session_holder_mock.session.set_location.assert_not_called()
-
-
-def test_on_state_change_skip_store_new_device_ip_when_successfully_connected_to_vpn_and_device_ip_is_none():
-    publisher_mock = Mock()
-    session_holder_mock = Mock()
-    new_connection_details = events.ConnectionDetails(
-        device_ip=None,
-        device_country="PT",
-        server_ipv4="0.0.0.0",
-        server_ipv6=None,
-    )
-    _ = VPNConnector(
-        session_holder=session_holder_mock,
-        settings_persistence=None,
-        usage_reporting=None,
-        registry=Registry(),
-        connection_persistence=Mock(),
-        publisher=publisher_mock
-    )
-
-    on_state_change_callback = publisher_mock.register.call_args[0][0]
-
-    connected_event = events.Connected(
-        context=events.EventContext(
-            connection=Mock(),
-            connection_details=new_connection_details
-        )
-    )
-    connected_state = states.Connected(context=states.StateContext(connected_event))
-
-    on_state_change_callback(connected_state)
-
-    session_holder_mock.session.set_location.assert_not_called()
 
 
 @pytest.mark.asyncio
