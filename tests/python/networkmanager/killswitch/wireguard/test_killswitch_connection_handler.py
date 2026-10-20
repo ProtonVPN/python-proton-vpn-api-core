@@ -54,10 +54,17 @@ class FakeNMClient:
     exception entry makes that poll fail with it.
     """
 
-    def __init__(self, devices, route_answers, devices_without_gateway=()):
+    def __init__(
+            self, devices, route_answers, devices_without_gateway=(),
+            routable_devices_answers=None
+    ):
         self.devices = devices
         self.route_answers = route_answers
         self.devices_without_gateway = devices_without_gateway
+        # Consumed one entry per get_routable_devices call, same semantics as
+        # route_answers: the last entry repeats once the list is exhausted.
+        self.routable_devices_answers = routable_devices_answers
+        self.routable_devices_polls = 0
         self.routes_added = []
         self.routes_removed = []
         self.polled_devices = []
@@ -72,7 +79,12 @@ class FakeNMClient:
         pass
 
     def get_routable_devices(self):
-        return self.devices
+        if self.routable_devices_answers is None:
+            return self.devices
+
+        index = min(self.routable_devices_polls, len(self.routable_devices_answers) - 1)
+        self.routable_devices_polls += 1
+        return self.routable_devices_answers[index]
 
     def get_active_devices(self):
         return self.devices
@@ -159,6 +171,40 @@ async def test_add_vpn_server_route_skips_devices_that_have_no_gateway():
     await handler.add_vpn_server_route(SERVER_IP)
 
     assert nm_client.routes_added == [("enp2s0", SERVER_IP)]
+
+
+@pytest.mark.asyncio
+async def test_wait_for_routable_devices_retries_until_a_routable_device_appears():
+    """Adding the kill switch can transiently drop the real device's gateway,
+    so get_routable_devices returning an empty list must not be taken as final."""
+    enp2s0 = FakeDevice("enp2s0")
+    nm_client = FakeNMClient(
+        devices=[enp2s0],
+        route_answers=[True],
+        routable_devices_answers=[[], [], [enp2s0]]
+    )
+    handler = KillSwitchConnectionHandler(nm_client=nm_client)
+
+    devices = await handler._wait_for_routable_devices(timeout=0.05, interval=0.001)
+
+    assert devices == [enp2s0]
+    assert nm_client.routable_devices_polls == 3
+
+
+@pytest.mark.asyncio
+async def test_wait_for_routable_devices_gives_up_when_none_ever_appears():
+    """If no routable device shows up within the timeout, an empty list is
+    returned instead of hanging or raising, and this is logged."""
+    nm_client = FakeNMClient(
+        devices=[FakeDevice("enp2s0")],
+        route_answers=[True],
+        routable_devices_answers=[[]]
+    )
+    handler = KillSwitchConnectionHandler(nm_client=nm_client)
+
+    devices = await handler._wait_for_routable_devices(timeout=0.01, interval=0.001)
+
+    assert devices == []
 
 
 @pytest.mark.asyncio
