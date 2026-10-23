@@ -1,3 +1,14 @@
+version: 6.1.1
+time: 2026/10/23 05:37
+author: Elena Svilpe
+email: elena.svilpe@proton.ch
+description:
+- "chore: enable auto versioning (Axel Langenskiold)"
+- "fix: sort a copy of the serverlist to keep serverlist visible when updating loads (Elena Svilpe)"
+- "fix: address issues with loads recalculation on disconnect (Elena Švilpė)"
+- "chore: Bump webpki-roots to 1.0.10 (Flanders)"
+- "chore: update submodules commit (Elena Svilpe)"
+---
 version: 6.1.0
 time: 2026/10/16 16:50
 author: Luke Titley
