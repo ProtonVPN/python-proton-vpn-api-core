@@ -56,6 +56,7 @@ impl AgentFeatures {
     ///     0 - No netshield.
     ///     1 - Block malware
     ///     2 - Block malware, trackers and adverts
+    ///     3 - Block malware, trackers, adverts and adult content
     /// * `randomized_nat` - Whether to enable randomized NAT.
     ///     Is random source port applied to outgoing NAT packets.
     /// * `split_tcp` - Whether to enable split TCP.
