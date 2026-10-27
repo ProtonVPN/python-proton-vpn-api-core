@@ -34,6 +34,7 @@ class NetShield(IntEnum):  # pylint: disable=missing-class-docstring
     NO_BLOCK = 0
     BLOCK_MALICIOUS_URL = 1
     BLOCK_ADS_AND_TRACKING = 2
+    BLOCK_ADS_TRACKING_AND_ADULT_CONTENT = 3
 
 
 @dataclass
