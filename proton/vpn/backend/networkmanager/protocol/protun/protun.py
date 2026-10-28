@@ -163,6 +163,7 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
         self._set_interface_name()
         self._set_connection_type()
         self._set_connection_user_owned()
+        self._disable_dns_over_tls()
         self.connection.add_setting(self._connection_settings)
 
         self._set_route()
@@ -192,6 +193,18 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
             NM.SETTING_USER_SETTING_NAME,
             getuser(),
             None
+        )
+
+    def _disable_dns_over_tls(self):
+        """Disable DNS-over-TLS for this connection.
+
+        Overrides the global systemd-resolved DNSOverTLS setting so that
+        ProtonVPN's internal DNS server (plain DNS, port 53) is reachable
+        even when the system is configured with DNSOverTLS=yes.
+        """
+        self._connection_settings.set_property(
+            NM.SETTING_CONNECTION_DNS_OVER_TLS,
+            NM.SettingConnectionDnsOverTls.NO
         )
 
     def _set_route(self):
