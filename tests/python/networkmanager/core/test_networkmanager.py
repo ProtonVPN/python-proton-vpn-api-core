@@ -123,6 +123,30 @@ async def test_start_generates_timeout_event_when_the_tcp_connection_check_fails
 
 @pytest.mark.asyncio
 @patch("proton.vpn.backend.networkmanager.core.networkmanager.tcpcheck")
+async def test_start_skips_tcp_connection_check_when_disabled(
+        tcpcheck_patch, nm_client_mock
+):
+    tcpcheck_patch.is_any_port_reachable = AsyncMock(return_value=False)
+
+    nm_protocol = create_nm_protocol(nm_client_mock)
+    nm_protocol.requires_openvpn_tcp_check = False
+
+    with patch.object(nm_protocol, "setup") as setup_mock:
+        start_connection_future = Future()
+        nm_client_mock.start_connection_async.return_value = start_connection_future
+        connection_mock = setup_mock.return_value.result()
+        start_connection_future.set_result(connection_mock)
+
+        await nm_protocol.start()
+
+        setup_mock.assert_called_once()
+
+    tcpcheck_patch.is_any_port_reachable.assert_not_called()
+    nm_client_mock.start_connection_async.assert_called_once_with(connection_mock)
+
+
+@pytest.mark.asyncio
+@patch("proton.vpn.backend.networkmanager.core.networkmanager.tcpcheck")
 async def test_start_generates_tunnel_setup_failed_event_on_connection_setup_errors(
         tcpcheck_patch, nm_client_mock
 ):

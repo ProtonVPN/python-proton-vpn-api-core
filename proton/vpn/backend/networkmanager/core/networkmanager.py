@@ -47,6 +47,9 @@ class LinuxNetworkManager(VPNConnection):
     """
     SIGNAL_NAME = "vpn-state-changed"
     backend = "linuxnetworkmanager"
+    # Whether to probe the OpenVPN TCP ports before starting the tunnel.
+    # Protocols using a different transport can disable it.
+    requires_openvpn_tcp_check = True
 
     def __init__(self, *args, nm_client: NMClient = None, **kwargs):
         self.__nm_client = nm_client
@@ -66,23 +69,21 @@ class LinuxNetworkManager(VPNConnection):
         """
         Starts a VPN connection using NetworkManager.
         """
-        # The VPN connection is started only if at least one of the TCP ports of the server to
-        # connect to is open. The reason for doing this check is that, after introducing the
-        # dummy kill switch network interface, the VPN connection backend tries to use it
-        # to establish the VPN connection.
+        # The VPN connection is started only if the server is reachable. Protocols
+        # that don't use the OpenVPN TCP ports can disable this check.
         self._cancelled = False
 
-        server_reachable = await tcpcheck.is_any_port_reachable(
-            self._vpnserver.server_ip,
-            self._vpnserver.openvpn_ports.tcp
-        )
+        if self.requires_openvpn_tcp_check:
+            server_reachable = await tcpcheck.is_any_port_reachable(
+                self._vpnserver.server_ip,
+                self._vpnserver.openvpn_ports.tcp
+            )
+            if not server_reachable:
+                logger.info("VPN server NOT reachable.")
+                self._notify_subscribers(events.Timeout(EventContext(connection=self)))
+                return
 
-        if not server_reachable:
-            logger.info("VPN server NOT reachable.")
-            self._notify_subscribers(events.Timeout(EventContext(connection=self)))
-            return
-
-        logger.info("VPN server REACHABLE.")
+            logger.info("VPN server REACHABLE.")
 
         if self._cancelled:
             logger.info("Connection cancelled.")

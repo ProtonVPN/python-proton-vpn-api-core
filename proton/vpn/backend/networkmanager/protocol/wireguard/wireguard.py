@@ -97,6 +97,7 @@ class Wireguard(LinuxNetworkManager, LocalAgentMixin):
     VIRTUAL_DEVICE_NAME: str = "proton0"
     protocol: str = "wireguard"
     ui_protocol: str = "WireGuard"
+    requires_openvpn_tcp_check = False
     connection: Optional[NM.SimpleConnection] = None
     FWMARK: int = FWMARK_VALUE
 

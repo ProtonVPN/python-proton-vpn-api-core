@@ -128,6 +128,7 @@ class Protun(LinuxNetworkManager, LocalAgentMixin):
     SIGNAL_NAME: str = "vpn-state-changed"
     VIRTUAL_DEVICE_NAME: str = "proton0"
     PLUGIN_NAME: str = "protun"
+    requires_openvpn_tcp_check = False
     connection: Optional[NM.SimpleConnection] = None
     plugin_exists: Optional[bool] = None
 
