@@ -256,16 +256,31 @@ class VPNConnector:  # pylint: disable=too-many-instance-attributes
         if not persisted_parameters:
             return None
 
-        if protocol := self._registry.get(persisted_parameters.protocol):
-            vpn_connection = protocol(
-                server=persisted_parameters.server,
-                credentials=self.credentials,
-                settings=await self.get_settings(),
-                connection_id=persisted_parameters.connection_id,
-                user_tier=self._session_holder.user_tier
+        # Registry.get documents a None return, but it raises RuntimeError when
+        # the protocol is missing or its validate() check fails. A stale
+        # persistence file must not stop the connector from starting.
+        try:
+            protocol = self._registry.get(persisted_parameters.protocol)
+        except RuntimeError:
+            protocol = None
+
+        if not protocol:
+            logger.warning(
+                "Ignoring persisted connection because protocol "
+                f"{persisted_parameters.protocol} is not available",
+                category="CONN", subcategory="PERSISTENCE", event="LOAD"
             )
-            if not isinstance(vpn_connection.initial_state, states.Disconnected):
-                return vpn_connection
+            return None
+
+        vpn_connection = protocol(
+            server=persisted_parameters.server,
+            credentials=self.credentials,
+            settings=await self.get_settings(),
+            connection_id=persisted_parameters.connection_id,
+            user_tier=self._session_holder.user_tier
+        )
+        if not isinstance(vpn_connection.initial_state, states.Disconnected):
+            return vpn_connection
 
         return None
 
