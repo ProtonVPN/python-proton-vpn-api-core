@@ -100,6 +100,11 @@ class Wireguard(LinuxNetworkManager, LocalAgentMixin):
     connection: Optional[NM.SimpleConnection] = None
     FWMARK: int = FWMARK_VALUE
 
+    @property
+    def enable_ipv6_support(self) -> bool:
+        # IPv6 DNS follows the kill-switch dummy and blackholes Local Agent.
+        return False
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         LocalAgentMixin.__init__(self, self._user_tier)
@@ -236,17 +241,25 @@ class Wireguard(LinuxNetworkManager, LocalAgentMixin):
             nm_setting.add_dns(wg_config.get_dns_ip_for_protocol_version(ip_version))
             nm_setting.add_dns_search(wg_config.get_dns_search_for_protocol_version(ip_version))
 
+    def _wireguard_udp_port(self) -> int:
+        """Prefer 51820 when advertised; udp[0] is often 443 and fails to handshake."""
+        ports = list(self._vpnserver.wireguard_ports.udp or [])
+        if 51820 in ports:
+            return 51820
+        return ports[0]
+
     def _set_wireguard_properties(self):
         peer = NM.WireGuardPeer.new()
         wireguard_config = NM.SettingWireGuard.new()
 
         peer.append_allowed_ip(wg_config.ipv4.allowed_ip, False)
         peer.set_endpoint(
-            f"{self._vpnserver.server_ip}:{self._vpnserver.wireguard_ports.udp[0]}",
+            f"{self._vpnserver.server_ip}:{self._wireguard_udp_port()}",
             False
         )
 
         peer.set_public_key(self._vpnserver.x25519pk, False)
+        peer.set_persistent_keepalive(25)
 
         if self.enable_ipv6_support:
             peer.append_allowed_ip(wg_config.ipv6.allowed_ip, False)
