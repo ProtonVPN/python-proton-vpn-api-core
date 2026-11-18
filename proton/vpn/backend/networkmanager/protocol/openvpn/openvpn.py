@@ -235,6 +235,7 @@ class OpenVPN(LinuxNetworkManager, LocalAgentMixin):
         """
         self._set_custom_connection_id()
         self._set_connection_user_owned()
+        self._disable_dns_over_tls()
         self._set_server_certificate_check()
         self._set_dns()
         self._set_vpn_cert_credentials(private_key_passphrase)
@@ -256,6 +257,18 @@ class OpenVPN(LinuxNetworkManager, LocalAgentMixin):
             NM.SETTING_USER_SETTING_NAME,
             getuser(),
             None
+        )
+
+    def _disable_dns_over_tls(self):
+        """Disable DNS-over-TLS for this connection.
+
+        Overrides the global systemd-resolved DNSOverTLS setting so that
+        ProtonVPN's internal DNS server (plain DNS, port 53) is reachable
+        even when the system is configured with DNSOverTLS=yes.
+        """
+        self._connection_settings.set_property(
+            NM.SETTING_CONNECTION_DNS_OVER_TLS,
+            NM.SettingConnectionDnsOverTls.NO
         )
 
     def _set_server_certificate_check(self):
