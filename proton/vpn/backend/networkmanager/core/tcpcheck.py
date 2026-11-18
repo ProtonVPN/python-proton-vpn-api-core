@@ -5,7 +5,6 @@ import asyncio
 import ipaddress
 import logging
 import socket
-from asyncio import as_completed
 from contextlib import closing
 from typing import List, Union
 
@@ -70,12 +69,8 @@ async def is_any_port_reachable(
     async def _is_port_reachable(port):
         return await loop.run_in_executor(None, is_port_reachable, ip_address, port, timeout)
 
-    tasks = [
-        asyncio.create_task(_is_port_reachable(port))
-        for port in ports
-    ]
-    for task in as_completed(tasks):
-        try:
-            return await task
-        except Exception:  # pylint: disable=broad-except
-            return False
+    results = await asyncio.gather(
+        *(_is_port_reachable(port) for port in ports),
+        return_exceptions=True
+    )
+    return any(result is True for result in results)

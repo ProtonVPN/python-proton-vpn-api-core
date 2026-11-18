@@ -34,8 +34,9 @@ from proton.vpn.backend.networkmanager.killswitch.wireguard.killswitch_connectio
 
 logger = logging.getLogger(__name__)
 
-# How often NetworkManager is asked whether VPN server route is in place, and how
-# long to keep asking before giving up. Check is cheap, only reads NMs in-memory config.
+# How often NetworkManager is asked whether VPN server route is in place (or whether
+# a routable device is available yet), and how long to keep asking before giving up.
+# Check is cheap, only reads NMs in-memory config.
 ROUTE_POLL_INTERVAL_IN_SECS = 0.1
 ROUTE_TIMEOUT_IN_SECS = 5
 
@@ -151,7 +152,7 @@ class KillSwitchConnectionHandler:
         if not self.nm_client.is_monitoring_network_config_changes():
             self._start_monitoring_network_config_changes()
 
-        devices = self.nm_client.get_routable_devices()
+        devices = await self._wait_for_routable_devices()
         # Set first: wait below can throw, and teardown needs this IP to clean up.
         old_server_ip, self._server_ip = self._server_ip, server_ip
         for device in devices:
@@ -213,6 +214,26 @@ class KillSwitchConnectionHandler:
         raise TimeoutError(
             f"Error waiting for server route to be {'added' if found else 'removed'}"
         )
+
+    async def _wait_for_routable_devices(
+            self, timeout: float = ROUTE_TIMEOUT_IN_SECS,
+            interval: float = ROUTE_POLL_INTERVAL_IN_SECS
+    ) -> list:
+        """Returns routable devices, retrying briefly if none are found yet.
+
+        Adding the kill switch reapplies the real device's connection, which
+        can transiently drop its gateway; without retrying here the VPN server
+        route would silently never be added.
+        """
+        for _ in range(int(timeout / interval)):
+            devices = self.nm_client.get_routable_devices()
+            if devices:
+                return devices
+
+            await asyncio.sleep(interval)
+
+        logger.warning("No routable devices found to add the VPN server route to.")
+        return []
 
     def _start_monitoring_network_config_changes(self):
         loop = asyncio.get_running_loop()
